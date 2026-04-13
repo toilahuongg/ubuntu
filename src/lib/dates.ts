@@ -1,0 +1,32 @@
+import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
+
+import { DEFAULT_TIMEZONE } from "@/lib/domain";
+import { getOptionalEnv } from "@/lib/env";
+
+export function getAppTimezone() {
+  return getOptionalEnv().appTimezone || DEFAULT_TIMEZONE;
+}
+
+export function getTodayDateKey(date = new Date()) {
+  return formatInTimeZone(date, getAppTimezone(), "yyyy-MM-dd");
+}
+
+export function createDeadlineAt(dateKey: string, time: string) {
+  return fromZonedTime(`${dateKey}T${time}:00`, getAppTimezone());
+}
+
+export function formatDateLabel(dateKey: string) {
+  return formatInTimeZone(
+    fromZonedTime(`${dateKey}T00:00:00`, getAppTimezone()),
+    getAppTimezone(),
+    "EEEE, dd/MM/yyyy",
+  );
+}
+
+export function formatDateTimeLabel(date: Date) {
+  return formatInTimeZone(date, getAppTimezone(), "HH:mm - dd/MM/yyyy");
+}
+
+export function formatTimeLabel(date: Date) {
+  return formatInTimeZone(date, getAppTimezone(), "HH:mm");
+}
