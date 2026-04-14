@@ -1,14 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  Shield,
-  Users,
-  MapPin,
   Building2,
-  Layers,
-  MessageCircle,
-  ListChecks,
   ChevronRight,
+  Layers,
+  ListChecks,
+  MapPin,
+  MessageCircle,
+  Shield,
+  UserCog,
+  Users,
 } from "lucide-react";
 
 import { getSessionUser } from "@/lib/auth/session";
@@ -21,18 +22,16 @@ import {
   getAdminSnapshot,
   listPendingUsers,
 } from "@/lib/services/organization-service";
+
 import { MembersRoster } from "./members-roster";
-import { PendingUsers } from "./pending-users";
-import { TeamSection } from "./team-section";
-import { ZoneSection } from "./zone-section";
-import { RegionSection } from "./region-section";
-import { UserSection } from "./user-section";
-import { CreateTeamForm } from "./create-team-form";
-import { CreateZoneForm } from "./create-zone-form";
-import { CreateRegionForm } from "./create-region-form";
-import { CreateUserForm } from "./create-user-form";
-import { ExportUsersCsv } from "./export-csv";
-import { TelegramSection } from "./telegram-section";
+
+type NavItem = {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  description: string;
+  badge?: number;
+};
 
 export default async function AdminPage() {
   const session = await getSessionUser();
@@ -48,35 +47,27 @@ export default async function AdminPage() {
 
   if (!isTeamLead) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
+      <>
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5" />
           <h1 className="font-display text-xl font-bold">Quản Trị</h1>
         </div>
-        <Link
-          href="/templates"
-          className="glass-card flex items-center justify-between p-4 transition-colors hover:bg-overlay-subtle"
-        >
-          <div className="flex items-center gap-3">
-            <ListChecks className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="font-semibold">Nhiệm vụ</p>
-              <p className="text-xs text-muted-foreground">
-                Quản lý mẫu nhiệm vụ
-              </p>
-            </div>
-          </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </Link>
-        <section id="telegram" className="scroll-mt-20">
-          <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            <MessageCircle className="h-4 w-4" />
-            Thông báo Telegram
-          </h2>
-          <TelegramSection session={session} />
-        </section>
+        <nav className="space-y-2" aria-label="Khu vực quản trị">
+          <AdminNavLink
+            href="/templates"
+            icon={ListChecks}
+            label="Nhiệm vụ"
+            description="Quản lý mẫu nhiệm vụ"
+          />
+          <AdminNavLink
+            href="/admin/telegram"
+            icon={MessageCircle}
+            label="Thông báo Telegram"
+            description="Kết nối và quản lý kênh Telegram"
+          />
+        </nav>
         <MembersRoster actor={session} />
-      </div>
+      </>
     );
   }
 
@@ -85,158 +76,146 @@ export default async function AdminPage() {
     listPendingUsers(),
   ]);
 
-  const teamOptions = snapshot.teams.map((t) => ({ id: t.id, name: t.name }));
-  const zoneOptions = snapshot.zones.map((z) => ({
-    id: z.id,
-    name: z.name,
-    teamId: z.teamId,
-    teamName: z.teamName,
-  }));
-  const regionOptions = snapshot.regions.map((r) => ({
-    id: r.id,
-    name: r.name,
-    teamId: r.teamId,
-    zoneId: r.zoneId,
-    zoneName: r.zoneName,
-  }));
+  const navItems: NavItem[] = [
+    {
+      href: "/templates",
+      icon: ListChecks,
+      label: "Nhiệm vụ",
+      description: "Quản lý mẫu nhiệm vụ",
+    },
+    {
+      href: "/admin/teams",
+      icon: Building2,
+      label: "Nhóm",
+      description: `${snapshot.teams.length} nhóm`,
+    },
+    {
+      href: "/admin/zones",
+      icon: Layers,
+      label: "Địa vực",
+      description: `${snapshot.zones.length} địa vực`,
+    },
+    {
+      href: "/admin/regions",
+      icon: MapPin,
+      label: "Khu vực",
+      description: `${snapshot.regions.length} khu vực`,
+    },
+    {
+      href: "/admin/users",
+      icon: UserCog,
+      label: "Người dùng",
+      description: `${snapshot.users.length} người dùng`,
+      badge: pendingUsers.length,
+    },
+    {
+      href: "/admin/telegram",
+      icon: MessageCircle,
+      label: "Thông báo Telegram",
+      description: "Kết nối và quản lý kênh Telegram",
+    },
+  ];
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
+    <>
       <div className="flex items-center gap-2">
         <Shield className="h-5 w-5" />
         <h1 className="font-display text-xl font-bold">Quản Trị</h1>
       </div>
 
-      {/* Stats overview + anchor nav */}
-      <nav
-        aria-label="Điều hướng mục quản trị"
-        className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-      >
-        <a
-          href="#teams"
-          className="glass-card flex flex-col items-center p-3 transition-colors hover:bg-overlay-subtle"
+      <div className="space-y-3">
+        <nav
+          aria-label="Tổng quan quản trị"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-4"
         >
-          <Building2 className="mb-1 h-4 w-4 text-muted-foreground" />
-          <p className="text-lg font-bold">{snapshot.teams.length}</p>
-          <p className="text-[10px] text-muted-foreground">Nhóm</p>
-        </a>
-        <a
-          href="#zones"
-          className="glass-card flex flex-col items-center p-3 transition-colors hover:bg-overlay-subtle"
-        >
-          <Layers className="mb-1 h-4 w-4 text-muted-foreground" />
-          <p className="text-lg font-bold">{snapshot.zones.length}</p>
-          <p className="text-[10px] text-muted-foreground">Địa vực</p>
-        </a>
-        <a
-          href="#regions"
-          className="glass-card flex flex-col items-center p-3 transition-colors hover:bg-overlay-subtle"
-        >
-          <MapPin className="mb-1 h-4 w-4 text-muted-foreground" />
-          <p className="text-lg font-bold">{snapshot.regions.length}</p>
-          <p className="text-[10px] text-muted-foreground">Khu vực</p>
-        </a>
-        <a
-          href="#users"
-          className="glass-card flex flex-col items-center p-3 transition-colors hover:bg-overlay-subtle"
-        >
-          <Users className="mb-1 h-4 w-4 text-muted-foreground" />
-          <p className="text-lg font-bold">{snapshot.users.length}</p>
-          <p className="text-[10px] text-muted-foreground">Người dùng</p>
-        </a>
-      </nav>
+          <StatCard
+            href="/admin/teams"
+            icon={Building2}
+            value={snapshot.teams.length}
+            label="Nhóm"
+          />
+          <StatCard
+            href="/admin/zones"
+            icon={Layers}
+            value={snapshot.zones.length}
+            label="Địa vực"
+          />
+          <StatCard
+            href="/admin/regions"
+            icon={MapPin}
+            value={snapshot.regions.length}
+            label="Khu vực"
+          />
+          <StatCard
+            href="/admin/users"
+            icon={Users}
+            value={snapshot.users.length}
+            label="Người dùng"
+          />
+        </nav>
 
-      <Link
-        href="/templates"
-        className="glass-card flex items-center justify-between p-4 transition-colors hover:bg-overlay-subtle"
-      >
-        <div className="flex items-center gap-3">
-          <ListChecks className="h-5 w-5 text-muted-foreground" />
-          <div>
-            <p className="font-semibold">Nhiệm vụ</p>
-            <p className="text-xs text-muted-foreground">
-              Quản lý mẫu nhiệm vụ
-            </p>
-          </div>
-        </div>
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-      </Link>
-
-      {pendingUsers.length > 0 && <PendingUsers users={pendingUsers} />}
+        <nav className="space-y-2" aria-label="Khu vực quản trị">
+          {navItems.map((item) => (
+            <AdminNavLink key={item.href} {...item} />
+          ))}
+        </nav>
+      </div>
 
       <MembersRoster actor={session} />
+    </>
+  );
+}
 
-      <section id="teams" className="scroll-mt-20">
-        <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Nhóm ({snapshot.teams.length})
-        </h2>
-        <TeamSection teams={snapshot.teams} />
-        <div className="mt-3">
-          <CreateTeamForm />
-        </div>
-      </section>
+function StatCard({
+  href,
+  icon: Icon,
+  value,
+  label,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  value: number;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="glass-card flex flex-col items-center p-3 transition-colors hover:bg-overlay-subtle"
+    >
+      <Icon className="mb-1 h-4 w-4 text-muted-foreground" />
+      <p className="text-lg font-bold">{value}</p>
+      <p className="text-[10px] text-muted-foreground">{label}</p>
+    </Link>
+  );
+}
 
-      <section id="zones" className="scroll-mt-20">
-        <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Địa vực ({snapshot.zones.length})
-        </h2>
-        <ZoneSection zones={snapshot.zones} />
-        <div className="mt-3">
-          <CreateZoneForm teams={teamOptions} />
+function AdminNavLink({
+  href,
+  icon: Icon,
+  label,
+  description,
+  badge,
+}: NavItem) {
+  return (
+    <Link
+      href={href}
+      className="glass-card flex items-center justify-between p-4 transition-colors hover:bg-overlay-subtle"
+    >
+      <div className="flex items-center gap-3">
+        <Icon className="h-5 w-5 text-muted-foreground" />
+        <div>
+          <p className="font-semibold">{label}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
-      </section>
-
-      <section id="regions" className="scroll-mt-20">
-        <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Khu vực ({snapshot.regions.length})
-        </h2>
-        <RegionSection regions={snapshot.regions} />
-        <div className="mt-3">
-          <CreateRegionForm
-            zones={snapshot.zones.map((z) => ({
-              id: z.id,
-              name: z.name,
-              teamName: z.teamName,
-            }))}
-          />
-        </div>
-      </section>
-
-      <section id="telegram" className="scroll-mt-20">
-        <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          <MessageCircle className="h-4 w-4" />
-          Thông báo Telegram
-        </h2>
-        <TelegramSection session={session} />
-      </section>
-
-      <section id="users" className="scroll-mt-20">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Người dùng ({snapshot.users.length})
-          </h2>
-          <ExportUsersCsv
-            users={snapshot.users}
-            teams={teamOptions}
-            zones={zoneOptions.map((z) => ({ id: z.id, name: z.name }))}
-            regions={regionOptions.map((r) => ({ id: r.id, name: r.name }))}
-          />
-        </div>
-        <UserSection
-          currentUserId={session.id}
-          users={snapshot.users}
-          teams={teamOptions}
-          zones={zoneOptions}
-          regions={regionOptions}
-        />
-        <div className="mt-3">
-          <CreateUserForm
-            teams={teamOptions}
-            zones={zoneOptions}
-            regions={regionOptions}
-          />
-        </div>
-      </section>
-    </div>
+      </div>
+      <div className="flex items-center gap-2">
+        {badge ? (
+          <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
+            {badge}
+          </span>
+        ) : null}
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </div>
+    </Link>
   );
 }

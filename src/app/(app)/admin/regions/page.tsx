@@ -1,0 +1,35 @@
+import { redirect } from "next/navigation";
+
+import { getSessionUser } from "@/lib/auth/session";
+import { canAccessManagement } from "@/lib/permissions";
+import { getAdminSnapshot } from "@/lib/services/organization-service";
+
+import { CreateRegionForm } from "../create-region-form";
+import { RegionSection } from "../region-section";
+import { AdminSubHeader } from "../sub-header";
+
+export default async function AdminRegionsPage() {
+  const session = await getSessionUser();
+  if (!session) redirect("/login");
+  if (!canAccessManagement(session)) redirect("/admin");
+
+  const snapshot = await getAdminSnapshot(session);
+  const zones = snapshot.zones.map((z) => ({
+    id: z.id,
+    name: z.name,
+    teamName: z.teamName,
+  }));
+
+  return (
+    <>
+      <AdminSubHeader
+        title={`Khu vực (${snapshot.regions.length})`}
+        description="Quản lý các khu vực theo địa vực"
+      />
+      <div className="space-y-3">
+        <RegionSection regions={snapshot.regions} />
+        <CreateRegionForm zones={zones} />
+      </div>
+    </>
+  );
+}
