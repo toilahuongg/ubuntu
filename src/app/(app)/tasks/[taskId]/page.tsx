@@ -3,7 +3,8 @@ import { ArrowLeft, Clock, Zap } from "lucide-react";
 import Link from "next/link";
 
 import { getSessionUser } from "@/lib/auth/session";
-import { getOccurrenceDetail } from "@/lib/services/task-service";
+import { getTaskDetail } from "@/lib/tasks/task-service";
+import { getTodayDateKey } from "@/lib/dates";
 import { ROLE_LABELS } from "@/lib/domain";
 import { SubmitSection } from "./submit-section";
 
@@ -11,25 +12,28 @@ export default async function TaskDetailPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ occurrenceId: string }>;
+  params: Promise<{ taskId: string }>;
   searchParams: Promise<{ subject?: string }>;
 }) {
   const session = await getSessionUser();
   if (!session) redirect("/login");
 
-  const { occurrenceId } = await params;
+  const { taskId } = await params;
   const { subject } = await searchParams;
+  const dateKey = getTodayDateKey();
 
-  const detail = await getOccurrenceDetail(session, occurrenceId, subject);
+  const detail = await getTaskDetail(session, taskId, dateKey, subject);
 
   const deadlineTime = new Date(detail.deadlineAt).toLocaleTimeString("vi-VN", {
     hour: "2-digit",
     minute: "2-digit",
   });
 
+  const statusLabel =
+    detail.status === "OPEN" ? "Đang mở" : "Đã khoá";
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
-      {/* Back + Title */}
       <div>
         <Link
           href="/dashboard"
@@ -62,21 +66,19 @@ export default async function TaskDetailPage({
                 : "bg-muted text-muted-foreground"
             }`}
           >
-            {detail.status === "OPEN" ? "Đang mở" : "Đã đóng"}
+            {statusLabel}
           </span>
         </div>
       </div>
 
-      {/* Submit section */}
       <SubmitSection
-        occurrenceId={detail.id}
-        allowedSubjects={detail.allowedSubjects}
+        taskId={detail.id}
+        allowedSubjects={detail.rosterMembers}
         selectedSubject={detail.selectedSubject}
         myCompletionCount={detail.myCompletionCount}
         status={detail.status}
       />
 
-      {/* Roster */}
       <section>
         <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Bảng hoàn thành
@@ -92,7 +94,7 @@ export default async function TaskDetailPage({
                   {member.fullName}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] ?? member.role}
+                  {ROLE_LABELS[member.role] ?? member.role}
                 </p>
               </div>
               <div className="flex items-center gap-2">

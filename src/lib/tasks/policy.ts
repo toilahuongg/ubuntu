@@ -1,19 +1,21 @@
 import { fromZonedTime } from "date-fns-tz";
 
-import type { SessionUser, TemplateScope } from "@/lib/domain";
+import type { Role, SessionUser, TaskScope } from "@/lib/domain";
 import { getAppTimezone, getTodayDateKey } from "@/lib/dates";
-import { canManageTemplates } from "@/lib/permissions";
+import { canManageTasks } from "@/lib/permissions";
 
-export type OccurrenceScope = {
-  scope: TemplateScope;
+export type ScopeContext = {
+  scope: TaskScope;
   teamId: string;
   zoneId: string | null;
   regionId: string | null;
 };
 
-type UserScope = Pick<SessionUser, "teamId" | "zoneId" | "regionId">;
+type UserScope = Pick<SessionUser, "teamId" | "zoneId" | "regionId"> & {
+  role?: Role;
+};
 
-export function resolveActorScope(actor: SessionUser): OccurrenceScope {
+export function resolveActorScope(actor: SessionUser): ScopeContext {
   if (actor.role === "REGIONAL_LEAD" && actor.regionId && actor.teamId) {
     return {
       scope: "REGION",
@@ -41,66 +43,50 @@ export function resolveActorScope(actor: SessionUser): OccurrenceScope {
   throw new Error("Bạn không có phạm vi để tạo nhiệm vụ.");
 }
 
-export function canAccessOccurrence(
-  actor: SessionUser,
-  occ: OccurrenceScope,
-): boolean {
-  if (actor.role === "REGIONAL_LEAD" && actor.regionId) {
-    return occ.regionId === actor.regionId;
-  }
-  if (actor.role === "ZONE_LEAD" && actor.zoneId) {
-    return occ.zoneId === actor.zoneId;
-  }
-  return !!actor.teamId && occ.teamId === actor.teamId;
-}
-
 export function appliesToUser(
-  occ: OccurrenceScope,
+  task: ScopeContext,
   user: UserScope,
 ): boolean {
-  if (!user.teamId || occ.teamId !== user.teamId) return false;
-  if (occ.scope === "TEAM") return true;
-  if (occ.scope === "ZONE") {
-    return !!user.zoneId && occ.zoneId === user.zoneId;
+  if (!user.teamId) return false;
+  if (task.scope === "TEAM") return task.teamId === user.teamId;
+  if (task.scope === "ZONE") {
+    if (user.role === "TEAM_LEAD") return task.teamId === user.teamId;
+    return !!user.zoneId && task.zoneId === user.zoneId;
   }
-  if (occ.scope === "REGION") {
-    return !!user.regionId && occ.regionId === user.regionId;
+  if (task.scope === "REGION") {
+    if (user.role === "TEAM_LEAD") return task.teamId === user.teamId;
+    if (user.role === "ZONE_LEAD") {
+      return !!user.zoneId && task.zoneId === user.zoneId;
+    }
+    return !!user.regionId && task.regionId === user.regionId;
   }
   return false;
 }
 
-export function canManageTemplate(
+export function canManageTask(
   actor: SessionUser,
-  tpl: OccurrenceScope,
+  task: ScopeContext,
 ): boolean {
-  if (!canManageTemplates(actor)) return false;
+  if (!canManageTasks(actor)) return false;
   if (actor.role === "TEAM_LEAD") {
-    return !!actor.teamId && tpl.teamId === actor.teamId;
+    return !!actor.teamId && task.teamId === actor.teamId;
   }
   if (actor.role === "ZONE_LEAD") {
-    return !!actor.zoneId && tpl.zoneId === actor.zoneId;
+    return !!actor.zoneId && task.zoneId === actor.zoneId;
   }
   if (actor.role === "REGIONAL_LEAD") {
-    return !!actor.regionId && tpl.regionId === actor.regionId;
+    return !!actor.regionId && task.regionId === actor.regionId;
   }
   return false;
 }
 
-/**
- * Check whether `now` is still within the late window for occurrence
- * `dateKey`. Comparison is done via VN timezone date keys so a client
- * clock that's a few hours off doesn't flip the decision.
- */
 export function isWithinLateWindow(
   dateKey: string,
   lateWindowDays: number,
   now: Date = new Date(),
 ): boolean {
   const tz = getAppTimezone();
-  // Midnight of occurrence date in VN, converted to UTC instant.
   const startInstant = fromZonedTime(`${dateKey}T00:00:00`, tz);
-  // End is dateKey + lateWindowDays (inclusive of whole day). Compute
-  // the date string of today in VN, parse it the same way.
   const todayKey = getTodayDateKey(now);
   const todayInstant = fromZonedTime(`${todayKey}T00:00:00`, tz);
   const diffDays = Math.floor(

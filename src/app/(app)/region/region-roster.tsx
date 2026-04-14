@@ -4,39 +4,23 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, Clock, Plus } from "lucide-react";
 
-import { submitTaskAction } from "@/app/(app)/actions";
+import { submitTaskAction } from "@/app/(app)/tasks/actions";
 import { ROLE_LABELS } from "@/lib/domain";
-import type { Role } from "@/lib/domain";
-
-type Occurrence = {
-  deadlineAt: string;
-  expReward: number;
-  id: string;
-  status: "OPEN" | "CLOSED";
-  title: string;
-};
-
-type Member = {
-  completed: number;
-  fullName: string;
-  id: string;
-  role: string;
-  status: Array<{
-    completionCount: number;
-    occurrenceId: string;
-  }>;
-};
+import type {
+  DashboardRosterEntry,
+  TaskCard,
+} from "@/lib/tasks/types";
 
 export function RegionRoster({
-  members,
-  occurrences,
+  roster,
+  cards,
 }: {
-  members: Member[];
-  occurrences: Occurrence[];
+  roster: DashboardRosterEntry[];
+  cards: TaskCard[];
 }) {
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
 
-  if (members.length === 0) {
+  if (roster.length === 0) {
     return (
       <div className="glass-card py-8 text-center text-sm text-muted-foreground">
         Khu vực chưa có thành viên.
@@ -44,13 +28,17 @@ export function RegionRoster({
     );
   }
 
+  const cardById = new Map(cards.map((c) => [c.id, c]));
+
   return (
     <div className="space-y-2">
-      {members.map((member) => {
+      {roster.map((member) => {
         const isOpen = openMemberId === member.id;
-        const total = occurrences.length;
+        const applicable = member.statuses.filter((s) => s.applicable);
         const completionPercent =
-          total > 0 ? Math.round((member.completed / total) * 100) : 0;
+          applicable.length > 0
+            ? Math.round((member.completed / applicable.length) * 100)
+            : 0;
 
         return (
           <div key={member.id} className="glass-card overflow-hidden">
@@ -66,13 +54,13 @@ export function RegionRoster({
                   {member.fullName}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {ROLE_LABELS[member.role as Role] ?? member.role}
+                  {ROLE_LABELS[member.role] ?? member.role}
                 </p>
               </div>
               <div className="ml-3 flex items-center gap-3">
                 <div className="text-right">
                   <p className="text-sm font-semibold">
-                    {member.completed}/{total}
+                    {member.completed}/{applicable.length}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
                     {completionPercent}%
@@ -88,14 +76,16 @@ export function RegionRoster({
 
             {isOpen && (
               <div className="divide-y divide-border border-t border-border">
-                {occurrences.map((occurrence, idx) => {
-                  const status = member.status[idx];
+                {member.statuses.map((status) => {
+                  if (!status.applicable) return null;
+                  const card = cardById.get(status.taskId);
+                  if (!card) return null;
                   return (
                     <TaskRow
-                      key={occurrence.id}
+                      key={status.taskId}
                       memberId={member.id}
-                      occurrence={occurrence}
-                      completionCount={status?.completionCount ?? 0}
+                      card={card}
+                      completionCount={status.completionCount}
                     />
                   );
                 })}
@@ -110,81 +100,90 @@ export function RegionRoster({
 
 function TaskRow({
   memberId,
-  occurrence,
+  card,
   completionCount,
 }: {
   memberId: string;
-  occurrence: Occurrence;
+  card: TaskCard;
   completionCount: number;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit() {
+    setError(null);
     startTransition(async () => {
-      try {
-        await submitTaskAction(occurrence.id, memberId);
+      const result = await submitTaskAction(card.id, memberId);
+      if (result.ok) {
         router.refresh();
-      } catch (error) {
-        console.error(error);
-        alert(
-          error instanceof Error ? error.message : "Không thể nộp nhiệm vụ.",
-        );
+      } else {
+        setError(result.error);
       }
     });
   }
 
-  const deadline = new Date(occurrence.deadlineAt).toLocaleTimeString("vi-VN", {
+  const deadline = new Date(card.deadlineAt).toLocaleTimeString("vi-VN", {
     hour: "2-digit",
     minute: "2-digit",
   });
 
-  const isClosed = occurrence.status === "CLOSED";
+  const isLocked = card.status === "LOCKED";
   const isDone = completionCount > 0;
 
   return (
-    <div className="flex items-center justify-between px-4 py-3">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{occurrence.title}</p>
-        <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-0.5">
-            <Clock className="h-3 w-3" />
-            {deadline}
-          </span>
-          {occurrence.expReward > 0 && (
-            <span>+{occurrence.expReward} XP</span>
-          )}
-          {isDone && (
-            <span className="font-medium text-foreground/70">
-              × {completionCount}
+    <div className="flex flex-col gap-1 px-4 py-3">
+      <div className="flex items-center justify-between">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{card.title}</p>
+          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-0.5">
+              <Clock className="h-3 w-3" />
+              {deadline}
             </span>
-          )}
+            {card.expReward > 0 && <span>+{card.expReward} XP</span>}
+            {isDone && (
+              <span className="font-medium text-foreground/70">
+                × {completionCount}
+              </span>
+            )}
+            {isLocked && (
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                Đã khoá
+              </span>
+            )}
+          </div>
         </div>
+        <button
+          type="button"
+          disabled={isPending || isLocked}
+          onClick={handleSubmit}
+          className={`ml-3 flex h-9 min-w-[4rem] items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            isDone
+              ? "bg-overlay-medium text-foreground hover:bg-overlay-strong"
+              : "bg-primary/15 text-foreground hover:bg-primary/25"
+          }`}
+        >
+          {isPending ? (
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-foreground/30 border-t-foreground" />
+          ) : isDone ? (
+            <>
+              <Plus className="h-3 w-3" />
+              Nộp thêm
+            </>
+          ) : (
+            <>
+              <Check className="h-3 w-3" />
+              Nộp hộ
+            </>
+          )}
+        </button>
       </div>
-      <button
-        type="button"
-        disabled={isPending || isClosed}
-        onClick={handleSubmit}
-        className={`ml-3 flex h-9 min-w-[4rem] items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          isDone
-            ? "bg-overlay-medium text-foreground hover:bg-overlay-strong"
-            : "bg-primary/15 text-foreground hover:bg-primary/25"
-        }`}
-      >
-        {isPending ? (
-          <div className="h-3 w-3 animate-spin rounded-full border-2 border-foreground/30 border-t-foreground" />
-        ) : isDone ? (
-          <>
-            <Plus className="h-3 w-3" />
-            Nộp thêm
-          </>
-        ) : (
-          <>
-            <Check className="h-3 w-3" />
-            Nộp hộ
-          </>
-        )}
-      </button>
+      {error && (
+        <p role="alert" className="text-[11px] text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

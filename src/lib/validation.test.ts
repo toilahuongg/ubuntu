@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { taskTemplateInputSchema } from "@/lib/validation";
+import { taskInputSchema } from "@/lib/validation";
 
-describe("taskTemplateInputSchema", () => {
+describe("taskInputSchema", () => {
   it("accepts valid input", () => {
-    const result = taskTemplateInputSchema.parse({
+    const result = taskInputSchema.parse({
       deadlineTime: "17:30",
       description: "Test task",
       expReward: 10,
@@ -18,7 +18,7 @@ describe("taskTemplateInputSchema", () => {
 
   it("rejects invalid deadline format", () => {
     expect(() =>
-      taskTemplateInputSchema.parse({
+      taskInputSchema.parse({
         deadlineTime: "25:00",
         title: "Test",
       }),
@@ -27,7 +27,7 @@ describe("taskTemplateInputSchema", () => {
 
   it("rejects title that is too short", () => {
     expect(() =>
-      taskTemplateInputSchema.parse({
+      taskInputSchema.parse({
         deadlineTime: "17:30",
         title: "AB",
       }),

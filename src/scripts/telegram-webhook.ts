@@ -49,7 +49,7 @@ async function setWebhook() {
   const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
 
   const body: Record<string, unknown> = {
-    allowed_updates: ["message", "callback_query"],
+    allowed_updates: ["message", "callback_query", "my_chat_member"],
     url: webhookUrl,
   };
 

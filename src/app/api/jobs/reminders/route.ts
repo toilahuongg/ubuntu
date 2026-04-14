@@ -9,14 +9,16 @@ import {
 import {
   getReminderCandidates,
   markReminderSent,
-} from "@/lib/services/task-service";
+  type ReminderRecipient,
+} from "@/lib/tasks/reminder-service";
 
 function isAuthorized(request: Request) {
+  if (request.headers.get("x-vercel-cron")) return true;
   const secret = request.headers.get("x-cron-secret");
-  return secret && secret === requireEnv("CRON_SECRET");
+  return !!secret && secret === requireEnv("CRON_SECRET");
 }
 
-export async function POST(request: Request) {
+async function run(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json(
       { error: "Unauthorized cron request." },
@@ -24,46 +26,41 @@ export async function POST(request: Request) {
     );
   }
 
-  const reminders = await getReminderCandidates(getTodayDateKey());
+  const dateKey = getTodayDateKey();
+  const reminders = await getReminderCandidates(dateKey);
 
-  // Track per-occurrence send outcomes so we only mark an occurrence as
-  // "reminded" when at least one recipient got the message — otherwise a
-  // single blocked user could mask the whole batch.
-  const perOccurrence = new Map<string, { attempted: number; succeeded: number }>();
+  const succeeded: ReminderRecipient[] = [];
   let sent = 0;
   let failed = 0;
 
   for (const reminder of reminders) {
-    const stats =
-      perOccurrence.get(reminder.occurrenceId) ??
-      { attempted: 0, succeeded: 0 };
-    stats.attempted += 1;
-
     const result = await safeSendTelegramMessage({
       chatId: reminder.chatId,
-      replyMarkup: buildReminderMarkup(reminder.occurrenceId),
+      replyMarkup: buildReminderMarkup(reminder.taskId),
       text: reminder.text,
     });
 
     if (result.ok) {
-      stats.succeeded += 1;
       sent += 1;
+      succeeded.push({ taskId: reminder.taskId, userId: reminder.userId });
     } else {
       failed += 1;
     }
-
-    perOccurrence.set(reminder.occurrenceId, stats);
   }
 
-  const succeededOccurrenceIds = [...perOccurrence.entries()]
-    .filter(([, stats]) => stats.succeeded > 0)
-    .map(([occurrenceId]) => occurrenceId);
-
-  await markReminderSent(succeededOccurrenceIds);
+  await markReminderSent(dateKey, succeeded);
 
   return NextResponse.json({
     failed,
     reminderCount: reminders.length,
     sent,
   });
+}
+
+export async function GET(request: Request) {
+  return run(request);
+}
+
+export async function POST(request: Request) {
+  return run(request);
 }

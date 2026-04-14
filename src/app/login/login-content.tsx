@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Shield } from "lucide-react";
 
 type TelegramWidgetUser = {
@@ -153,7 +154,17 @@ export function LoginContent() {
           ) : (
             <div className="flex flex-col gap-4">
               {!isTelegramWebApp && (
-                <TelegramLoginButton onAuth={handleWidgetLogin} />
+                <>
+                  <TelegramLoginButton onAuth={handleWidgetLogin} />
+                  <div className="flex items-center gap-3 py-1">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                      hoặc
+                    </span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  <GoogleLoginButton />
+                </>
               )}
 
               {isTelegramWebApp && (
@@ -172,6 +183,24 @@ export function LoginContent() {
         </div>
       </div>
     </main>
+  );
+}
+
+function GoogleLoginButton() {
+  return (
+    <button
+      type="button"
+      onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
+      className="flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-background px-4 py-3 text-sm font-medium transition hover:bg-overlay-subtle"
+    >
+      <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5">
+        <path
+          fill="#EA4335"
+          d="M12 10.2v3.9h5.5c-.2 1.4-1.7 4.1-5.5 4.1-3.3 0-6-2.7-6-6.1S8.7 6 12 6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.9 3.6 14.7 2.7 12 2.7 6.9 2.7 2.8 6.8 2.8 12S6.9 21.3 12 21.3c6.9 0 9.2-4.9 9.2-9 0-.6-.1-1-.2-1.5H12z"
+        />
+      </svg>
+      <span>Đăng nhập bằng Google</span>
+    </button>
   );
 }
 

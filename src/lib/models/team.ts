@@ -5,6 +5,8 @@ const teamSchema = new Schema(
     code: { required: true, trim: true, type: String, unique: true },
     leadUserIds: [{ ref: "User", type: Schema.Types.ObjectId }],
     name: { required: true, trim: true, type: String },
+    telegramChatId: { default: null, index: true, sparse: true, type: Number },
+    telegramChatTitle: { default: null, trim: true, type: String },
   },
   { timestamps: true },
 );

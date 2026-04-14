@@ -1,9 +1,9 @@
 import { model, models, Schema, Types } from "mongoose";
 
-import { TEMPLATE_SCOPES, type TemplateScope } from "@/lib/domain";
+import { TASK_SCOPES, type TaskScope } from "@/lib/domain";
 import { DEFAULT_EXP_REWARD, DEFAULT_LATE_WINDOW_DAYS } from "@/lib/tasks/constants";
 
-const taskTemplateSchema = new Schema(
+const taskSchema = new Schema(
   {
     createdBy: { ref: "User", required: true, type: Schema.Types.ObjectId },
     deadlineTime: { required: true, type: String },
@@ -17,7 +17,7 @@ const taskTemplateSchema = new Schema(
     },
     isActive: { default: true, type: Boolean },
     regionId: { default: null, ref: "Region", type: Schema.Types.ObjectId },
-    scope: { default: "TEAM", enum: TEMPLATE_SCOPES, type: String },
+    scope: { default: "TEAM", enum: TASK_SCOPES, type: String },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId },
     title: { required: true, trim: true, type: String },
     zoneId: { default: null, ref: "Zone", type: Schema.Types.ObjectId },
@@ -25,10 +25,7 @@ const taskTemplateSchema = new Schema(
   { timestamps: true },
 );
 
-// Explicit record type. InferSchemaType loses the narrow TemplateScope
-// union and marks optional fields as possibly-undefined even though the
-// schema supplies defaults — an explicit type removes casts at callers.
-export type TaskTemplateRecord = {
+export type TaskRecord = {
   _id: Types.ObjectId;
   createdBy: Types.ObjectId;
   deadlineTime: string;
@@ -37,7 +34,7 @@ export type TaskTemplateRecord = {
   lateWindowDays: number;
   isActive: boolean;
   regionId: Types.ObjectId | null;
-  scope: TemplateScope;
+  scope: TaskScope;
   teamId: Types.ObjectId;
   title: string;
   zoneId: Types.ObjectId | null;
@@ -45,5 +42,4 @@ export type TaskTemplateRecord = {
   updatedAt: Date;
 };
 
-export const TaskTemplateModel =
-  models.TaskTemplate || model("TaskTemplate", taskTemplateSchema);
+export const TaskModel = models.Task || model("Task", taskSchema);

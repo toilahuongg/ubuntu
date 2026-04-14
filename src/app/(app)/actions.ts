@@ -4,13 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
-import type { TemplateScope, SessionUser } from "@/lib/domain";
+import { runAction, type ActionResult } from "@/lib/actions/result";
+import type { SessionUser } from "@/lib/domain";
 import { canAccessManagement } from "@/lib/permissions";
-import {
-  createTaskTemplate,
-  saveSubmission,
-  toggleTaskTemplate,
-} from "@/lib/services/task-service";
 import {
   approveUser,
   bulkApproveUsers,
@@ -26,30 +22,10 @@ import {
   saveUser,
   updateRegion,
   updateTeam,
-  updateUserProfile,
   updateZone,
 } from "@/lib/services/organization-service";
 
-// Server actions surface errors to the UI instead of bubbling as unhandled
-// rejections. Wrap mutating actions with this helper so clients can show
-// inline error banners without each action reimplementing the pattern.
-export type ActionResult<T = unknown> =
-  | { ok: true; data?: T }
-  | { ok: false; error: string };
-
-function toActionError(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  return "Đã có lỗi xảy ra. Vui lòng thử lại.";
-}
-
-async function runAction<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
-  try {
-    const data = await fn();
-    return { data, ok: true };
-  } catch (err) {
-    return { error: toActionError(err), ok: false };
-  }
-}
+export type { ActionResult } from "@/lib/actions/result";
 
 // A TEAM_LEAD is scoped to a single team (see permissions.ts). Any mutation
 // that references a team/zone/region MUST verify ownership so one lead
@@ -86,52 +62,6 @@ async function requireManagementUser(): Promise<SessionUser> {
     throw new Error("Bạn không có quyền thực hiện thao tác này.");
   }
   return session;
-}
-
-// ── Task Submission ──
-
-export async function submitTaskAction(
-  occurrenceId: string,
-  subjectUserId: string,
-) {
-  const session = await requireSession();
-  await saveSubmission(session, occurrenceId, subjectUserId);
-  revalidatePath("/dashboard");
-  revalidatePath(`/tasks/${occurrenceId}`);
-  revalidatePath("/region");
-  revalidatePath("/zone");
-}
-
-// ── Task Templates ──
-
-export async function createTemplateAction(formData: FormData) {
-  const session = await requireSession();
-
-  const title = formData.get("title") as string;
-  const description = (formData.get("description") as string) || "";
-  const deadlineTime = formData.get("deadlineTime") as string;
-  const expReward = Number(formData.get("expReward")) || 10;
-  const isActive = formData.get("isActive") === "true";
-  const scope = ((formData.get("scope") as string) || "").toUpperCase() as TemplateScope;
-
-  await createTaskTemplate(session, {
-    deadlineTime,
-    description,
-    expReward,
-    isActive,
-    scope: scope || undefined,
-    title,
-  });
-
-  revalidatePath("/templates");
-  revalidatePath("/dashboard");
-}
-
-export async function toggleTemplateAction(templateId: string) {
-  const session = await requireSession();
-  await toggleTaskTemplate(session, templateId);
-  revalidatePath("/templates");
-  revalidatePath("/dashboard");
 }
 
 // ── Organization ──
@@ -292,15 +222,3 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
   });
 }
 
-export async function updateProfileAction(formData: FormData) {
-  const session = await requireSession();
-
-  await updateUserProfile(session.id, {
-    bio: (formData.get("bio") as string) ?? "",
-    fullName: formData.get("fullName") as string,
-    gender: (formData.get("gender") as string) || undefined,
-  });
-
-  revalidatePath("/profile");
-  revalidatePath("/dashboard");
-}

@@ -25,6 +25,7 @@ export type TelegramUser = {
 export type TelegramChat = {
   id: number;
   type?: string;
+  title?: string;
 };
 
 export type TelegramMessage = {
@@ -41,10 +42,32 @@ export type TelegramCallbackQuery = {
   data?: string;
 };
 
+export type TelegramChatMemberStatus =
+  | "creator"
+  | "administrator"
+  | "member"
+  | "restricted"
+  | "left"
+  | "kicked";
+
+export type TelegramChatMember = {
+  user: TelegramUser;
+  status: TelegramChatMemberStatus;
+};
+
+export type TelegramMyChatMemberUpdate = {
+  chat: TelegramChat;
+  from: TelegramUser;
+  date: number;
+  old_chat_member: TelegramChatMember;
+  new_chat_member: TelegramChatMember;
+};
+
 export type TelegramUpdate = {
   update_id?: number;
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;
+  my_chat_member?: TelegramMyChatMemberUpdate;
 };
 
 const MAX_RETRIES = 2;
@@ -52,6 +75,28 @@ const RETRY_DELAY_MS = [500, 1500];
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const MAX_RETRY_AFTER_SEC = 30;
+
+function parseRetryAfterSeconds(
+  header: string | null,
+  body: string,
+): number {
+  const fromHeader = header ? Number.parseInt(header, 10) : NaN;
+  if (Number.isFinite(fromHeader) && fromHeader > 0) {
+    return Math.min(fromHeader, MAX_RETRY_AFTER_SEC);
+  }
+  try {
+    const parsed = JSON.parse(body) as { parameters?: { retry_after?: number } };
+    const fromBody = parsed.parameters?.retry_after;
+    if (typeof fromBody === "number" && fromBody > 0) {
+      return Math.min(fromBody, MAX_RETRY_AFTER_SEC);
+    }
+  } catch {
+    // body was not JSON; fall through.
+  }
+  return 1;
 }
 
 async function telegramFetch(
@@ -79,7 +124,18 @@ async function telegramFetch(
       const errorText = await response.text();
       const errorMessage = `Telegram ${method} failed (${response.status}): ${errorText}`;
 
-      // Do not retry on client errors (e.g. 400 bad request, 403 bot blocked).
+      // 429: Telegram asks us to back off for `retry_after` seconds.
+      if (response.status === 429 && attempt < MAX_RETRIES) {
+        const retryAfterSec = parseRetryAfterSeconds(
+          response.headers.get("retry-after"),
+          errorText,
+        );
+        lastError = new Error(errorMessage);
+        await sleep(retryAfterSec * 1000);
+        continue;
+      }
+
+      // Do not retry on other client errors (e.g. 400 bad request, 403 bot blocked).
       if (response.status >= 400 && response.status < 500) {
         throw new Error(errorMessage);
       }
@@ -197,27 +253,28 @@ export async function safeEditMessageReplyMarkup(input: {
   }
 }
 
-export function buildTelegramStartMarkup(): TelegramReplyMarkup | undefined {
+export function buildTelegramStartMarkup(options?: {
+  inGroup?: boolean;
+}): TelegramReplyMarkup | undefined {
   const appUrl = getOptionalEnv().appUrl;
 
   if (!appUrl) {
     return undefined;
   }
 
+  // web_app buttons are only valid in private chats. In groups, Telegram
+  // rejects the markup with BUTTON_TYPE_INVALID, so fall back to a url button.
+  const button: TelegramInlineKeyboardButton = options?.inGroup
+    ? { text: "Mở app nhiệm vụ", url: `${appUrl}/login` }
+    : { text: "Mở app nhiệm vụ", web_app: { url: `${appUrl}/login` } };
+
   return {
-    inline_keyboard: [
-      [
-        {
-          text: "Mở app nhiệm vụ",
-          web_app: { url: `${appUrl}/login` },
-        },
-      ],
-    ],
+    inline_keyboard: [[button]],
   };
 }
 
 export function buildReminderMarkup(
-  occurrenceId: string,
+  taskId: string,
 ): TelegramReplyMarkup | undefined {
   const appUrl = getOptionalEnv().appUrl;
   const rows: TelegramInlineKeyboardButton[][] = [];
@@ -234,7 +291,7 @@ export function buildReminderMarkup(
   rows.push([
     {
       text: "✅ Đánh dấu xong",
-      callback_data: `done:${occurrenceId}`,
+      callback_data: `done:${taskId}`,
     },
   ]);
 

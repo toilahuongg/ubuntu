@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Image from "next/image";
 import { Pencil, X } from "lucide-react";
 
-import { updateProfileAction } from "@/app/(app)/actions";
+import { updateProfileAction } from "@/app/(app)/profile/actions";
 
 type Props = {
   initialFullName: string;
@@ -33,11 +33,11 @@ export function EditProfileForm({
   function handleSubmit(formData: FormData) {
     setError(null);
     startTransition(async () => {
-      try {
-        await updateProfileAction(formData);
+      const result = await updateProfileAction(formData);
+      if (result.ok) {
         setIsOpen(false);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Đã có lỗi xảy ra.");
+      } else {
+        setError(result.error);
       }
     });
   }

@@ -6,12 +6,12 @@ export function AppHeader({ user }: { user: SessionUser }) {
   return (
     <header
       role="banner"
-      className="sticky top-0 z-40 border-b border-border bg-background/50 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25 sm:px-6 lg:px-8"
+      className="sticky top-0 z-40 border-b border-border bg-sidebar/80 px-4 shadow-[0_1px_0_0_var(--overlay-subtle)_inset,0_8px_24px_-12px_var(--overlay-strong)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-sidebar/60 sm:px-6 lg:px-8"
       style={{ height: "var(--header-height)" }}
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/[0.06] via-white/[0.02] to-transparent"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-overlay-subtle via-transparent to-transparent"
       />
       <div className="relative mx-auto flex h-full max-w-2xl items-center justify-between">
         <div className="flex items-center gap-3">

@@ -1,8 +1,22 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Shield, Users, MapPin, Building2, Layers } from "lucide-react";
+import {
+  Shield,
+  Users,
+  MapPin,
+  Building2,
+  Layers,
+  MessageCircle,
+  ListChecks,
+  ChevronRight,
+} from "lucide-react";
 
 import { getSessionUser } from "@/lib/auth/session";
-import { canAccessManagement } from "@/lib/permissions";
+import {
+  canAccessManagement,
+  canAccessRegionManagement,
+  canAccessZoneManagement,
+} from "@/lib/permissions";
 import {
   getAdminSnapshot,
   listPendingUsers,
@@ -17,13 +31,51 @@ import { CreateZoneForm } from "./create-zone-form";
 import { CreateRegionForm } from "./create-region-form";
 import { CreateUserForm } from "./create-user-form";
 import { ExportUsersCsv } from "./export-csv";
+import { TelegramSection } from "./telegram-section";
 
 export default async function AdminPage() {
   const session = await getSessionUser();
   if (!session) redirect("/login");
 
-  if (!canAccessManagement(session)) {
+  const isTeamLead = canAccessManagement(session);
+  const isZoneLead = canAccessZoneManagement(session);
+  const isRegionalLead = canAccessRegionManagement(session);
+
+  if (!isTeamLead && !isZoneLead && !isRegionalLead) {
     redirect("/dashboard");
+  }
+
+  if (!isTeamLead) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
+        <div className="flex items-center gap-2">
+          <Shield className="h-5 w-5" />
+          <h1 className="font-display text-xl font-bold">Quản Trị</h1>
+        </div>
+        <Link
+          href="/templates"
+          className="glass-card flex items-center justify-between p-4 transition-colors hover:bg-overlay-subtle"
+        >
+          <div className="flex items-center gap-3">
+            <ListChecks className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="font-semibold">Nhiệm vụ</p>
+              <p className="text-xs text-muted-foreground">
+                Quản lý mẫu nhiệm vụ
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+        <section id="telegram" className="scroll-mt-20">
+          <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <MessageCircle className="h-4 w-4" />
+            Thông báo Telegram
+          </h2>
+          <TelegramSection session={session} />
+        </section>
+      </div>
+    );
   }
 
   const [snapshot, pendingUsers] = await Promise.all([
@@ -92,6 +144,22 @@ export default async function AdminPage() {
         </a>
       </nav>
 
+      <Link
+        href="/templates"
+        className="glass-card flex items-center justify-between p-4 transition-colors hover:bg-overlay-subtle"
+      >
+        <div className="flex items-center gap-3">
+          <ListChecks className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <p className="font-semibold">Nhiệm vụ</p>
+            <p className="text-xs text-muted-foreground">
+              Quản lý mẫu nhiệm vụ
+            </p>
+          </div>
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </Link>
+
       {pendingUsers.length > 0 && <PendingUsers users={pendingUsers} />}
 
       <section id="teams" className="scroll-mt-20">
@@ -128,6 +196,14 @@ export default async function AdminPage() {
             }))}
           />
         </div>
+      </section>
+
+      <section id="telegram" className="scroll-mt-20">
+        <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          <MessageCircle className="h-4 w-4" />
+          Thông báo Telegram
+        </h2>
+        <TelegramSection session={session} />
       </section>
 
       <section id="users" className="scroll-mt-20">

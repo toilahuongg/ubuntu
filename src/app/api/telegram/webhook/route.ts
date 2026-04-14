@@ -7,6 +7,7 @@ import {
   safeAnswerCallbackQuery,
   safeEditMessageReplyMarkup,
   safeSendTelegramMessage,
+  type TelegramMyChatMemberUpdate,
   type TelegramUpdate,
 } from "@/lib/telegram-bot";
 import {
@@ -14,8 +15,13 @@ import {
   getTelegramLeaderboard,
   getTelegramProfile,
   getTelegramTodayDigest,
-  saveSubmission,
-} from "@/lib/services/task-service";
+} from "@/lib/notifications/telegram-presenters";
+import { saveSubmission } from "@/lib/tasks/submission-service";
+import {
+  onBotJoinedGroup,
+  onBotLeftGroup,
+  refreshPendingGroupTitle,
+} from "@/lib/services/telegram-binding-service";
 
 const HELP_TEXT = [
   "🤖 Các lệnh hiện có:",
@@ -32,7 +38,37 @@ function parseCommand(text: string): string {
   return match ? match[1]!.toLowerCase() : "";
 }
 
+const GROUP_CHAT_TYPES = new Set(["group", "supergroup"]);
+
+async function handleMyChatMember(update: TelegramMyChatMemberUpdate) {
+  const chatType = update.chat.type;
+  if (!chatType || !GROUP_CHAT_TYPES.has(chatType)) {
+    return;
+  }
+
+  const status = update.new_chat_member.status;
+  if (status === "member" || status === "administrator" || status === "creator") {
+    await onBotJoinedGroup({
+      chatId: update.chat.id,
+      title: update.chat.title ?? `Chat ${update.chat.id}`,
+      type: chatType,
+    });
+    return;
+  }
+
+  if (status === "left" || status === "kicked") {
+    await onBotLeftGroup(update.chat.id);
+  }
+}
+
 async function handleMessage(message: NonNullable<TelegramUpdate["message"]>) {
+  const chatType = message.chat.type;
+  const isGroup = !!chatType && GROUP_CHAT_TYPES.has(chatType);
+
+  if (isGroup && message.chat.title) {
+    await refreshPendingGroupTitle(message.chat.id, message.chat.title);
+  }
+
   const chatId = message.chat.id;
   const text = message.text ?? "";
   const fromId = message.from?.id;
@@ -42,13 +78,27 @@ async function handleMessage(message: NonNullable<TelegramUpdate["message"]>) {
     return;
   }
 
+  // In groups, only /start is supported. Personal commands (/today, /me,
+  // /leaderboard) require a private chat to avoid leaking individual data.
+  if (isGroup && command !== "start") {
+    return;
+  }
+
   switch (command) {
     case "start":
       await safeSendTelegramMessage({
         chatId,
-        replyMarkup: buildTelegramStartMarkup(),
-        text:
-          "Chào mừng bạn đến với app nhiệm vụ mỗi ngày. Bấm nút dưới đây để mở web app và bắt đầu cập nhật. Gõ /help để xem các lệnh khác.",
+        replyMarkup: buildTelegramStartMarkup({ inGroup: isGroup }),
+        text: isGroup
+          ? [
+              "Chào cả nhóm! Mình là bot nhiệm vụ mỗi ngày.",
+              "",
+              "Nút bên dưới sẽ mở app trong trình duyệt.",
+              "👉 Muốn mở app trực tiếp trong Telegram (không qua trình duyệt), hãy nhắn tin riêng với mình rồi gõ /start — trong chat riêng, nút sẽ mở web app ngay trong Telegram.",
+              "",
+              "Các lệnh cá nhân (/today, /me, /leaderboard) cũng chỉ dùng được trong chat riêng.",
+            ].join("\n")
+          : "Chào mừng bạn đến với app nhiệm vụ mỗi ngày. Bấm nút dưới đây để mở web app và bắt đầu cập nhật. Gõ /help để xem các lệnh khác.",
       });
       return;
 
@@ -117,8 +167,8 @@ async function handleCallbackQuery(
     return;
   }
 
-  const occurrenceId = data.slice("done:".length).trim();
-  if (!occurrenceId) {
+  const taskId = data.slice("done:".length).trim();
+  if (!taskId) {
     await safeAnswerCallbackQuery({
       callbackQueryId: callback.id,
       text: "Thiếu mã nhiệm vụ.",
@@ -138,7 +188,7 @@ async function handleCallbackQuery(
   }
 
   try {
-    await saveSubmission(actor, occurrenceId, actor.id);
+    await saveSubmission(actor, taskId, actor.id);
 
     if (callback.message) {
       await safeEditMessageReplyMarkup({
@@ -182,7 +232,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (update.callback_query) {
+    if (update.my_chat_member) {
+      await handleMyChatMember(update.my_chat_member);
+    } else if (update.callback_query) {
       await handleCallbackQuery(update.callback_query);
     } else if (update.message) {
       await handleMessage(update.message);

@@ -14,7 +14,18 @@ export function getOptionalEnv() {
       process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME?.trim() || "",
     telegramWebhookSecret:
       process.env.TELEGRAM_WEBHOOK_SECRET?.trim() || "",
+    googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() || "",
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET?.trim() || "",
+    authSecret:
+      process.env.AUTH_SECRET?.trim() ||
+      process.env.SESSION_SECRET?.trim() ||
+      "",
   };
+}
+
+export function isGoogleAuthConfigured() {
+  const env = getOptionalEnv();
+  return Boolean(env.googleClientId && env.googleClientSecret && env.authSecret);
 }
 
 export function requireEnv(
@@ -24,7 +35,10 @@ export function requireEnv(
     | "TELEGRAM_BOT_TOKEN"
     | "TELEGRAM_WEBHOOK_SECRET"
     | "NEXT_PUBLIC_APP_URL"
-    | "CRON_SECRET",
+    | "CRON_SECRET"
+    | "GOOGLE_CLIENT_ID"
+    | "GOOGLE_CLIENT_SECRET"
+    | "AUTH_SECRET",
 ) {
   const value = process.env[name]?.trim();
 

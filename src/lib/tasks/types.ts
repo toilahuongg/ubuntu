@@ -1,15 +1,15 @@
-import type { Role, SessionUser, TemplateScope } from "@/lib/domain";
+import type { Role, SessionUser, TaskScope } from "@/lib/domain";
 
-export type OccurrenceStatus = "OPEN" | "LOCKED";
+export type TaskStatus = "OPEN" | "LOCKED";
 
-export type TemplateSummary = {
+export type TaskSummary = {
   id: string;
   title: string;
   description: string;
   deadlineTime: string;
   expReward: number;
   lateWindowDays: number;
-  scope: TemplateScope;
+  scope: TaskScope;
   isActive: boolean;
   teamId: string;
   zoneId: string | null;
@@ -24,14 +24,9 @@ export type TaskCard = {
   date: string;
   deadlineAt: string;
   expReward: number;
-  status: OccurrenceStatus;
-  // Number of users inside the occurrence scope that have at least one
-  // submission. A given user counts once regardless of how many times
-  // they submitted.
+  status: TaskStatus;
   completionCount: number;
-  // Total users inside occurrence scope (denominator).
   totalCount: number;
-  // Number of times the acting user has submitted for themself.
   myCompletionCount: number;
 };
 
@@ -42,18 +37,24 @@ export type RosterEntry = {
   completionCount: number;
 };
 
-export type OccurrenceDetail = {
+export type TaskDetail = {
   id: string;
   title: string;
   description: string;
   date: string;
   deadlineAt: string;
   expReward: number;
-  status: OccurrenceStatus;
+  status: TaskStatus;
   myCompletionCount: number;
   selectedSubject: SessionUser;
   rosterMembers: SessionUser[];
   roster: RosterEntry[];
+};
+
+export type DashboardMemberTaskStatus = {
+  taskId: string;
+  applicable: boolean;
+  completionCount: number;
 };
 
 export type DashboardRosterEntry = {
@@ -62,6 +63,7 @@ export type DashboardRosterEntry = {
   role: Role;
   completed: number;
   pending: number;
+  statuses: DashboardMemberTaskStatus[];
 };
 
 export type DashboardHighlights = {
@@ -76,5 +78,29 @@ export type DashboardView = {
   highlights: DashboardHighlights;
   cards: TaskCard[];
   roster: DashboardRosterEntry[];
-  templates: TemplateSummary[];
+  tasks: TaskSummary[];
 };
+
+export type ScopeLabel = "TEAM" | "ZONE" | "REGION";
+
+export type MemberDashboardView = {
+  date: string;
+  cards: TaskCard[];
+  totalXp: number;
+  level: number;
+  progressXp: number;
+  nextLevelXp: number;
+  levelName: string;
+  levelIcon: string;
+};
+
+export type LeaderDashboardView = DashboardView & {
+  scopeLabel: ScopeLabel;
+};
+
+export type TemplateCoverageEntry = {
+  completed: number;
+  applicable: number;
+};
+
+export type TemplateCoverage = Record<string, TemplateCoverageEntry>;

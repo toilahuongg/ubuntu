@@ -2,16 +2,23 @@
 
 import { useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
-import { createTemplateAction } from "@/app/(app)/actions";
+
+import { createTaskAction } from "./actions";
 
 export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(formData: FormData) {
+    setError(null);
     startTransition(async () => {
-      await createTemplateAction(formData);
-      setIsOpen(false);
+      const result = await createTaskAction(formData);
+      if (result.ok) {
+        setIsOpen(false);
+      } else {
+        setError(result.error);
+      }
     });
   }
 
@@ -72,7 +79,7 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
           <label htmlFor="deadlineTime" className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Hạn chót *
@@ -100,9 +107,30 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
             className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
           />
         </div>
+        <div>
+          <label htmlFor="lateWindowDays" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            Nhập bù (ngày)
+          </label>
+          <input
+            id="lateWindowDays"
+            name="lateWindowDays"
+            type="number"
+            min={1}
+            max={365}
+            defaultValue={7}
+            inputMode="numeric"
+            className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+          />
+        </div>
       </div>
 
       <input type="hidden" name="isActive" value="true" />
+
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
 
       <button
         type="submit"

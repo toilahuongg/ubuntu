@@ -78,6 +78,8 @@ function serializeUser(record: UserRecord): SerializedUser {
     status: record.status,
     teamId: stringifyId(record.teamId),
     telegramId: record.telegramId,
+    googleId: (record as UserRecord & { googleId?: string | null }).googleId ?? null,
+    email: (record as UserRecord & { email?: string | null }).email ?? null,
     updatedAt: record.updatedAt?.toISOString(),
     username: record.username,
     zoneId: stringifyId((record as UserRecord & { zoneId?: unknown }).zoneId),
@@ -211,15 +213,105 @@ export async function getUserById(userId: string) {
   return user ? serializeUser(user) : null;
 }
 
+export async function getUserOrgContext(user: {
+  teamId?: string | null;
+  zoneId?: string | null;
+  regionId?: string | null;
+}) {
+  await connectToDatabase();
+  const [team, zone, region] = await Promise.all([
+    user.teamId
+      ? (TeamModel.findById(user.teamId).lean() as Promise<TeamRecord | null>)
+      : null,
+    user.zoneId
+      ? (ZoneModel.findById(user.zoneId).lean() as Promise<ZoneRecord | null>)
+      : null,
+    user.regionId
+      ? (RegionModel.findById(user.regionId).lean() as Promise<RegionRecord | null>)
+      : null,
+  ]);
+  return {
+    team: team ? { id: stringifyId(team._id), name: team.name, code: team.code } : null,
+    zone: zone ? { id: stringifyId(zone._id), name: zone.name, code: zone.code } : null,
+    region: region
+      ? { id: stringifyId(region._id), name: region.name, code: region.code }
+      : null,
+  };
+}
+
 export async function getUserByTelegramId(telegramId: number) {
   await connectToDatabase();
   const user = (await UserModel.findOne({ telegramId }).lean()) as UserRecord | null;
   return user ? serializeUser(user) : null;
 }
 
+export async function getUserByGoogleId(googleId: string) {
+  await connectToDatabase();
+  const user = (await UserModel.findOne({ googleId }).lean()) as UserRecord | null;
+  return user ? serializeUser(user) : null;
+}
+
+export async function getUserByEmail(email: string) {
+  await connectToDatabase();
+  const user = (await UserModel.findOne({
+    email: email.toLowerCase().trim(),
+  }).lean()) as UserRecord | null;
+  return user ? serializeUser(user) : null;
+}
+
+export async function linkGoogleAccount(
+  userId: string,
+  input: { googleId: string; email: string; avatarUrl?: string | null },
+) {
+  await connectToDatabase();
+  const user = await UserModel.findByIdAndUpdate(
+    userId,
+    {
+      googleId: input.googleId,
+      email: input.email.toLowerCase().trim(),
+      ...(input.avatarUrl ? { avatarUrl: input.avatarUrl } : {}),
+    },
+    { new: true },
+  );
+  if (!user) throw new Error("Không tìm thấy người dùng.");
+  return serializeUser(user.toObject() as UserRecord);
+}
+
+export async function createPendingGoogleUser(input: {
+  fullName: string;
+  googleId: string;
+  email: string;
+  avatarUrl?: string | null;
+}) {
+  await connectToDatabase();
+  const user = await UserModel.create({
+    fullName: input.fullName,
+    role: "MEMBER",
+    status: "PENDING",
+    googleId: input.googleId,
+    email: input.email.toLowerCase().trim(),
+    avatarUrl: input.avatarUrl ?? null,
+  });
+  return serializeUser(user.toObject() as UserRecord);
+}
+
 export async function markUserLogin(userId: string) {
   await connectToDatabase();
   await UserModel.findByIdAndUpdate(userId, { lastLoginAt: new Date() });
+}
+
+export async function listTeamMembersForViewing(
+  actor: SessionUser,
+): Promise<SerializedUser[]> {
+  if (!actor.teamId) return [];
+  await connectToDatabase();
+  const users = (await UserModel.find({
+    status: "ACTIVE",
+    teamId: toObjectId(actor.teamId),
+  })
+    .sort({ role: 1, fullName: 1 })
+    .lean()) as UserRecord[];
+  return users.map(serializeUser);
 }
 
 export async function listVisibleUsersForActor(actor: SessionUser) {

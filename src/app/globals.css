@@ -450,8 +450,8 @@
 
   /* Gradient buttons */
   .btn-gradient {
-    background: #ffffff;
-    color: #09090b;
+    background: var(--primary);
+    color: var(--primary-foreground);
     border: none;
     border-radius: 0.75rem;
     font-weight: 700;
@@ -461,20 +461,20 @@
   .btn-gradient:hover {
     opacity: 0.9;
     transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 20px var(--overlay-strong);
   }
 
   .btn-secondary-gradient {
-    background: rgba(255, 255, 255, 0.12);
-    color: #fafafa;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--overlay-medium);
+    color: var(--foreground);
+    border: 1px solid var(--border);
     border-radius: 0.75rem;
     font-weight: 700;
     transition: all 200ms ease;
     cursor: pointer;
   }
   .btn-secondary-gradient:hover {
-    background: rgba(255, 255, 255, 0.18);
+    background: var(--overlay-strong);
     transform: translateY(-1px);
   }
 

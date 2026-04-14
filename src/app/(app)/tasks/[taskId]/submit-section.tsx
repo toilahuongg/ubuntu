@@ -3,41 +3,51 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Send } from "lucide-react";
-import type { SerializedUser } from "@/lib/domain";
-import { submitTaskAction } from "@/app/(app)/actions";
+
+import type { SessionUser } from "@/lib/domain";
+import { submitTaskAction } from "@/app/(app)/tasks/actions";
+import type { TaskStatus } from "@/lib/tasks/types";
 
 export function SubmitSection({
-  occurrenceId,
+  taskId,
   allowedSubjects,
   selectedSubject,
   myCompletionCount,
   status,
 }: {
-  occurrenceId: string;
-  allowedSubjects: SerializedUser[];
-  selectedSubject: SerializedUser;
+  taskId: string;
+  allowedSubjects: SessionUser[];
+  selectedSubject: SessionUser;
   myCompletionCount: number;
-  status: "OPEN" | "CLOSED";
+  status: TaskStatus;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [currentSubjectId, setCurrentSubjectId] = useState(selectedSubject.id);
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubjectChange(subjectId: string) {
     setCurrentSubjectId(subjectId);
-    router.replace(`/tasks/${occurrenceId}?subject=${subjectId}`);
+    setError(null);
+    router.replace(`/tasks/${taskId}?subject=${subjectId}`);
   }
 
   function handleSubmit() {
+    setError(null);
     startTransition(async () => {
-      await submitTaskAction(occurrenceId, currentSubjectId);
-      router.refresh();
+      const result = await submitTaskAction(taskId, currentSubjectId);
+      if (result.ok) {
+        router.refresh();
+      } else {
+        setError(result.error);
+      }
     });
   }
 
+  const isLocked = status === "LOCKED";
+
   return (
     <div className="glass-card p-4 space-y-4">
-      {/* Subject selector */}
       {allowedSubjects.length > 1 && (
         <div>
           <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -57,7 +67,6 @@ export function SubmitSection({
         </div>
       )}
 
-      {/* Completion count */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">
@@ -76,10 +85,15 @@ export function SubmitSection({
         )}
       </div>
 
-      {/* Submit button */}
+      {error && (
+        <p role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
+      )}
+
       <button
         type="button"
-        disabled={isPending || status === "CLOSED"}
+        disabled={isPending || isLocked}
         aria-busy={isPending}
         onClick={handleSubmit}
         className="btn-gradient flex h-11 w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
@@ -95,7 +109,7 @@ export function SubmitSection({
         ) : (
           <>
             <Send className="h-4 w-4" aria-hidden />
-            {status === "CLOSED" ? "Đã đóng" : "Nộp nhiệm vụ"}
+            {isLocked ? "Đã khoá" : "Nộp nhiệm vụ"}
           </>
         )}
       </button>

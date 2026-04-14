@@ -3,7 +3,7 @@ import { MapPin, Users, CheckCircle2, Clock, TrendingUp } from "lucide-react";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { canAccessRegionManagement } from "@/lib/permissions";
-import { getRegionDashboardData } from "@/lib/services/task-service";
+import { buildDashboardView } from "@/lib/tasks/dashboard-service";
 import { getRegionById } from "@/lib/services/organization-service";
 import { getTodayDateKey, formatDateLabel } from "@/lib/dates";
 import { RegionRoster } from "./region-roster";
@@ -18,7 +18,7 @@ export default async function RegionPage() {
 
   const dateKey = getTodayDateKey();
   const [data, region] = await Promise.all([
-    getRegionDashboardData(session, dateKey),
+    buildDashboardView(session, dateKey),
     session.regionId ? getRegionById(session.regionId) : null,
   ]);
 
@@ -36,31 +36,30 @@ export default async function RegionPage() {
         </div>
       </div>
 
-      {/* Summary stats */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard
           icon={<Users className="h-4 w-4" />}
           label="Thành viên"
-          value={data.summary.memberCount}
+          value={data.highlights.visibleUsers}
         />
         <StatCard
           icon={<TrendingUp className="h-4 w-4" />}
           label="Hoàn thành"
-          value={`${data.summary.completionPercent}%`}
+          value={`${data.highlights.completionPercent}%`}
         />
         <StatCard
           icon={<CheckCircle2 className="h-4 w-4" />}
           label="Đã nộp"
-          value={data.summary.completedSlots}
+          value={data.highlights.completed}
         />
         <StatCard
           icon={<Clock className="h-4 w-4" />}
           label="Còn lại"
-          value={data.summary.pendingSlots}
+          value={data.highlights.pending}
         />
       </div>
 
-      {data.occurrences.length === 0 ? (
+      {data.cards.length === 0 ? (
         <div className="glass-card flex flex-col items-center py-12 text-center">
           <CheckCircle2 className="mb-3 h-10 w-10 text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
@@ -70,12 +69,9 @@ export default async function RegionPage() {
       ) : (
         <section>
           <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Thành viên ({data.members.length})
+            Thành viên ({data.roster.length})
           </h2>
-          <RegionRoster
-            members={data.members}
-            occurrences={data.occurrences}
-          />
+          <RegionRoster roster={data.roster} cards={data.cards} />
         </section>
       )}
     </div>

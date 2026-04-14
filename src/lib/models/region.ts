@@ -6,6 +6,8 @@ const regionSchema = new Schema(
     leadUserIds: [{ ref: "User", type: Schema.Types.ObjectId }],
     name: { required: true, trim: true, type: String },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId },
+    telegramChatId: { default: null, index: true, sparse: true, type: Number },
+    telegramChatTitle: { default: null, trim: true, type: String },
     zoneId: { ref: "Zone", required: true, type: Schema.Types.ObjectId },
   },
   { timestamps: true },

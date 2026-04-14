@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { LogOut, Star, Trophy, Zap, History } from "lucide-react";
+import { LogOut, MapPin, Star, Trophy, Users, Zap, History, Map } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/current-user";
 import { ROLE_LABELS } from "@/lib/domain";
 import { getUserProgress, getXpHistory } from "@/lib/services/gamification-service";
+import { getUserOrgContext } from "@/lib/services/organization-service";
 import { getAllLevelInfos } from "@/lib/level-utils";
 import { EditProfileForm } from "./edit-profile-form";
 import { LogoutButton } from "./logout-button";
@@ -14,9 +15,14 @@ export default async function ProfilePage() {
   const session = await getCurrentUser();
   if (!session) redirect("/login");
 
-  const [progress, xpHistory] = await Promise.all([
+  const [progress, xpHistory, orgContext] = await Promise.all([
     getUserProgress(session.id),
     getXpHistory(session.id, 10),
+    getUserOrgContext({
+      teamId: session.teamId,
+      zoneId: session.zoneId,
+      regionId: session.regionId,
+    }),
   ]);
 
   const allLevels = getAllLevelInfos(session.gender ?? "male");
@@ -64,7 +70,7 @@ export default async function ProfilePage() {
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-overlay-medium">
             <div
-              className="progress-glow h-full rounded-full bg-gradient-to-r from-white/40 to-white/80 transition-all duration-500"
+              className="progress-glow h-full rounded-full bg-foreground/80 transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -74,6 +80,59 @@ export default async function ProfilePage() {
           </p>
         </div>
       </div>
+
+      {/* Organization context */}
+      {(orgContext.region || orgContext.zone || orgContext.team) && (
+        <section>
+          <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Đơn vị trực thuộc
+          </h2>
+          <div className="glass-card divide-y divide-border overflow-hidden">
+            {orgContext.region && (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <Map className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-muted-foreground">Khu vực</p>
+                  <p className="truncate text-sm font-medium">
+                    {orgContext.region.name}
+                  </p>
+                </div>
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {orgContext.region.code}
+                </span>
+              </div>
+            )}
+            {orgContext.zone && (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-muted-foreground">Địa vực</p>
+                  <p className="truncate text-sm font-medium">
+                    {orgContext.zone.name}
+                  </p>
+                </div>
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {orgContext.zone.code}
+                </span>
+              </div>
+            )}
+            {orgContext.team && (
+              <div className="flex items-center gap-3 px-4 py-3">
+                <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-muted-foreground">Nhóm</p>
+                  <p className="truncate text-sm font-medium">
+                    {orgContext.team.name}
+                  </p>
+                </div>
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {orgContext.team.code}
+                </span>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Quick stats */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">

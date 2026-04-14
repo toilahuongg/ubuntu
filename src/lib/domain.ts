@@ -16,8 +16,8 @@ export type UserStatus = (typeof USER_STATUSES)[number];
 export const GENDERS = ["male", "female"] as const;
 export type Gender = (typeof GENDERS)[number];
 
-export const TEMPLATE_SCOPES = ["TEAM", "ZONE", "REGION"] as const;
-export type TemplateScope = (typeof TEMPLATE_SCOPES)[number];
+export const TASK_SCOPES = ["TEAM", "ZONE", "REGION"] as const;
+export type TaskScope = (typeof TASK_SCOPES)[number];
 
 export type SessionUser = {
   id: string;
@@ -26,6 +26,8 @@ export type SessionUser = {
   bio?: string | null;
   username?: string | null;
   telegramId?: number | null;
+  googleId?: string | null;
+  email?: string | null;
   role: Role;
   status: UserStatus;
   teamId?: string | null;
@@ -45,7 +47,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   MEMBER: "Thành viên",
 };
 
-export const SCOPE_LABELS: Record<TemplateScope, string> = {
+export const SCOPE_LABELS: Record<TaskScope, string> = {
   TEAM: "Toàn Nhóm",
   ZONE: "Địa Vực",
   REGION: "Khu vực",

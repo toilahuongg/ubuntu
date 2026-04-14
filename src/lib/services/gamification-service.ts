@@ -56,29 +56,6 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
   };
 }
 
-export async function getTeamLeaderboard(teamId: string): Promise<LeaderboardEntry[]> {
-  await connectToDatabase();
-
-  const users = (await UserModel.find({
-    status: "ACTIVE",
-    teamId: toObjectId(teamId),
-  })
-    .sort({ totalXp: -1, level: -1 })
-    .lean()) as UserRecord[];
-
-  return users.map((user, index) => {
-    const u = user as UserRecord & { gender?: string };
-    return {
-      fullName: u.fullName,
-      id: u._id.toString(),
-      level: u.level ?? 1,
-      levelInfo: getLevelInfo(u.level ?? 1, u.gender ?? "male"),
-      rank: index + 1,
-      totalXp: u.totalXp ?? 0,
-    };
-  });
-}
-
 export async function getXpHistory(
   userId: string,
   limit = 20,

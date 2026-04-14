@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   Layers,
   LayoutDashboard,
-  ListChecks,
   MapPin,
   Trophy,
   User,
@@ -27,12 +27,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    href: "/templates",
-    label: "Nhiệm vụ",
-    icon: ListChecks,
-    roles: ["TEAM_LEAD", "ZONE_LEAD", "REGIONAL_LEAD"],
-  },
-  {
     href: "/zone",
     label: "Địa vực",
     icon: Layers,
@@ -43,6 +37,11 @@ const NAV_ITEMS: NavItem[] = [
     label: "Khu vực",
     icon: MapPin,
     roles: ["REGIONAL_LEAD"],
+  },
+  {
+    href: "/activities",
+    label: "Hoạt động",
+    icon: Activity,
   },
   {
     href: "/leaderboard",
@@ -58,7 +57,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/admin",
     label: "Quản lý",
     icon: Settings,
-    roles: ["TEAM_LEAD"],
+    roles: ["TEAM_LEAD", "ZONE_LEAD", "REGIONAL_LEAD"],
   },
 ];
 
@@ -72,11 +71,11 @@ export function BottomNav({ role }: { role: Role }) {
   return (
     <nav
       aria-label="Điều hướng chính"
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_0_rgba(255,255,255,0.04)_inset,0_-8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-sidebar/80 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_0_var(--overlay-subtle)_inset,0_-8px_24px_-12px_var(--overlay-strong)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-sidebar/60"
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/[0.04] via-white/[0.01] to-transparent"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-overlay-subtle via-transparent to-transparent"
       />
       <div className="relative mx-auto flex max-w-2xl items-center justify-around py-1">
         {visibleItems.map((item) => {

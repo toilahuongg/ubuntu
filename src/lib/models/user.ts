@@ -17,6 +17,9 @@ const userSchema = new Schema(
     telegramId: { default: null, type: Number },
     totalXp: { default: 0, type: Number },
     username: { default: null, trim: true, type: String },
+    googleId: { default: null, trim: true, type: String },
+    email: { default: null, lowercase: true, trim: true, type: String },
+    avatarUrl: { default: null, trim: true, type: String },
   },
   { timestamps: true },
 );
@@ -29,6 +32,22 @@ userSchema.index(
   { telegramId: 1 },
   {
     partialFilterExpression: { telegramId: { $type: "number" } },
+    unique: true,
+  },
+);
+
+userSchema.index(
+  { googleId: 1 },
+  {
+    partialFilterExpression: { googleId: { $type: "string" } },
+    unique: true,
+  },
+);
+
+userSchema.index(
+  { email: 1 },
+  {
+    partialFilterExpression: { email: { $type: "string" } },
     unique: true,
   },
 );

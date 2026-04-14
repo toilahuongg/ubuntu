@@ -27,11 +27,14 @@ vi.mock("@/lib/telegram-bot", () => ({
   safeSendTelegramMessage: sendMock,
 }));
 
-vi.mock("@/lib/services/task-service", () => ({
+vi.mock("@/lib/notifications/telegram-presenters", () => ({
   getSessionUserByTelegramId: getSessionUserByTelegramIdMock,
   getTelegramLeaderboard: getTelegramLeaderboardMock,
   getTelegramProfile: getTelegramProfileMock,
   getTelegramTodayDigest: getTelegramTodayDigestMock,
+}));
+
+vi.mock("@/lib/tasks/submission-service", () => ({
   saveSubmission: saveSubmissionMock,
 }));
 

@@ -4,9 +4,9 @@ import { connectToDatabase } from "@/lib/mongoose";
 import {
   AuditLogModel,
   RegionModel,
+  ReminderLogModel,
   SubmissionModel,
-  TaskOccurrenceModel,
-  TaskTemplateModel,
+  TaskModel,
   TeamModel,
   UserModel,
   ZoneModel,
@@ -17,9 +17,9 @@ async function main() {
 
   await Promise.all([
     AuditLogModel.deleteMany({}),
+    ReminderLogModel.deleteMany({}),
     SubmissionModel.deleteMany({}),
-    TaskOccurrenceModel.deleteMany({}),
-    TaskTemplateModel.deleteMany({}),
+    TaskModel.deleteMany({}),
     UserModel.deleteMany({}),
     RegionModel.deleteMany({}),
     ZoneModel.deleteMany({}),
