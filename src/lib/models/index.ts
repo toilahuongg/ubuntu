@@ -9,4 +9,3 @@ export * from "@/lib/models/telegram-pending-group";
 export * from "@/lib/models/user";
 export * from "@/lib/models/zone";
 export * from "@/lib/models/xp-transaction";
-export * from "@/lib/models/point-transaction";

@@ -41,6 +41,35 @@ export const taskInputSchema = z
     },
   );
 
+export const updateTaskInputSchema = z
+  .object({
+    taskId: z.string().min(1, "Thiếu mã nhiệm vụ."),
+    deadlineTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Deadline phải theo HH:mm"),
+    description: z.string().max(280).optional().default(""),
+    expReward: z
+      .number()
+      .int()
+      .min(0, "EXP không được âm")
+      .max(10000)
+      .default(10),
+    pointReward: z
+      .number()
+      .int()
+      .min(0, "Điểm không được âm")
+      .max(10000)
+      .default(10),
+    lateWindowDays: z
+      .number()
+      .int()
+      .min(1, "Cửa sổ nhập bù tối thiểu 1 ngày")
+      .max(365)
+      .default(7),
+    targetCount: z.number().int().min(1).max(100000).optional(),
+    title: z.string().min(3, "Tiêu đề quá ngắn").max(80),
+  });
+
 export const monthlyGoalInputSchema = z.object({
   taskId: z.string().min(1, "Thiếu mã nhiệm vụ."),
   yearMonth: z
@@ -56,6 +85,13 @@ export const submitTaskInputSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Ngày không hợp lệ.")
     .optional(),
+  count: z
+    .number()
+    .int("Số lần phải là số nguyên.")
+    .min(0, "Số lần không được âm.")
+    .max(100, "Số lần tối đa là 100.")
+    .optional(),
+  mode: z.enum(["increment", "set"]).optional(),
 });
 
 export const toggleTaskInputSchema = z.object({

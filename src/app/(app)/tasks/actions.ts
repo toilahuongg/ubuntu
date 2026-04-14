@@ -20,22 +20,32 @@ export async function submitTaskAction(
   taskId: string,
   subjectUserId: string,
   dateKey?: string,
+  count?: number,
+  mode?: "increment" | "set",
 ): Promise<ActionResult<SaveSubmissionResult>> {
   return runAction(async () => {
     const parsed = submitTaskInputSchema.parse({
       taskId,
       subjectUserId,
       dateKey,
+      count,
+      mode,
     });
     const session = await requireSession();
     const today = getTodayDateKey();
     const effectiveDate = parsed.dateKey ?? today;
+    const isSettingZero =
+      parsed.mode === "set" && (parsed.count ?? 0) === 0;
     const result = await saveSubmission(
       session,
       parsed.taskId,
       parsed.subjectUserId,
       effectiveDate,
-      { notify: effectiveDate === today },
+      {
+        notify: effectiveDate === today && !isSettingZero,
+        count: parsed.count,
+        mode: parsed.mode,
+      },
     );
     revalidatePath("/dashboard");
     revalidatePath(`/tasks/${parsed.taskId}`);

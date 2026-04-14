@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronRight, Clock, Target, Trophy, UserCheck, Zap } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Clock, Target, Trophy, Zap } from "lucide-react";
 import Link from "next/link";
 
 import { getSessionUser } from "@/lib/auth/session";
@@ -45,7 +45,10 @@ export default async function TaskDetailPage({
   const proxyCandidates = detail.rosterMembers.filter(
     (m) => m.id !== session.id && canProxySubmit(session, m),
   );
-  const canShowProxyLink = proxyCandidates.length > 0;
+  const proxyHint =
+    proxyCandidates.length > 0
+      ? `Bạn + ${proxyCandidates.length} thành viên khác`
+      : "Nhập bù cho các ngày trong tháng";
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
@@ -152,26 +155,21 @@ export default async function TaskDetailPage({
         subjectUserId={session.id}
         myCompletionCount={detail.myCompletionCount}
         status={detail.status}
-        backfillDays={detail.backfillDays}
       />
 
-      {canShowProxyLink && (
-        <Link
-          href={`/tasks/${detail.id}/proxy`}
-          className="glass-card flex items-center justify-between p-4 transition-colors hover:bg-overlay-subtle"
-        >
-          <div className="flex items-center gap-3">
-            <UserCheck className="h-5 w-5 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-semibold">Nhập hộ cho thành viên</p>
-              <p className="text-xs text-muted-foreground">
-                {proxyCandidates.length} thành viên khả dụng
-              </p>
-            </div>
+      <Link
+        href={`/tasks/${detail.id}/proxy`}
+        className="glass-card flex items-center justify-between p-4 transition-colors hover:bg-overlay-subtle"
+      >
+        <div className="flex items-center gap-3">
+          <CalendarDays className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <p className="text-sm font-semibold">Lịch & nhập bù</p>
+            <p className="text-xs text-muted-foreground">{proxyHint}</p>
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        </Link>
-      )}
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </Link>
 
       <MonthActivity activities={activities} />
     </div>

@@ -7,7 +7,6 @@ import { getTodayDateKey } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   AuditLogModel,
-  PointTransactionModel,
   SubmissionModel,
   type SubmissionRecordModel,
   TaskModel,
@@ -22,7 +21,6 @@ import { getLevelFromXp } from "@/lib/xp";
 import {
   DEFAULT_EXP_REWARD,
   DEFAULT_LATE_WINDOW_DAYS,
-  DEFAULT_POINT_REWARD,
 } from "@/lib/tasks/constants";
 import { appliesToUser, isWithinLateWindow } from "@/lib/tasks/policy";
 import { DEFAULT_TASK_TYPE } from "@/lib/tasks/constants";
@@ -49,9 +47,16 @@ export async function saveSubmission(
   taskId: string,
   subjectUserId: string,
   dateKey: string = getTodayDateKey(),
-  options: { notify?: boolean } = {},
+  options: {
+    notify?: boolean;
+    count?: number;
+    mode?: "increment" | "set";
+  } = {},
 ): Promise<SaveSubmissionResult> {
   const shouldNotify = options.notify ?? true;
+  const mode = options.mode ?? "increment";
+  const rawCount = Math.floor(options.count ?? (mode === "set" ? 0 : 1));
+  const count = Math.max(0, Math.min(100, rawCount));
   await connectToDatabase();
 
   const [taskRaw, subjectRaw] = await Promise.all([
@@ -100,7 +105,6 @@ export async function saveSubmission(
   }
 
   const expReward = taskRaw.expReward ?? DEFAULT_EXP_REWARD;
-  const pointReward = taskRaw.pointReward ?? DEFAULT_POINT_REWARD;
 
   const supportsTransactions = (() => {
     try {
@@ -127,18 +131,67 @@ export async function saveSubmission(
       .session(session ?? null)
       .lean()) as SubmissionRecordModel | null;
 
+    if (mode === "set" && count === 0) {
+      if (!existing) {
+        return {
+          submissionId: "",
+          completionCount: 0,
+          isFirstSubmission: false,
+          xpAwarded: 0,
+          newLevel: null,
+          leveledUp: false,
+          taskJustCompleted: false,
+        };
+      }
+      await SubmissionModel.deleteOne(filter, session ? { session } : undefined);
+      await AuditLogModel.create(
+        [
+          {
+            action: "submission.cleared",
+            actorUserId: toObjectId(actor.id),
+            entityId: existing._id.toString(),
+            entityType: "Submission",
+            metadata: { date: dateKey, taskId },
+            subjectUserId: subjectRaw._id,
+          },
+        ],
+        session ? { session } : undefined,
+      );
+      return {
+        submissionId: existing._id.toString(),
+        completionCount: 0,
+        isFirstSubmission: false,
+        xpAwarded: 0,
+        newLevel: null,
+        leveledUp: false,
+        taskJustCompleted: false,
+      };
+    }
+
     const isFirstSubmission = !existing;
+
+    const updateOp =
+      mode === "set"
+        ? {
+            $set: {
+              completionCount: count,
+              actorUserId: toObjectId(actor.id),
+              updatedAt: new Date(),
+            },
+            $setOnInsert: { submittedAt: new Date() },
+          }
+        : {
+            $inc: { completionCount: count },
+            $set: {
+              actorUserId: toObjectId(actor.id),
+              updatedAt: new Date(),
+            },
+            $setOnInsert: { submittedAt: new Date() },
+          };
 
     const updated = (await SubmissionModel.findOneAndUpdate(
       filter,
-      {
-        $inc: { completionCount: 1 },
-        $set: {
-          actorUserId: toObjectId(actor.id),
-          updatedAt: new Date(),
-        },
-        $setOnInsert: { submittedAt: new Date() },
-      },
+      updateOp,
       {
         new: true,
         upsert: true,
@@ -182,27 +235,6 @@ export async function saveSubmission(
           );
         }
       }
-    }
-
-    if (isFirstSubmission && pointReward > 0) {
-      await PointTransactionModel.create(
-        [
-          {
-            amount: pointReward,
-            description: `Hoàn thành: ${taskRaw.title}`,
-            source: "task_completion",
-            sourceId: taskRaw._id,
-            userId: subjectRaw._id,
-          },
-        ],
-        session ? { session } : undefined,
-      );
-
-      await UserModel.updateOne(
-        { _id: subjectRaw._id },
-        { $inc: { totalPoints: pointReward } },
-        session ? { session } : undefined,
-      );
     }
 
     await AuditLogModel.create(

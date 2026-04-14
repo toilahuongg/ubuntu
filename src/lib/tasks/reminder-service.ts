@@ -2,6 +2,8 @@ import "server-only";
 
 import { connectToDatabase } from "@/lib/mongoose";
 import {
+  MonthlyGoalModel,
+  type MonthlyGoalRecord,
   ReminderLogModel,
   type ReminderLogRecord,
   SubmissionModel,
@@ -124,4 +126,79 @@ export async function markReminderSent(
     })),
     { ordered: false },
   );
+}
+
+export async function getMonthlyGoalReminderCandidates(
+  yearMonth: string,
+): Promise<ReminderCandidate[]> {
+  await connectToDatabase();
+
+  const tasks = (await TaskModel.find({
+    isActive: true,
+    taskType: "MONTHLY_PER_MEMBER",
+  }).lean()) as TaskRecord[];
+
+  if (tasks.length === 0) return [];
+
+  const taskIds = tasks.map((t) => t._id);
+
+  const [sentLogs, allUsers, goals] = await Promise.all([
+    ReminderLogModel.find({
+      date: yearMonth,
+      taskId: { $in: taskIds },
+    }).lean() as Promise<ReminderLogRecord[]>,
+    UserModel.find({
+      status: "ACTIVE",
+      telegramId: { $ne: null },
+    }).lean() as Promise<UserRecord[]>,
+    MonthlyGoalModel.find({
+      yearMonth,
+      taskId: { $in: taskIds },
+    }).lean() as Promise<MonthlyGoalRecord[]>,
+  ]);
+
+  const sentPairs = new Set(
+    sentLogs.map((l) => `${l.taskId.toString()}:${l.userId.toString()}`),
+  );
+  const goalPairs = new Set(
+    goals.map((g) => `${g.taskId.toString()}:${g.userId.toString()}`),
+  );
+
+  const reminders: ReminderCandidate[] = [];
+
+  for (const task of tasks) {
+    const scope = taskToScope(task);
+    const taskId = task._id.toString();
+
+    for (const user of allUsers) {
+      const userId = user._id.toString();
+      const applies = appliesToUser(scope, {
+        teamId: user.teamId?.toString() ?? null,
+        zoneId: user.zoneId?.toString() ?? null,
+        regionId: user.regionId?.toString() ?? null,
+        role: user.role,
+      });
+      if (!applies) continue;
+      if (!user.telegramId) continue;
+      const pairKey = `${taskId}:${userId}`;
+      if (goalPairs.has(pairKey)) continue;
+      if (sentPairs.has(pairKey)) continue;
+
+      reminders.push({
+        chatId: user.telegramId,
+        taskId,
+        userId,
+        text: `Nhắc nhở: bạn chưa đặt mục tiêu tháng ${yearMonth} cho nhiệm vụ "${task.title}". Mở WebApp để cập nhật.`,
+      });
+    }
+  }
+
+  return reminders;
+}
+
+export async function markMonthlyGoalReminderSent(
+  yearMonth: string,
+  recipients: ReminderRecipient[],
+): Promise<void> {
+  await markReminderSent(yearMonth, recipients);
 }

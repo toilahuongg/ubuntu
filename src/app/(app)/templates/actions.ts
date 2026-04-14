@@ -7,10 +7,16 @@ import { getSessionUser } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
 import type { SessionUser } from "@/lib/domain";
 import { canManageTasks } from "@/lib/permissions";
-import { createTask, deleteTask, toggleTask } from "@/lib/tasks/task-service";
+import {
+  createTask,
+  deleteTask,
+  toggleTask,
+  updateTask,
+} from "@/lib/tasks/task-service";
 import {
   taskInputSchema,
   toggleTaskInputSchema,
+  updateTaskInputSchema,
 } from "@/lib/validation";
 
 async function requireManager(): Promise<SessionUser> {
@@ -47,6 +53,34 @@ export async function createTaskAction(
     revalidatePath("/templates");
     revalidatePath("/dashboard");
     return { id };
+  });
+}
+
+export async function updateTaskAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManager();
+    const rawTargetCount = formData.get("targetCount");
+    const parsed = updateTaskInputSchema.parse({
+      taskId: formData.get("taskId") ?? "",
+      title: formData.get("title") ?? "",
+      description: (formData.get("description") as string) ?? "",
+      deadlineTime: formData.get("deadlineTime") ?? "",
+      expReward: Number(formData.get("expReward") ?? 10),
+      pointReward: Number(formData.get("pointReward") ?? 10),
+      lateWindowDays: Number(formData.get("lateWindowDays") ?? 7),
+      targetCount:
+        rawTargetCount != null && rawTargetCount !== ""
+          ? Number(rawTargetCount)
+          : undefined,
+    });
+    const { taskId, ...rest } = parsed;
+    await updateTask(session, taskId, rest);
+    revalidatePath("/templates");
+    revalidatePath("/dashboard");
+    revalidatePath(`/tasks/${taskId}`);
+    revalidatePath(`/tasks/${taskId}/proxy`);
   });
 }
 

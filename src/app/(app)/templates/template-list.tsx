@@ -1,9 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Clock, ToggleLeft, ToggleRight, Trash2, Trophy, Zap } from "lucide-react";
+import {
+  Clock,
+  Pencil,
+  ToggleLeft,
+  ToggleRight,
+  Trash2,
+  Trophy,
+  Zap,
+} from "lucide-react";
 
 import { deleteTaskAction, toggleTaskAction } from "./actions";
+import { EditTemplateForm } from "./edit-template-form";
 import { SCOPE_LABELS } from "@/lib/domain";
 import type { TaskSummary, TemplateCoverage } from "@/lib/tasks/types";
 
@@ -46,6 +55,7 @@ function TaskCard({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   function handleToggle() {
     setError(null);
@@ -68,6 +78,7 @@ function TaskCard({
   }
 
   return (
+    <div className="flex flex-col gap-1">
     <div className="glass-card flex flex-col gap-1 p-4">
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
@@ -119,6 +130,16 @@ function TaskCard({
         <div className="ml-3 flex items-center">
           <button
             type="button"
+            onClick={() => setIsEditing((v) => !v)}
+            disabled={isPending}
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground disabled:opacity-50"
+            aria-label="Sửa nhiệm vụ"
+            aria-pressed={isEditing}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={handleToggle}
             disabled={isPending}
             className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground disabled:opacity-50"
@@ -145,6 +166,10 @@ function TaskCard({
         <p role="alert" className="text-[11px] text-destructive">
           {error}
         </p>
+      )}
+    </div>
+      {isEditing && (
+        <EditTemplateForm task={task} onClose={() => setIsEditing(false)} />
       )}
     </div>
   );

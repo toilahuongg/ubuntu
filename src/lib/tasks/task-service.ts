@@ -115,6 +115,24 @@ export async function sumTaskCompletions(
   return row?.total ?? 0;
 }
 
+export async function listSubjectMonthSubmissions(
+  taskId: string,
+  subjectUserId: string,
+  yearMonth: string,
+): Promise<Record<string, number>> {
+  await connectToDatabase();
+  const subs = (await SubmissionModel.find({
+    taskId: toObjectId(taskId),
+    subjectUserId: toObjectId(subjectUserId),
+    date: { $regex: `^${yearMonth}` },
+  }).lean()) as SubmissionRecordModel[];
+  const result: Record<string, number> = {};
+  for (const s of subs) {
+    result[s.date] = (result[s.date] ?? 0) + (s.completionCount ?? 0);
+  }
+  return result;
+}
+
 export async function getMonthlyGoal(
   taskId: string,
   userId: string,
@@ -418,6 +436,74 @@ export async function createTask(
   });
 
   return created._id.toString();
+}
+
+export type UpdateTaskInput = {
+  title: string;
+  description?: string;
+  deadlineTime: string;
+  expReward?: number;
+  pointReward?: number;
+  lateWindowDays?: number;
+  targetCount?: number | null;
+};
+
+export async function updateTask(
+  actor: SessionUser,
+  taskId: string,
+  input: UpdateTaskInput,
+): Promise<void> {
+  await connectToDatabase();
+
+  const record = (await TaskModel.findById(taskId).lean()) as TaskRecord | null;
+
+  if (!record || !canManageTask(actor, taskToScope(record))) {
+    throw new Error("Không tìm thấy nhiệm vụ phù hợp.");
+  }
+
+  const taskType = record.taskType ?? DEFAULT_TASK_TYPE;
+  let nextTargetCount: number | null = record.targetCount ?? null;
+  if (taskType === "COUNT_TOTAL") {
+    if (
+      !input.targetCount ||
+      !Number.isInteger(input.targetCount) ||
+      input.targetCount < 1
+    ) {
+      throw new Error(
+        "Task tổng hợp theo số lần cần mục tiêu (targetCount) ≥ 1.",
+      );
+    }
+    nextTargetCount = input.targetCount;
+  } else {
+    nextTargetCount = null;
+  }
+
+  await TaskModel.updateOne(
+    { _id: record._id },
+    {
+      $set: {
+        title: input.title,
+        description: input.description?.trim() ?? "",
+        deadlineTime: input.deadlineTime,
+        expReward: input.expReward ?? DEFAULT_EXP_REWARD,
+        pointReward: input.pointReward ?? DEFAULT_POINT_REWARD,
+        lateWindowDays: input.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS,
+        targetCount: nextTargetCount,
+      },
+    },
+  );
+
+  await AuditLogModel.create({
+    action: "task.updated",
+    actorUserId: toObjectId(actor.id),
+    entityId: taskId,
+    entityType: "Task",
+    metadata: {
+      title: input.title,
+      taskType,
+      targetCount: nextTargetCount,
+    },
+  });
 }
 
 export async function deleteTask(

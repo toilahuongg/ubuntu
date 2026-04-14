@@ -1,13 +1,12 @@
 import "server-only";
 
-import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 
-import { getAppTimezone } from "@/lib/dates";
+import { getAppTimezone, getCurrentYearMonth } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
-  PointTransactionModel,
   RegionModel,
-  UserModel,
+  SubmissionModel,
   type UserRecord,
 } from "@/lib/models";
 import { getLevelInfo } from "@/lib/level-utils";
@@ -21,12 +20,6 @@ export type RegionLeaderboardEntry = {
   totalXp: number;
   memberCount: number;
 };
-
-function getMonthStart(now = new Date()): Date {
-  const tz = getAppTimezone();
-  const yearMonth = formatInTimeZone(now, tz, "yyyy-MM");
-  return fromZonedTime(`${yearMonth}-01T00:00:00`, tz);
-}
 
 type MonthlyXpRow = { _id: unknown; monthlyXp: number };
 
@@ -46,16 +39,36 @@ function toLeaderboardEntry(
   };
 }
 
+function buildMonthlyPointsPipeline(yearMonth: string) {
+  return [
+    { $match: { date: { $regex: `^${yearMonth}` } } },
+    {
+      $lookup: {
+        as: "task",
+        foreignField: "_id",
+        from: "tasks",
+        localField: "taskId",
+      },
+    },
+    { $unwind: "$task" },
+    {
+      $group: {
+        _id: "$subjectUserId",
+        monthlyXp: { $sum: { $ifNull: ["$task.pointReward", 0] } },
+      },
+    },
+  ];
+}
+
 async function getTopUsersByMonthlyXp(
   filter: Record<string, unknown>,
   limit: number,
 ): Promise<LeaderboardEntry[]> {
   await connectToDatabase();
-  const since = getMonthStart();
+  const yearMonth = getCurrentYearMonth();
 
-  const topIds = (await PointTransactionModel.aggregate([
-    { $match: { createdAt: { $gte: since } } },
-    { $group: { _id: "$userId", monthlyXp: { $sum: "$amount" } } },
+  const topIds = (await SubmissionModel.aggregate([
+    ...buildMonthlyPointsPipeline(yearMonth),
     {
       $lookup: {
         as: "user",
@@ -99,11 +112,10 @@ export async function getTopRegions(
   limit = 3,
 ): Promise<RegionLeaderboardEntry[]> {
   await connectToDatabase();
-  const since = getMonthStart();
+  const yearMonth = getCurrentYearMonth();
 
-  const aggregated = (await PointTransactionModel.aggregate([
-    { $match: { createdAt: { $gte: since } } },
-    { $group: { _id: "$userId", monthlyXp: { $sum: "$amount" } } },
+  const aggregated = (await SubmissionModel.aggregate([
+    ...buildMonthlyPointsPipeline(yearMonth),
     {
       $lookup: {
         as: "user",
