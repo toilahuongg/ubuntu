@@ -33,7 +33,7 @@ export default async function TaskDetailPage({
       <div>
         <Link
           href="/dashboard"
-          className="mb-3 inline-flex cursor-pointer items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="mb-3 -ml-2 inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-overlay-subtle hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Quay lại
@@ -58,7 +58,7 @@ export default async function TaskDetailPage({
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
               detail.status === "OPEN"
-                ? "bg-white/10 text-foreground"
+                ? "bg-overlay-medium text-foreground"
                 : "bg-muted text-muted-foreground"
             }`}
           >
@@ -97,7 +97,7 @@ export default async function TaskDetailPage({
               </div>
               <div className="flex items-center gap-2">
                 {member.completionCount > 0 ? (
-                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/12 px-2 text-xs font-bold">
+                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-overlay-medium px-2 text-xs font-bold">
                     {member.completionCount}
                   </span>
                 ) : (

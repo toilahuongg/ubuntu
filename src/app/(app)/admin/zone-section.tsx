@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { Layers, MapPin, Pencil, Users, X } from "lucide-react";
 
-import { updateZoneAction } from "@/app/(app)/actions";
+import { deleteZoneAction, updateZoneAction } from "@/app/(app)/actions";
+import { ConfirmDeleteButton, FormError } from "./_shared";
 
 type Zone = {
   code: string;
@@ -63,11 +64,15 @@ export function ZoneSection({ zones }: { zones: Zone[] }) {
               <button
                 type="button"
                 onClick={() => setEditingId(zone.id)}
-                className="cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-white/10 hover:text-foreground"
+                className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg transition-colors hover:bg-overlay-medium hover:text-foreground"
                 aria-label="Sửa"
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil className="h-4 w-4" />
               </button>
+              <ConfirmDeleteButton
+                ariaLabel={`Xóa địa vực ${zone.name}`}
+                onConfirm={() => deleteZoneAction(zone.id)}
+              />
             </div>
           </div>
         ),
@@ -78,10 +83,15 @@ export function ZoneSection({ zones }: { zones: Zone[] }) {
 
 function EditZoneRow({ zone, onClose }: { zone: Zone; onClose: () => void }) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
-      await updateZoneAction(formData);
+      const result = await updateZoneAction(formData);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
       onClose();
     });
   }
@@ -95,7 +105,7 @@ function EditZoneRow({ zone, onClose }: { zone: Zone; onClose: () => void }) {
         <button
           type="button"
           onClick={onClose}
-          className="cursor-pointer rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground"
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
@@ -120,11 +130,12 @@ function EditZoneRow({ zone, onClose }: { zone: Zone; onClose: () => void }) {
           Thuộc nhóm: {zone.teamName} (không đổi được)
         </p>
       )}
+      {error && <FormError message={error} onDismiss={() => setError(null)} />}
       <button
         type="submit"
         disabled={isPending}
         aria-busy={isPending}
-        className="btn-gradient flex h-10 w-full items-center justify-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-60"
+        className="btn-gradient flex h-11 w-full items-center justify-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-60"
       >
         {isPending ? (
           <>

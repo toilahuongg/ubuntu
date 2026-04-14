@@ -31,7 +31,7 @@ export default async function LeaderboardPage() {
 
       {/* Top 3 podium */}
       {leaderboard.length >= 3 && (
-        <div className="flex items-end justify-center gap-3 py-4">
+        <div className="flex items-end justify-center gap-2 py-4 sm:gap-3">
           <PodiumCard entry={leaderboard[1]!} position={2} />
           <PodiumCard entry={leaderboard[0]!} position={1} />
           <PodiumCard entry={leaderboard[2]!} position={3} />
@@ -44,14 +44,14 @@ export default async function LeaderboardPage() {
           <div
             key={entry.id}
             className={`flex items-center gap-3 px-4 py-3 ${
-              entry.id === session.id ? "bg-white/6" : ""
+              entry.id === session.id ? "bg-overlay-subtle" : ""
             }`}
           >
             {/* Rank */}
             <span
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
                 entry.rank <= 3
-                  ? "bg-white/12 text-foreground"
+                  ? "bg-overlay-medium text-foreground"
                   : "text-muted-foreground"
               }`}
             >
@@ -69,7 +69,7 @@ export default async function LeaderboardPage() {
 
             {/* Name */}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">
+              <p className="truncate text-sm font-medium" title={entry.fullName}>
                 {entry.fullName}
                 {entry.id === session.id && (
                   <span className="ml-1 text-xs text-muted-foreground">
@@ -113,7 +113,7 @@ function PodiumCard({
   const sizes = { 1: 48, 2: 36, 3: 36 } as const;
 
   return (
-    <div className="flex w-24 flex-col items-center">
+    <div className="flex w-full min-w-0 max-w-[7rem] flex-1 flex-col items-center sm:w-24 sm:flex-none">
       <Image
         src={entry.levelInfo.icon}
         alt={entry.levelInfo.nameVi}
@@ -121,7 +121,7 @@ function PodiumCard({
         height={sizes[position]}
         className="mb-2 drop-shadow-lg"
       />
-      <p className="mb-1 w-full truncate text-center text-xs font-semibold">
+      <p className="mb-1 w-full truncate text-center text-xs font-semibold" title={entry.fullName}>
         {entry.fullName}
       </p>
       <p className="mb-2 text-[10px] text-muted-foreground">

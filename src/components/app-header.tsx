@@ -6,7 +6,7 @@ export function AppHeader({ user }: { user: SessionUser }) {
   return (
     <header
       role="banner"
-      className="sticky top-0 z-40 border-b border-white/10 bg-background/50 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25 sm:px-6 lg:px-8"
+      className="sticky top-0 z-40 border-b border-border bg-background/50 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25 sm:px-6 lg:px-8"
       style={{ height: "var(--header-height)" }}
     >
       <div
@@ -15,8 +15,8 @@ export function AppHeader({ user }: { user: SessionUser }) {
       />
       <div className="relative mx-auto flex h-full max-w-2xl items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10">
-            <Shield className="h-4 w-4 text-white" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-overlay-medium">
+            <Shield className="h-4 w-4 text-foreground" />
           </div>
           <div className="leading-tight">
             <p className="text-sm font-semibold">{user.fullName}</p>

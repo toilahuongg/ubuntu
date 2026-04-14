@@ -3,14 +3,21 @@
 import { useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
 import { createTeamAction } from "@/app/(app)/actions";
+import { FormError } from "./_shared";
 
 export function CreateTeamForm() {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
-      await createTeamAction(formData);
+      const result = await createTeamAction(formData);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setError(null);
       setIsOpen(false);
     });
   }
@@ -35,12 +42,12 @@ export function CreateTeamForm() {
         <button
           type="button"
           onClick={() => setIsOpen(false)}
-          className="cursor-pointer rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground"
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <input
           name="name"
           required
@@ -54,11 +61,12 @@ export function CreateTeamForm() {
           className="h-10 rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
         />
       </div>
+      {error && <FormError message={error} onDismiss={() => setError(null)} />}
       <button
         type="submit"
         disabled={isPending}
         aria-busy={isPending}
-        className="btn-gradient flex h-10 w-full items-center justify-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-60"
+        className="btn-gradient flex h-11 w-full items-center justify-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-60"
       >
         {isPending ? (
           <>

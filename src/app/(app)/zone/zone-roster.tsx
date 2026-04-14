@@ -62,7 +62,9 @@ export function ZoneRoster({
             <button
               type="button"
               onClick={() => setOpenMemberId(isOpen ? null : member.id)}
-              className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-white/5"
+              aria-expanded={isOpen}
+              aria-label={`${member.fullName} — ${isOpen ? "thu gọn" : "mở rộng"}`}
+              className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-overlay-subtle"
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
@@ -157,7 +159,7 @@ function TaskRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{occurrence.title}</p>
         <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span className="rounded-md bg-white/5 px-1.5 py-0.5">
+          <span className="rounded-md bg-overlay-subtle px-1.5 py-0.5">
             {SCOPE_LABELS[occurrence.scope]}
           </span>
           <span className="flex items-center gap-0.5">
@@ -177,9 +179,9 @@ function TaskRow({
           type="button"
           disabled={isPending || isClosed}
           onClick={handleSubmit}
-          className={`ml-3 flex h-8 items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`ml-3 flex h-9 min-w-[4rem] items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
             isDone
-              ? "bg-white/10 text-foreground hover:bg-white/15"
+              ? "bg-overlay-medium text-foreground hover:bg-overlay-strong"
               : "bg-primary/15 text-foreground hover:bg-primary/25"
           }`}
         >

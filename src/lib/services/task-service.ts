@@ -72,6 +72,21 @@ function resolveActorScope(actor: SessionUser): {
   throw new Error("Bạn không có phạm vi để tạo nhiệm vụ.");
 }
 
+function actorCanAccessOccurrence(
+  actor: SessionUser,
+  occurrence: Pick<TaskOccurrenceRecord, "scope" | "teamId" | "zoneId" | "regionId">,
+) {
+  if (actor.role === "REGIONAL_LEAD" && actor.regionId) {
+    return occurrence.regionId?.toString() === actor.regionId;
+  }
+  if (actor.role === "ZONE_LEAD" && actor.zoneId) {
+    return occurrence.zoneId?.toString() === actor.zoneId;
+  }
+  return (
+    !!actor.teamId && occurrence.teamId.toString() === actor.teamId
+  );
+}
+
 function occurrenceAppliesToUser(
   occurrence: Pick<TaskOccurrenceRecord, "scope" | "teamId" | "zoneId" | "regionId">,
   user: Pick<SerializedUser, "teamId" | "zoneId" | "regionId">,
@@ -198,25 +213,6 @@ async function getTemplatesForTeam(teamId: string) {
     .lean()) as TaskTemplateRecord[];
 
   return templates.map(mapTemplate);
-}
-
-async function getTeamScopedUsers(teamId: string) {
-  await connectToDatabase();
-  const users = (await UserModel.find({
-    status: "ACTIVE",
-    teamId: toObjectId(teamId),
-  }).lean()) as UserRecord[];
-
-  return users.map((user) => ({
-    fullName: user.fullName,
-    id: user._id.toString(),
-    regionId: user.regionId?.toString() || null,
-    role: user.role,
-    status: user.status,
-    teamId: user.teamId?.toString() || null,
-    telegramId: user.telegramId,
-    username: user.username,
-  }));
 }
 
 function canManageTemplate(
@@ -367,12 +363,25 @@ export async function getDashboardData(actor: SessionUser, dateKey: string) {
     throw new Error("Người dùng chưa được gán vào nhóm.");
   }
 
+  const occurrenceScopeFilter: Record<string, unknown> = { date: dateKey };
+  const templateScopeFilter: Record<string, unknown> = {};
+  if (actor.role === "REGIONAL_LEAD" && actor.regionId) {
+    occurrenceScopeFilter.regionId = toObjectId(actor.regionId);
+    templateScopeFilter.regionId = toObjectId(actor.regionId);
+  } else if (actor.role === "ZONE_LEAD" && actor.zoneId) {
+    occurrenceScopeFilter.zoneId = toObjectId(actor.zoneId);
+    templateScopeFilter.zoneId = toObjectId(actor.zoneId);
+  } else {
+    occurrenceScopeFilter.teamId = toObjectId(actor.teamId);
+    templateScopeFilter.teamId = toObjectId(actor.teamId);
+  }
+
   const [visibleUsers, allOccurrences, allTemplates] = await Promise.all([
     listVisibleUsersForActor(actor),
-    TaskOccurrenceModel.find({ date: dateKey, teamId: toObjectId(actor.teamId) })
+    TaskOccurrenceModel.find(occurrenceScopeFilter)
       .sort({ deadlineAt: 1 })
       .lean() as Promise<TaskOccurrenceRecord[]>,
-    TaskTemplateModel.find({ teamId: toObjectId(actor.teamId) })
+    TaskTemplateModel.find(templateScopeFilter)
       .sort({ createdAt: -1 })
       .lean() as Promise<TaskTemplateRecord[]>,
   ]);
@@ -459,8 +468,7 @@ export async function getOccurrenceDetail(
     throw new Error("Không tìm thấy nhiệm vụ trong ngày.");
   }
 
-  const isGlobalTeamLead = actor.role === "TEAM_LEAD" && !actor.teamId;
-  if (!isGlobalTeamLead && occurrence.teamId.toString() !== actor.teamId) {
+  if (!actorCanAccessOccurrence(actor, occurrence)) {
     throw new Error("Bạn không có quyền xem nhiệm vụ này.");
   }
 
@@ -482,9 +490,9 @@ export async function getOccurrenceDetail(
     throw new Error("Bạn chưa có đối tượng để nộp nhiệm vụ.");
   }
 
-  const allTeamUsers = actor.teamId
-    ? await getTeamScopedUsers(actor.teamId)
-    : await getTeamScopedUsers(occurrence.teamId.toString());
+  const allTeamUsers = allowedSubjects.filter((user) =>
+    occurrenceAppliesToUser(occurrence, user),
+  );
 
   const submissions = (await SubmissionModel.find({
     occurrenceId: occurrence._id,
@@ -559,6 +567,10 @@ export async function saveSubmission(
 
   if (!occurrenceAppliesToUser(typedOccurrence, serializedSubject)) {
     throw new Error("Nhiệm vụ này không áp dụng cho người dùng đã chọn.");
+  }
+
+  if (!actorCanAccessOccurrence(actor, typedOccurrence)) {
+    throw new Error("Bạn không có quyền nộp nhiệm vụ ngoài phạm vi của mình.");
   }
 
   assertCanProxySubmit(actor, serializedSubject);

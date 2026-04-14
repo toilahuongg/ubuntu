@@ -38,6 +38,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-overlay-subtle: var(--overlay-subtle);
+  --color-overlay-medium: var(--overlay-medium);
+  --color-overlay-strong: var(--overlay-strong);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -65,7 +68,7 @@
   --secondary-foreground: #fafafa;
 
   --muted: rgba(255, 255, 255, 0.08);
-  --muted-foreground: #a1a1aa;
+  --muted-foreground: #b5b5bd;
 
   --accent: rgba(255, 255, 255, 0.12);
   --accent-foreground: #fafafa;
@@ -122,7 +125,76 @@
   --sidebar-ring: rgba(255, 255, 255, 0.3);
 }
 
-/* ===== LIGHT THEME ===== */
+/* ===== LIGHT THEME =====
+   Applied when:
+   - user/system prefers light (via media query below), OR
+   - `.light` class is set explicitly on <html>
+   The `.dark` class on <html> overrides back to the :root (dark) defaults. */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) {
+    --background: #ffffff;
+    --foreground: #09090b;
+
+    --card: rgba(0, 0, 0, 0.02);
+    --card-foreground: #09090b;
+
+    --popover: rgba(255, 255, 255, 0.98);
+    --popover-foreground: #09090b;
+
+    --primary: #18181b;
+    --primary-foreground: #ffffff;
+
+    --secondary: rgba(0, 0, 0, 0.06);
+    --secondary-foreground: #09090b;
+
+    --muted: rgba(0, 0, 0, 0.05);
+    --muted-foreground: #71717a;
+
+    --accent: rgba(0, 0, 0, 0.08);
+    --accent-foreground: #09090b;
+
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+
+    --border: rgba(0, 0, 0, 0.08);
+    --input: rgba(0, 0, 0, 0.08);
+    --ring: rgba(0, 0, 0, 0.3);
+
+    --chart-1: #18181b;
+    --chart-2: #3f3f46;
+    --chart-3: #71717a;
+    --chart-4: #a1a1aa;
+    --chart-5: #d4d4d8;
+
+    --xp-bronze: #78716c;
+    --xp-silver: #a1a1aa;
+    --xp-gold: #52525b;
+    --xp-diamond: #18181b;
+
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.06);
+    --glass-blur: 12px;
+
+    --gradient-primary: linear-gradient(135deg, #18181b 0%, #52525b 50%, #a1a1aa 100%);
+    --gradient-secondary: linear-gradient(135deg, #3f3f46 0%, #71717a 100%);
+    --gradient-accent: linear-gradient(135deg, #27272a 0%, #52525b 100%);
+    --gradient-dark: linear-gradient(180deg, #ffffff 0%, #f4f4f5 100%);
+
+    --overlay-subtle: rgba(0, 0, 0, 0.03);
+    --overlay-medium: rgba(0, 0, 0, 0.06);
+    --overlay-strong: rgba(0, 0, 0, 0.09);
+
+    --sidebar: #fafafa;
+    --sidebar-foreground: #09090b;
+    --sidebar-primary: #18181b;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: rgba(0, 0, 0, 0.04);
+    --sidebar-accent-foreground: #09090b;
+    --sidebar-border: rgba(0, 0, 0, 0.06);
+    --sidebar-ring: rgba(0, 0, 0, 0.2);
+  }
+}
+
 .light {
   --background: #ffffff;
   --foreground: #09090b;
@@ -219,7 +291,7 @@
   }
 
   ::selection {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: var(--overlay-strong);
     color: var(--foreground);
   }
 }
@@ -457,6 +529,45 @@
 /* Reduce floating orb intensity in light mode */
 .light .blur-3xl {
   opacity: 0.05 !important;
+}
+
+/* System-preference light mode: mirror the `.light`-scoped utility overrides
+   so components that opt-in via `.light X` selectors also work when light mode
+   is triggered by `prefers-color-scheme` without the `.light` class. */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark):not(.light) .glass-strong {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  }
+
+  :root:not(.dark):not(.light) .glass-inset {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  :root:not(.dark):not(.light) .gradient-text {
+    background: linear-gradient(135deg, #18181b 0%, #52525b 50%, #a1a1aa 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% 200%;
+  }
+
+  :root:not(.dark):not(.light) .bg-gradient-mesh {
+    background-image:
+      radial-gradient(at 40% 20%, rgba(0, 0, 0, 0.015) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, rgba(0, 0, 0, 0.01) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, rgba(0, 0, 0, 0.01) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, rgba(0, 0, 0, 0.008) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(0, 0, 0, 0.01) 0px, transparent 50%);
+  }
+
+  :root:not(.dark):not(.light) .blur-3xl {
+    opacity: 0.05 !important;
+  }
 }
 
 /* ===== SCROLLBAR ===== */

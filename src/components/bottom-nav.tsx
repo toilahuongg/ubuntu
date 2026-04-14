@@ -72,7 +72,7 @@ export function BottomNav({ role }: { role: Role }) {
   return (
     <nav
       aria-label="Điều hướng chính"
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-background/50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_0_rgba(255,255,255,0.04)_inset,0_-8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_0_rgba(255,255,255,0.04)_inset,0_-8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25"
     >
       <div
         aria-hidden

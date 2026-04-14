@@ -583,3 +583,80 @@ export async function listPendingUsers() {
     .lean()) as UserRecord[];
   return users.map(serializeUser);
 }
+
+export async function deleteTeam(teamId: string) {
+  await connectToDatabase();
+  const oid = toObjectId(teamId);
+  const [userCount, zoneCount] = await Promise.all([
+    UserModel.countDocuments({ teamId: oid }),
+    ZoneModel.countDocuments({ teamId: oid }),
+  ]);
+  if (userCount > 0) {
+    throw new Error(`Không thể xóa: Nhóm còn ${userCount} thành viên.`);
+  }
+  if (zoneCount > 0) {
+    throw new Error(`Không thể xóa: Nhóm còn ${zoneCount} địa vực.`);
+  }
+  const deleted = await TeamModel.findByIdAndDelete(teamId);
+  if (!deleted) throw new Error("Nhóm không tồn tại.");
+}
+
+export async function deleteZone(zoneId: string) {
+  await connectToDatabase();
+  const oid = toObjectId(zoneId);
+  const [userCount, regionCount] = await Promise.all([
+    UserModel.countDocuments({ zoneId: oid }),
+    RegionModel.countDocuments({ zoneId: oid }),
+  ]);
+  if (userCount > 0) {
+    throw new Error(`Không thể xóa: Địa vực còn ${userCount} thành viên.`);
+  }
+  if (regionCount > 0) {
+    throw new Error(`Không thể xóa: Địa vực còn ${regionCount} khu vực.`);
+  }
+  const deleted = await ZoneModel.findByIdAndDelete(zoneId);
+  if (!deleted) throw new Error("Địa vực không tồn tại.");
+}
+
+export async function deleteRegion(regionId: string) {
+  await connectToDatabase();
+  const oid = toObjectId(regionId);
+  const userCount = await UserModel.countDocuments({ regionId: oid });
+  if (userCount > 0) {
+    throw new Error(`Không thể xóa: Khu vực còn ${userCount} thành viên.`);
+  }
+  const deleted = await RegionModel.findByIdAndDelete(regionId);
+  if (!deleted) throw new Error("Khu vực không tồn tại.");
+}
+
+export async function deleteUser(userId: string) {
+  await connectToDatabase();
+  const userObjectId = toObjectId(userId);
+  // Clean up any lead references before deleting so stale IDs don't linger.
+  await Promise.all([
+    TeamModel.updateMany(
+      { leadUserIds: userObjectId },
+      { $pull: { leadUserIds: userObjectId } },
+    ),
+    ZoneModel.updateMany(
+      { leadUserIds: userObjectId },
+      { $pull: { leadUserIds: userObjectId } },
+    ),
+    RegionModel.updateMany(
+      { leadUserIds: userObjectId },
+      { $pull: { leadUserIds: userObjectId } },
+    ),
+  ]);
+  const deleted = await UserModel.findByIdAndDelete(userId);
+  if (!deleted) throw new Error("Không tìm thấy người dùng.");
+}
+
+export async function bulkApproveUsers(userIds: string[]) {
+  await connectToDatabase();
+  if (userIds.length === 0) return 0;
+  const result = await UserModel.updateMany(
+    { _id: { $in: userIds.map(toObjectId) }, status: "PENDING" },
+    { status: "ACTIVE" },
+  );
+  return result.modifiedCount ?? 0;
+}

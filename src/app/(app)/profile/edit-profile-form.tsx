@@ -47,7 +47,7 @@ export function EditProfileForm({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-foreground transition-colors hover:bg-white/8"
+        className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-foreground transition-colors hover:bg-overlay-medium"
       >
         <Pencil className="h-4 w-4" />
         Chỉnh sửa hồ sơ
@@ -62,7 +62,7 @@ export function EditProfileForm({
         <button
           type="button"
           onClick={() => setIsOpen(false)}
-          className="cursor-pointer rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground"
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
@@ -91,6 +91,8 @@ export function EditProfileForm({
           defaultValue={initialFullName}
           required
           maxLength={60}
+          autoComplete="name"
+          inputMode="text"
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? "profile-error" : undefined}
           className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
@@ -108,7 +110,7 @@ export function EditProfileForm({
               className={`flex h-10 cursor-pointer items-center justify-center rounded-xl border text-sm transition-colors focus-within:ring-2 focus-within:ring-primary/60 ${
                 gender === value
                   ? "border-primary bg-primary/10 text-foreground"
-                  : "border-border text-muted-foreground hover:bg-white/8"
+                  : "border-border text-muted-foreground hover:bg-overlay-medium"
               }`}
             >
               <input
@@ -155,7 +157,7 @@ export function EditProfileForm({
         type="submit"
         disabled={isPending}
         aria-busy={isPending}
-        className="btn-gradient flex h-10 w-full items-center justify-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-60"
+        className="btn-gradient flex h-11 w-full items-center justify-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-60"
       >
         {isPending ? (
           <>

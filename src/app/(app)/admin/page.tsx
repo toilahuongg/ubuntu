@@ -15,6 +15,8 @@ import { UserSection } from "./user-section";
 import { CreateTeamForm } from "./create-team-form";
 import { CreateZoneForm } from "./create-zone-form";
 import { CreateRegionForm } from "./create-region-form";
+import { CreateUserForm } from "./create-user-form";
+import { ExportUsersCsv } from "./export-csv";
 
 export default async function AdminPage() {
   const session = await getSessionUser();
@@ -29,6 +31,21 @@ export default async function AdminPage() {
     listPendingUsers(),
   ]);
 
+  const teamOptions = snapshot.teams.map((t) => ({ id: t.id, name: t.name }));
+  const zoneOptions = snapshot.zones.map((z) => ({
+    id: z.id,
+    name: z.name,
+    teamId: z.teamId,
+    teamName: z.teamName,
+  }));
+  const regionOptions = snapshot.regions.map((r) => ({
+    id: r.id,
+    name: r.name,
+    teamId: r.teamId,
+    zoneId: r.zoneId,
+    zoneName: r.zoneName,
+  }));
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
       <div className="flex items-center gap-2">
@@ -36,33 +53,48 @@ export default async function AdminPage() {
         <h1 className="font-display text-xl font-bold">Quản Trị</h1>
       </div>
 
-      {/* Stats overview */}
-      <div className="grid grid-cols-4 gap-2">
-        <div className="glass-card flex flex-col items-center p-3">
+      {/* Stats overview + anchor nav */}
+      <nav
+        aria-label="Điều hướng mục quản trị"
+        className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+      >
+        <a
+          href="#teams"
+          className="glass-card flex flex-col items-center p-3 transition-colors hover:bg-overlay-subtle"
+        >
           <Building2 className="mb-1 h-4 w-4 text-muted-foreground" />
           <p className="text-lg font-bold">{snapshot.teams.length}</p>
           <p className="text-[10px] text-muted-foreground">Nhóm</p>
-        </div>
-        <div className="glass-card flex flex-col items-center p-3">
+        </a>
+        <a
+          href="#zones"
+          className="glass-card flex flex-col items-center p-3 transition-colors hover:bg-overlay-subtle"
+        >
           <Layers className="mb-1 h-4 w-4 text-muted-foreground" />
           <p className="text-lg font-bold">{snapshot.zones.length}</p>
           <p className="text-[10px] text-muted-foreground">Địa vực</p>
-        </div>
-        <div className="glass-card flex flex-col items-center p-3">
+        </a>
+        <a
+          href="#regions"
+          className="glass-card flex flex-col items-center p-3 transition-colors hover:bg-overlay-subtle"
+        >
           <MapPin className="mb-1 h-4 w-4 text-muted-foreground" />
           <p className="text-lg font-bold">{snapshot.regions.length}</p>
           <p className="text-[10px] text-muted-foreground">Khu vực</p>
-        </div>
-        <div className="glass-card flex flex-col items-center p-3">
+        </a>
+        <a
+          href="#users"
+          className="glass-card flex flex-col items-center p-3 transition-colors hover:bg-overlay-subtle"
+        >
           <Users className="mb-1 h-4 w-4 text-muted-foreground" />
           <p className="text-lg font-bold">{snapshot.users.length}</p>
           <p className="text-[10px] text-muted-foreground">Người dùng</p>
-        </div>
-      </div>
+        </a>
+      </nav>
 
       {pendingUsers.length > 0 && <PendingUsers users={pendingUsers} />}
 
-      <section>
+      <section id="teams" className="scroll-mt-20">
         <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Nhóm ({snapshot.teams.length})
         </h2>
@@ -72,19 +104,17 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      <section>
+      <section id="zones" className="scroll-mt-20">
         <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Địa vực ({snapshot.zones.length})
         </h2>
         <ZoneSection zones={snapshot.zones} />
         <div className="mt-3">
-          <CreateZoneForm
-            teams={snapshot.teams.map((t) => ({ id: t.id, name: t.name }))}
-          />
+          <CreateZoneForm teams={teamOptions} />
         </div>
       </section>
 
-      <section>
+      <section id="regions" className="scroll-mt-20">
         <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Khu vực ({snapshot.regions.length})
         </h2>
@@ -100,27 +130,32 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      <section>
-        <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Người dùng ({snapshot.users.length})
-        </h2>
+      <section id="users" className="scroll-mt-20">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Người dùng ({snapshot.users.length})
+          </h2>
+          <ExportUsersCsv
+            users={snapshot.users}
+            teams={teamOptions}
+            zones={zoneOptions.map((z) => ({ id: z.id, name: z.name }))}
+            regions={regionOptions.map((r) => ({ id: r.id, name: r.name }))}
+          />
+        </div>
         <UserSection
+          currentUserId={session.id}
           users={snapshot.users}
-          teams={snapshot.teams.map((t) => ({ id: t.id, name: t.name }))}
-          zones={snapshot.zones.map((z) => ({
-            id: z.id,
-            name: z.name,
-            teamId: z.teamId,
-            teamName: z.teamName,
-          }))}
-          regions={snapshot.regions.map((r) => ({
-            id: r.id,
-            name: r.name,
-            teamId: r.teamId,
-            zoneId: r.zoneId,
-            zoneName: r.zoneName,
-          }))}
+          teams={teamOptions}
+          zones={zoneOptions}
+          regions={regionOptions}
         />
+        <div className="mt-3">
+          <CreateUserForm
+            teams={teamOptions}
+            zones={zoneOptions}
+            regions={regionOptions}
+          />
+        </div>
       </section>
     </div>
   );

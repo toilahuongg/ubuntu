@@ -25,14 +25,14 @@ export default async function OnboardingPendingPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-32 -top-32 h-64 w-64 rounded-full bg-white/[0.03] blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-white/[0.02] blur-3xl" />
+        <div className="absolute -left-32 -top-32 h-64 w-64 rounded-full bg-overlay-subtle blur-3xl" />
+        <div className="absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-overlay-subtle blur-3xl" />
       </div>
 
       <div className="relative z-10 w-full max-w-sm animate-slide-up">
         <div className="mb-8 flex flex-col items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
-            <Clock className="h-7 w-7 text-white" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-overlay-medium backdrop-blur-sm">
+            <Clock className="h-7 w-7 text-foreground" />
           </div>
           <div className="text-center">
             <h1 className="font-display text-xl font-bold tracking-tight">

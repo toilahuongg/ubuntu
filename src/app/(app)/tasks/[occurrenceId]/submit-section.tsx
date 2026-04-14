@@ -70,7 +70,7 @@ export function SubmitSection({
           </p>
         </div>
         {myCompletionCount > 0 && (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/12">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-overlay-medium">
             <Check className="h-4 w-4" />
           </div>
         )}

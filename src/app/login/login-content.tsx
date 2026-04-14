@@ -121,15 +121,15 @@ export function LoginContent() {
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
       {/* Decorative orbs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -left-32 -top-32 h-64 w-64 rounded-full bg-white/[0.03] blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-white/[0.02] blur-3xl" />
+        <div className="absolute -left-32 -top-32 h-64 w-64 rounded-full bg-overlay-subtle blur-3xl" />
+        <div className="absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-overlay-subtle blur-3xl" />
       </div>
 
       <div className="relative z-10 w-full max-w-sm animate-slide-up">
         {/* Logo */}
         <div className="mb-10 flex flex-col items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
-            <Shield className="h-8 w-8 text-white" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-overlay-medium backdrop-blur-sm">
+            <Shield className="h-8 w-8 text-foreground" />
           </div>
           <div className="text-center">
             <h1 className="font-display text-2xl font-bold tracking-tight">
@@ -145,7 +145,7 @@ export function LoginContent() {
         <div className="glass-card p-6">
           {status === "loading" ? (
             <div className="flex flex-col items-center gap-4 py-4">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
               <p className="text-sm text-muted-foreground">
                 Đang xác thực qua Telegram...
               </p>

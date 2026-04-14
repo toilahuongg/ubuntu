@@ -62,7 +62,7 @@ export default async function ProfilePage() {
               {progress.totalXp} XP
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/8">
+          <div className="h-2 overflow-hidden rounded-full bg-overlay-medium">
             <div
               className="progress-glow h-full rounded-full bg-gradient-to-r from-white/40 to-white/80 transition-all duration-500"
               style={{ width: `${progressPercent}%` }}
@@ -76,21 +76,21 @@ export default async function ProfilePage() {
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <div className="glass-card flex flex-col items-center p-3">
           <Star className="mb-1 h-4 w-4 text-muted-foreground" />
           <p className="text-lg font-bold">{progress.level}</p>
-          <p className="text-[10px] text-muted-foreground">Cấp bậc</p>
+          <p className="text-[11px] text-muted-foreground">Cấp bậc</p>
         </div>
         <div className="glass-card flex flex-col items-center p-3">
           <Zap className="mb-1 h-4 w-4 text-muted-foreground" />
           <p className="text-lg font-bold">{progress.totalXp}</p>
-          <p className="text-[10px] text-muted-foreground">Tổng XP</p>
+          <p className="text-[11px] text-muted-foreground">Tổng XP</p>
         </div>
         <div className="glass-card flex flex-col items-center p-3">
           <Trophy className="mb-1 h-4 w-4 text-muted-foreground" />
           <p className="text-lg font-bold">{xpHistory.total}</p>
-          <p className="text-[10px] text-muted-foreground">Lần nộp</p>
+          <p className="text-[11px] text-muted-foreground">Lần nộp</p>
         </div>
       </div>
 
@@ -132,13 +132,13 @@ export default async function ProfilePage() {
         <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Lộ trình cấp bậc
         </h2>
-        <div className="glass-card grid grid-cols-3 gap-2 p-4">
+        <div className="glass-card grid grid-cols-3 gap-2 p-4 sm:grid-cols-6">
           {allLevels.map((level) => (
             <div
               key={level.level}
               className={`flex flex-col items-center rounded-xl p-2 ${
                 level.level === progress.level
-                  ? "bg-white/10"
+                  ? "bg-overlay-medium"
                   : level.level < progress.level
                     ? "opacity-50"
                     : "opacity-30"

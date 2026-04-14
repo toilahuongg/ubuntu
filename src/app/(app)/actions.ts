@@ -13,9 +13,14 @@ import {
 } from "@/lib/services/task-service";
 import {
   approveUser,
+  bulkApproveUsers,
   createRegion,
   createTeam,
   createZone,
+  deleteRegion,
+  deleteTeam,
+  deleteUser,
+  deleteZone,
   getRegionById,
   getZoneById,
   saveUser,
@@ -24,6 +29,27 @@ import {
   updateUserProfile,
   updateZone,
 } from "@/lib/services/organization-service";
+
+// Server actions surface errors to the UI instead of bubbling as unhandled
+// rejections. Wrap mutating actions with this helper so clients can show
+// inline error banners without each action reimplementing the pattern.
+export type ActionResult<T = unknown> =
+  | { ok: true; data?: T }
+  | { ok: false; error: string };
+
+function toActionError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return "Đã có lỗi xảy ra. Vui lòng thử lại.";
+}
+
+async function runAction<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
+  try {
+    const data = await fn();
+    return { data, ok: true };
+  } catch (err) {
+    return { error: toActionError(err), ok: false };
+  }
+}
 
 // A TEAM_LEAD is scoped to a single team (see permissions.ts). Any mutation
 // that references a team/zone/region MUST verify ownership so one lead
@@ -110,95 +136,160 @@ export async function toggleTemplateAction(templateId: string) {
 
 // ── Organization ──
 
-export async function approveUserAction(userId: string) {
-  await requireManagementUser();
-  await approveUser(userId);
-  revalidatePath("/admin");
-}
-
-export async function createTeamAction(formData: FormData) {
-  await requireManagementUser();
-  const name = formData.get("name") as string;
-  const code = formData.get("code") as string;
-  await createTeam(name, code);
-  revalidatePath("/admin");
-}
-
-export async function updateTeamAction(formData: FormData) {
-  const session = await requireManagementUser();
-  const id = formData.get("id") as string;
-  await assertOwnsTeam(session, id);
-  const name = formData.get("name") as string;
-  const code = formData.get("code") as string;
-  await updateTeam(id, { code, name });
-  revalidatePath("/admin");
-}
-
-export async function updateZoneAction(formData: FormData) {
-  const session = await requireManagementUser();
-  const id = formData.get("id") as string;
-  await assertOwnsZone(session, id);
-  const name = formData.get("name") as string;
-  const code = formData.get("code") as string;
-  await updateZone(id, { code, name });
-  revalidatePath("/admin");
-}
-
-export async function updateRegionAction(formData: FormData) {
-  const session = await requireManagementUser();
-  const id = formData.get("id") as string;
-  await assertOwnsRegion(session, id);
-  const name = formData.get("name") as string;
-  const code = formData.get("code") as string;
-  await updateRegion(id, { code, name });
-  revalidatePath("/admin");
-}
-
-export async function createZoneAction(formData: FormData) {
-  const session = await requireManagementUser();
-  const teamId = formData.get("teamId") as string;
-  await assertOwnsTeam(session, teamId);
-  const name = formData.get("name") as string;
-  const code = formData.get("code") as string;
-  await createZone({ code, name, teamId });
-  revalidatePath("/admin");
-}
-
-export async function createRegionAction(formData: FormData) {
-  const session = await requireManagementUser();
-  const zoneId = formData.get("zoneId") as string;
-  await assertOwnsZone(session, zoneId);
-  const name = formData.get("name") as string;
-  const code = formData.get("code") as string;
-  await createRegion({ code, name, zoneId });
-  revalidatePath("/admin");
-}
-
-export async function saveUserAction(formData: FormData) {
-  const session = await requireManagementUser();
-
-  // Restrict writes to the actor's own team. Zone/region resolution inside
-  // saveUser() will cross-check the hierarchy, but we block the request
-  // before any DB write so an attacker can't probe foreign IDs.
-  const targetTeamId = (formData.get("teamId") as string) || "";
-  const targetZoneId = (formData.get("zoneId") as string) || "";
-  const targetRegionId = (formData.get("regionId") as string) || "";
-  if (targetTeamId) await assertOwnsTeam(session, targetTeamId);
-  if (targetZoneId) await assertOwnsZone(session, targetZoneId);
-  if (targetRegionId) await assertOwnsRegion(session, targetRegionId);
-
-  await saveUser({
-    fullName: formData.get("fullName") as string,
-    gender: (formData.get("gender") as string) || undefined,
-    regionId: (formData.get("regionId") as string) || undefined,
-    role: formData.get("role") as "TEAM_LEAD" | "ZONE_LEAD" | "REGIONAL_LEAD" | "MEMBER",
-    status: formData.get("status") as "ACTIVE" | "INACTIVE" | "PENDING",
-    teamId: (formData.get("teamId") as string) || undefined,
-    userId: (formData.get("userId") as string) || undefined,
-    zoneId: (formData.get("zoneId") as string) || undefined,
+export async function approveUserAction(userId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireManagementUser();
+    await approveUser(userId);
+    revalidatePath("/admin");
   });
+}
 
-  revalidatePath("/admin");
+export async function bulkApproveUsersAction(
+  userIds: string[],
+): Promise<ActionResult<{ approved: number }>> {
+  return runAction(async () => {
+    await requireManagementUser();
+    const approved = await bulkApproveUsers(userIds);
+    revalidatePath("/admin");
+    return { approved };
+  });
+}
+
+export async function createTeamAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    await requireManagementUser();
+    const name = formData.get("name") as string;
+    const code = formData.get("code") as string;
+    await createTeam(name, code);
+    revalidatePath("/admin");
+  });
+}
+
+export async function updateTeamAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+    const id = formData.get("id") as string;
+    await assertOwnsTeam(session, id);
+    const name = formData.get("name") as string;
+    const code = formData.get("code") as string;
+    await updateTeam(id, { code, name });
+    revalidatePath("/admin");
+  });
+}
+
+export async function deleteTeamAction(id: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+    await assertOwnsTeam(session, id);
+    await deleteTeam(id);
+    revalidatePath("/admin");
+  });
+}
+
+export async function updateZoneAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+    const id = formData.get("id") as string;
+    await assertOwnsZone(session, id);
+    const name = formData.get("name") as string;
+    const code = formData.get("code") as string;
+    await updateZone(id, { code, name });
+    revalidatePath("/admin");
+  });
+}
+
+export async function deleteZoneAction(id: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+    await assertOwnsZone(session, id);
+    await deleteZone(id);
+    revalidatePath("/admin");
+  });
+}
+
+export async function updateRegionAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+    const id = formData.get("id") as string;
+    await assertOwnsRegion(session, id);
+    const name = formData.get("name") as string;
+    const code = formData.get("code") as string;
+    await updateRegion(id, { code, name });
+    revalidatePath("/admin");
+  });
+}
+
+export async function deleteRegionAction(id: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+    await assertOwnsRegion(session, id);
+    await deleteRegion(id);
+    revalidatePath("/admin");
+  });
+}
+
+export async function createZoneAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+    const teamId = formData.get("teamId") as string;
+    await assertOwnsTeam(session, teamId);
+    const name = formData.get("name") as string;
+    const code = formData.get("code") as string;
+    await createZone({ code, name, teamId });
+    revalidatePath("/admin");
+  });
+}
+
+export async function createRegionAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+    const zoneId = formData.get("zoneId") as string;
+    await assertOwnsZone(session, zoneId);
+    const name = formData.get("name") as string;
+    const code = formData.get("code") as string;
+    await createRegion({ code, name, zoneId });
+    revalidatePath("/admin");
+  });
+}
+
+export async function saveUserAction(formData: FormData): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+
+    // Restrict writes to the actor's own team. Zone/region resolution inside
+    // saveUser() will cross-check the hierarchy, but we block the request
+    // before any DB write so an attacker can't probe foreign IDs.
+    const targetTeamId = (formData.get("teamId") as string) || "";
+    const targetZoneId = (formData.get("zoneId") as string) || "";
+    const targetRegionId = (formData.get("regionId") as string) || "";
+    if (targetTeamId) await assertOwnsTeam(session, targetTeamId);
+    if (targetZoneId) await assertOwnsZone(session, targetZoneId);
+    if (targetRegionId) await assertOwnsRegion(session, targetRegionId);
+
+    await saveUser({
+      fullName: formData.get("fullName") as string,
+      gender: (formData.get("gender") as string) || undefined,
+      regionId: (formData.get("regionId") as string) || undefined,
+      role: formData.get("role") as "TEAM_LEAD" | "ZONE_LEAD" | "REGIONAL_LEAD" | "MEMBER",
+      status: formData.get("status") as "ACTIVE" | "INACTIVE" | "PENDING",
+      teamId: (formData.get("teamId") as string) || undefined,
+      userId: (formData.get("userId") as string) || undefined,
+      zoneId: (formData.get("zoneId") as string) || undefined,
+    });
+
+    revalidatePath("/admin");
+  });
+}
+
+export async function deleteUserAction(userId: string): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManagementUser();
+    if (session.id === userId) {
+      throw new Error("Không thể xóa chính bạn.");
+    }
+    await deleteUser(userId);
+    revalidatePath("/admin");
+  });
 }
 
 export async function updateProfileAction(formData: FormData) {

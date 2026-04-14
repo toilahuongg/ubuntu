@@ -40,7 +40,7 @@ export function DevLoginPanel({ users }: { users: SerializedUser[] }) {
                         type="submit"
                         name="userId"
                         value={user.id}
-                        className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+                        className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-overlay-subtle hover:text-foreground"
                       >
                         <span className="truncate font-medium">
                           {user.fullName}

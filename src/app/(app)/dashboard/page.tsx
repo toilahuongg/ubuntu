@@ -64,10 +64,10 @@ export default async function DashboardPage() {
               <Link
                 key={card.id}
                 href={`/tasks/${card.id}`}
-                className="glass-card card-hover flex items-center justify-between p-4"
+                className="glass-card card-hover flex items-center justify-between p-4 active:bg-overlay-medium active:scale-[0.99]"
               >
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-sm font-semibold">
+                  <h3 className="truncate text-sm font-semibold" title={card.title}>
                     {card.title}
                   </h3>
                   <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
@@ -125,14 +125,14 @@ export default async function DashboardPage() {
                 className="flex items-center justify-between px-4 py-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
+                  <p className="truncate text-sm font-medium" title={member.fullName}>
                     {member.fullName}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
                     {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] ?? member.role}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 text-xs">
+                <div className="ml-3 flex shrink-0 items-center gap-3 whitespace-nowrap text-xs">
                   <span className="text-foreground/70">
                     {member.completed} xong
                   </span>

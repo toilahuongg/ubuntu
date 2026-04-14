@@ -40,7 +40,7 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
         <button
           type="button"
           onClick={() => setIsOpen(false)}
-          className="cursor-pointer rounded-lg p-1 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground"
+          className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground"
         >
           <X className="h-4 w-4" />
         </button>
@@ -72,7 +72,7 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label htmlFor="deadlineTime" className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Hạn chót *
@@ -96,6 +96,7 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
             type="number"
             min={0}
             defaultValue={10}
+            inputMode="numeric"
             className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
           />
         </div>

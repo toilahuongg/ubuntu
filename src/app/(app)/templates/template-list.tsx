@@ -55,14 +55,14 @@ function TemplateCard({ template }: { template: TemplateSummary }) {
   return (
     <div className="glass-card flex items-center justify-between p-4">
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-sm font-semibold">{template.title}</h3>
+        <h3 className="truncate text-sm font-semibold" title={template.title}>{template.title}</h3>
         {template.description && (
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          <p className="mt-0.5 truncate text-xs text-muted-foreground" title={template.description}>
             {template.description}
           </p>
         )}
         <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
-          <span className="rounded-md bg-white/5 px-1.5 py-0.5">
+          <span className="rounded-md bg-overlay-subtle px-1.5 py-0.5">
             {SCOPE_LABELS[template.scope]}
           </span>
           <span className="flex items-center gap-1">
@@ -76,7 +76,7 @@ function TemplateCard({ template }: { template: TemplateSummary }) {
           <span
             className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
               template.isActive
-                ? "bg-white/10 text-foreground"
+                ? "bg-overlay-medium text-foreground"
                 : "bg-muted text-muted-foreground"
             }`}
           >
@@ -89,7 +89,7 @@ function TemplateCard({ template }: { template: TemplateSummary }) {
         type="button"
         onClick={handleToggle}
         disabled={isPending}
-        className="ml-3 cursor-pointer rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white/8 hover:text-foreground disabled:opacity-50"
+        className="ml-3 flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground disabled:opacity-50"
         aria-label={template.isActive ? "Tắt template" : "Bật template"}
       >
         {template.isActive ? (
