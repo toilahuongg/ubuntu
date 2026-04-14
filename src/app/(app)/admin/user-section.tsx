@@ -64,14 +64,24 @@ export function UserSection({
             </div>
             <div className="flex items-center gap-2">
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                   user.status === "ACTIVE"
-                    ? "bg-white/10 text-foreground"
+                    ? "bg-emerald-500/15 text-emerald-400"
                     : user.status === "PENDING"
-                      ? "bg-yellow-500/10 text-yellow-400"
-                      : "bg-destructive/10 text-destructive"
+                      ? "bg-yellow-500/15 text-yellow-400"
+                      : "bg-destructive/15 text-destructive"
                 }`}
               >
+                <span
+                  aria-hidden
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    user.status === "ACTIVE"
+                      ? "bg-emerald-400"
+                      : user.status === "PENDING"
+                        ? "bg-yellow-400"
+                        : "bg-destructive"
+                  }`}
+                />
                 {user.status === "ACTIVE"
                   ? "Hoạt động"
                   : user.status === "PENDING"
@@ -81,10 +91,10 @@ export function UserSection({
               <button
                 type="button"
                 onClick={() => setEditingId(user.id)}
-                className="cursor-pointer rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground"
-                aria-label="Sửa"
+                className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-white/10 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                aria-label={`Sửa ${user.fullName}`}
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <Pencil className="h-4 w-4" aria-hidden />
               </button>
             </div>
           </div>
@@ -270,10 +280,17 @@ function EditUserRow({
       <button
         type="submit"
         disabled={isPending}
-        className="btn-gradient flex h-10 w-full items-center justify-center text-sm disabled:opacity-50"
+        aria-busy={isPending}
+        className="btn-gradient flex h-10 w-full items-center justify-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-60"
       >
         {isPending ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background" />
+          <>
+            <span
+              aria-hidden
+              className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background"
+            />
+            Đang lưu…
+          </>
         ) : (
           "Lưu thay đổi"
         )}

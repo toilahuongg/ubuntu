@@ -71,7 +71,7 @@ export function EditProfileForm({
       <div className="flex flex-col items-center">
         <Image
           src={badgeSrc(level, gender)}
-          alt="avatar"
+          alt={`Huy hiệu cấp ${level} (${gender === "male" ? "nam" : "nữ"})`}
           width={72}
           height={72}
           className="drop-shadow-lg"
@@ -82,27 +82,30 @@ export function EditProfileForm({
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
+        <label htmlFor="profile-fullname" className="text-xs font-medium text-muted-foreground">
           Biệt danh
         </label>
         <input
+          id="profile-fullname"
           name="fullName"
           defaultValue={initialFullName}
           required
           maxLength={60}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "profile-error" : undefined}
           className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
         />
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
+      <fieldset className="space-y-1.5">
+        <legend className="text-xs font-medium text-muted-foreground">
           Giới tính
-        </label>
+        </legend>
         <div className="grid grid-cols-2 gap-2">
           {(["male", "female"] as const).map((value) => (
             <label
               key={value}
-              className={`flex h-10 cursor-pointer items-center justify-center rounded-xl border text-sm transition-colors ${
+              className={`flex h-10 cursor-pointer items-center justify-center rounded-xl border text-sm transition-colors focus-within:ring-2 focus-within:ring-primary/60 ${
                 gender === value
                   ? "border-primary bg-primary/10 text-foreground"
                   : "border-border text-muted-foreground hover:bg-white/8"
@@ -120,28 +123,30 @@ export function EditProfileForm({
             </label>
           ))}
         </div>
-      </div>
+      </fieldset>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground">
+        <label htmlFor="profile-bio" className="text-xs font-medium text-muted-foreground">
           Tiểu sử
         </label>
         <textarea
+          id="profile-bio"
           name="bio"
           value={bio}
           onChange={(event) => setBio(event.target.value)}
           maxLength={280}
           rows={3}
           placeholder="Giới thiệu đôi nét về bạn…"
+          aria-describedby="profile-bio-count"
           className="w-full rounded-xl bg-overlay-subtle border border-border px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
         />
-        <p className="text-right text-[10px] text-muted-foreground">
+        <p id="profile-bio-count" className="text-right text-[10px] text-muted-foreground">
           {bio.length}/280
         </p>
       </div>
 
       {error && (
-        <p className="text-xs text-destructive" role="alert">
+        <p id="profile-error" className="text-xs text-destructive" role="alert">
           {error}
         </p>
       )}
@@ -149,10 +154,17 @@ export function EditProfileForm({
       <button
         type="submit"
         disabled={isPending}
-        className="btn-gradient flex h-10 w-full items-center justify-center gap-1.5 text-sm disabled:opacity-50"
+        aria-busy={isPending}
+        className="btn-gradient flex h-10 w-full items-center justify-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-60"
       >
         {isPending ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background" />
+          <>
+            <span
+              aria-hidden
+              className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background"
+            />
+            Đang lưu…
+          </>
         ) : (
           "Lưu thay đổi"
         )}

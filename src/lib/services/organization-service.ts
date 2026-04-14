@@ -227,10 +227,12 @@ export async function listVisibleUsersForActor(actor: SessionUser) {
 
   if (actor.role === "TEAM_LEAD") {
     if (!actor.teamId) {
-      const users = (await UserModel.find({ status: "ACTIVE" })
-        .sort({ role: 1, fullName: 1 })
-        .lean()) as UserRecord[];
-      return users.map(serializeUser);
+      // Fail-closed: a TEAM_LEAD with no team scope should not be able to
+      // see every ACTIVE user in the org. Previously this branch leaked the
+      // full user list — now it falls through to the self-only default at
+      // the bottom of this function.
+      const self = await getUserById(actor.id);
+      return self ? [self] : [];
     }
 
     const users = (await UserModel.find({
@@ -388,8 +390,11 @@ async function resolveUserHierarchy(input: {
   regionId?: string;
 }) {
   if (input.role === "MEMBER" || input.role === "REGIONAL_LEAD") {
+    // Fail-fast: roles at or below REGION must be scoped to a region.
+    // Silently returning nulls here previously created orphan users that
+    // could not be found by any leader's visibility query.
     if (!input.regionId) {
-      return { regionId: null, teamId: null, zoneId: null };
+      throw new Error("Vui lòng chọn Khu vực cho thành viên/khu vực trưởng.");
     }
     const region = (await RegionModel.findById(input.regionId).lean()) as RegionRecord | null;
     if (!region) throw new Error("Khu vực không tồn tại.");
@@ -402,7 +407,7 @@ async function resolveUserHierarchy(input: {
 
   if (input.role === "ZONE_LEAD") {
     if (!input.zoneId) {
-      return { regionId: null, teamId: null, zoneId: null };
+      throw new Error("Vui lòng chọn Địa Vực cho Địa Vực trưởng.");
     }
     const zone = (await ZoneModel.findById(input.zoneId).lean()) as ZoneRecord | null;
     if (!zone) throw new Error("Địa Vực không tồn tại.");
@@ -414,9 +419,14 @@ async function resolveUserHierarchy(input: {
   }
 
   // TEAM_LEAD
+  if (!input.teamId) {
+    throw new Error("Vui lòng chọn Nhóm cho Nhóm trưởng.");
+  }
+  const team = (await TeamModel.findById(input.teamId).lean()) as TeamRecord | null;
+  if (!team) throw new Error("Nhóm không tồn tại.");
   return {
     regionId: null,
-    teamId: input.teamId || null,
+    teamId: team._id.toString(),
     zoneId: null,
   };
 }

@@ -70,7 +70,10 @@ export function BottomNav({ role }: { role: Role }) {
   );
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-background/50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_0_rgba(255,255,255,0.04)_inset,0_-8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25">
+    <nav
+      aria-label="Điều hướng chính"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-background/50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_0_rgba(255,255,255,0.04)_inset,0_-8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25"
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/[0.04] via-white/[0.01] to-transparent"
@@ -85,7 +88,9 @@ export function BottomNav({ role }: { role: Role }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex min-w-[56px] cursor-pointer flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-[10px] font-medium transition-colors ${
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex min-h-[44px] min-w-[56px] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                 isActive
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"

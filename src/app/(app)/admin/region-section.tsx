@@ -128,10 +128,17 @@ function EditRegionRow({
       <button
         type="submit"
         disabled={isPending}
-        className="btn-gradient flex h-10 w-full items-center justify-center text-sm disabled:opacity-50"
+        aria-busy={isPending}
+        className="btn-gradient flex h-10 w-full items-center justify-center gap-1.5 text-sm disabled:cursor-wait disabled:opacity-60"
       >
         {isPending ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background" />
+          <>
+            <span
+              aria-hidden
+              className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background"
+            />
+            Đang lưu…
+          </>
         ) : (
           "Lưu thay đổi"
         )}

@@ -16,12 +16,35 @@ import {
   createRegion,
   createTeam,
   createZone,
+  getRegionById,
+  getZoneById,
   saveUser,
   updateRegion,
   updateTeam,
   updateUserProfile,
   updateZone,
 } from "@/lib/services/organization-service";
+
+// A TEAM_LEAD is scoped to a single team (see permissions.ts). Any mutation
+// that references a team/zone/region MUST verify ownership so one lead
+// cannot create or rename structures in another lead's team by guessing IDs.
+async function assertOwnsTeam(session: SessionUser, teamId: string) {
+  if (!session.teamId || session.teamId !== teamId) {
+    throw new Error("Bạn chỉ có quyền thao tác trên Nhóm của mình.");
+  }
+}
+
+async function assertOwnsZone(session: SessionUser, zoneId: string) {
+  const zone = await getZoneById(zoneId);
+  if (!zone) throw new Error("Địa Vực không tồn tại.");
+  await assertOwnsTeam(session, zone.teamId.toString());
+}
+
+async function assertOwnsRegion(session: SessionUser, regionId: string) {
+  const region = await getRegionById(regionId);
+  if (!region) throw new Error("Khu vực không tồn tại.");
+  await assertOwnsTeam(session, region.teamId.toString());
+}
 
 async function requireSession() {
   const session = await getSessionUser();
@@ -102,8 +125,9 @@ export async function createTeamAction(formData: FormData) {
 }
 
 export async function updateTeamAction(formData: FormData) {
-  await requireManagementUser();
+  const session = await requireManagementUser();
   const id = formData.get("id") as string;
+  await assertOwnsTeam(session, id);
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
   await updateTeam(id, { code, name });
@@ -111,8 +135,9 @@ export async function updateTeamAction(formData: FormData) {
 }
 
 export async function updateZoneAction(formData: FormData) {
-  await requireManagementUser();
+  const session = await requireManagementUser();
   const id = formData.get("id") as string;
+  await assertOwnsZone(session, id);
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
   await updateZone(id, { code, name });
@@ -120,8 +145,9 @@ export async function updateZoneAction(formData: FormData) {
 }
 
 export async function updateRegionAction(formData: FormData) {
-  await requireManagementUser();
+  const session = await requireManagementUser();
   const id = formData.get("id") as string;
+  await assertOwnsRegion(session, id);
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
   await updateRegion(id, { code, name });
@@ -129,25 +155,37 @@ export async function updateRegionAction(formData: FormData) {
 }
 
 export async function createZoneAction(formData: FormData) {
-  await requireManagementUser();
+  const session = await requireManagementUser();
+  const teamId = formData.get("teamId") as string;
+  await assertOwnsTeam(session, teamId);
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
-  const teamId = formData.get("teamId") as string;
   await createZone({ code, name, teamId });
   revalidatePath("/admin");
 }
 
 export async function createRegionAction(formData: FormData) {
-  await requireManagementUser();
+  const session = await requireManagementUser();
+  const zoneId = formData.get("zoneId") as string;
+  await assertOwnsZone(session, zoneId);
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
-  const zoneId = formData.get("zoneId") as string;
   await createRegion({ code, name, zoneId });
   revalidatePath("/admin");
 }
 
 export async function saveUserAction(formData: FormData) {
-  await requireManagementUser();
+  const session = await requireManagementUser();
+
+  // Restrict writes to the actor's own team. Zone/region resolution inside
+  // saveUser() will cross-check the hierarchy, but we block the request
+  // before any DB write so an attacker can't probe foreign IDs.
+  const targetTeamId = (formData.get("teamId") as string) || "";
+  const targetZoneId = (formData.get("zoneId") as string) || "";
+  const targetRegionId = (formData.get("regionId") as string) || "";
+  if (targetTeamId) await assertOwnsTeam(session, targetTeamId);
+  if (targetZoneId) await assertOwnsZone(session, targetZoneId);
+  if (targetRegionId) await assertOwnsRegion(session, targetRegionId);
 
   await saveUser({
     fullName: formData.get("fullName") as string,

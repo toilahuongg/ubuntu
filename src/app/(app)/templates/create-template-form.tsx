@@ -106,13 +106,20 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
       <button
         type="submit"
         disabled={isPending}
-        className="btn-gradient flex h-11 w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        aria-busy={isPending}
+        className="btn-gradient flex h-11 w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background" />
+          <>
+            <span
+              aria-hidden
+              className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background"
+            />
+            Đang tạo…
+          </>
         ) : (
           <>
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4" aria-hidden />
             Tạo mẫu
           </>
         )}

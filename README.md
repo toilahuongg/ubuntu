@@ -1,72 +1,92 @@
-# Nhiem Vu Moi Ngay
+# Nhiệm Vụ Mỗi Ngày
 
-Web app van hanh noi bo cho luong `Nhóm trưởng > Khu vực trưởng > Thành viên`, dang nhap bang Telegram WebApp, xay bang `Next.js + shadcn/ui + MongoDB`.
+Web app vận hành nội bộ theo phân cấp `Khu vực trưởng > Địa Vực trưởng > Nhóm trưởng > Thành viên`. Đăng nhập bằng Telegram WebApp, chạy trên Next.js App Router + MongoDB.
 
 ## Stack
 
-- Next.js App Router + TypeScript
-- shadcn/ui
+- Next.js 16 (App Router) + React 19 + TypeScript
+- shadcn/ui + Tailwind v4 + `@base-ui/react`
 - MongoDB + Mongoose
-- Telegram WebApp auth + bot webhook
-- Server Actions cho admin, template, submission
+- Telegram WebApp auth + bot webhook (`jose` cho session)
+- Server Actions cho quản trị, template, submission
+- Vitest + `mongodb-memory-server` cho test
+
+## Cấu trúc
+
+- `src/app/(app)` — UI chính: `admin`, `region`, `zone`, `dashboard`, `tasks`, `templates`, `leaderboard`, `profile`
+- `src/app/api` — `auth/{telegram,dev-login,logout}`, `telegram/webhook`, `jobs/{daily-occurrences,reminders}`
+- `src/lib/models` — `user`, `region`, `zone`, `team`, `task-template`, `task-occurrence`, `submission`, `xp-transaction`, `audit-log`
+- `src/lib/services` — `auth-service`, `organization-service`, `task-service`, `gamification-service`
+- `src/scripts` — `seed`, `telegram-webhook`, `fix-telegram-index`
 
 ## Setup
 
-1. Tao file `.env.local` tu `.env.example`
-2. Cai dependency:
+1. Tạo `.env.local` từ `.env.example`
+2. Cài dependency:
 
 ```bash
 npm install
 ```
 
-3. Seed du lieu mau:
+3. Seed dữ liệu mẫu:
 
 ```bash
 npm run seed
 ```
 
-4. Chay app:
+4. Chạy app:
 
 ```bash
 npm run dev
 ```
 
-## Env bat buoc
+## Biến môi trường
 
-- `MONGODB_URI`
-- `SESSION_SECRET`
-- `TELEGRAM_BOT_TOKEN`
-- `NEXT_PUBLIC_APP_URL`
-- `CRON_SECRET`
-- `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (khuyen nghi de mo bot nhanh)
+| Biến | Mô tả |
+| --- | --- |
+| `MONGODB_URI` | Kết nối MongoDB |
+| `SESSION_SECRET` | Secret ký JWT session |
+| `TELEGRAM_BOT_TOKEN` | Token bot Telegram |
+| `TELEGRAM_WEBHOOK_SECRET` | Secret header xác thực webhook |
+| `NEXT_PUBLIC_APP_URL` | URL app (dùng cho webhook & link) |
+| `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | Username bot để mở WebApp |
+| `CRON_SECRET` | Secret header cho jobs |
+| `APP_TIMEZONE` | Mặc định `Asia/Ho_Chi_Minh` |
 
-## Jobs va Telegram
+## Vai trò & trạng thái
 
-- `POST /api/telegram/webhook`: Telegram bot webhook.
-- `POST /api/jobs/daily-occurrences`: sinh occurrence cho ngay hien tai.
-- `POST /api/jobs/reminders`: gui reminder cho user chua nop.
+- Roles: `REGIONAL_LEAD`, `ZONE_LEAD`, `TEAM_LEAD`, `MEMBER`
+- Trạng thái user: `ACTIVE`, `INACTIVE`, `PENDING`
+- Scope template: `REGION`, `ZONE`, `TEAM`
 
-Hai route jobs can header:
+## API jobs & Telegram
+
+- `POST /api/telegram/webhook` — webhook bot Telegram
+- `POST /api/jobs/daily-occurrences` — sinh occurrence cho ngày hiện tại
+- `POST /api/jobs/reminders` — gửi reminder cho user chưa nộp
+
+Hai route jobs yêu cầu header:
 
 ```txt
 x-cron-secret: <CRON_SECRET>
 ```
 
-## Tai khoan seed mau
-
-Sau khi chay `npm run seed`, co cac tai khoan mau:
-
-- `Admin He Thong` - `ADMIN`
-- `Tran Nhom Truong` - `TEAM_LEAD`
-- `Le Khu Vuc A` / `Pham Khu Vuc B` - `REGIONAL_LEAD`
-- `Nguyen Thanh Vien A1`, `Nguyen Thanh Vien A2`, `Vo Thanh Vien B1` - `MEMBER`
-
-Tat ca duoc map san `telegramId` de thu nghiem.
-
 ## Scripts
 
-- `npm run dev`
-- `npm run build`
-- `npm run lint`
-- `npm run test`
-- `npm run seed`
+| Lệnh | Mô tả |
+| --- | --- |
+| `npm run dev` | Dev server |
+| `npm run build` / `npm start` | Build & chạy production |
+| `npm run lint` | ESLint |
+| `npm run test` / `test:watch` | Vitest |
+| `npm run seed` | Seed dữ liệu mẫu |
+| `npm run fix-indexes` | Fix partial index `telegramId` |
+| `npm run tg:webhook:set\|delete\|info` | Quản lý webhook Telegram |
+
+## Tài khoản seed mẫu
+
+Sau khi chạy `npm run seed`, có sẵn các tài khoản (đã map `telegramId` để test):
+
+- `Tran Nhom Truong` — `TEAM_LEAD`
+- `Le Khu Vuc A` / `Pham Khu Vuc B` — `REGIONAL_LEAD`
+- `Nguyen Thanh Vien A1`, `Nguyen Thanh Vien A2`, `Vo Thanh Vien B1` — `MEMBER`

@@ -592,12 +592,21 @@ export async function saveSubmission(
     },
   );
 
+  // Idempotency: only grant XP / send notifications on the FIRST successful
+  // submission. Telegram may retry the callback, producers may double-click
+  // — every subsequent call should be a no-op side-effect-wise so XP does
+  // not drift. completionCount === 1 right after the upsert means this call
+  // created the record; > 1 means it already existed.
+  const submissionCompletionCount =
+    (submission as unknown as { completionCount: number }).completionCount ?? 1;
+  const isFirstSubmission = submissionCompletionCount === 1;
+
   const expReward = (template as TaskTemplateRecord & { expReward: number }).expReward ?? 10;
 
   let newLevel: number | null = null;
   let leveledUp = false;
 
-  if (expReward > 0) {
+  if (isFirstSubmission && expReward > 0) {
     await XpTransactionModel.create({
       amount: expReward,
       description: `Hoàn thành: ${template.title}`,
@@ -625,22 +634,23 @@ export async function saveSubmission(
   }
 
   await AuditLogModel.create({
-    action:
-      actor.id === serializedSubject.id
+    action: isFirstSubmission
+      ? actor.id === serializedSubject.id
         ? "submission.saved"
-        : "submission.proxy-saved",
+        : "submission.proxy-saved"
+      : "submission.duplicate-ignored",
     actorUserId: toObjectId(actor.id),
     entityId: submission._id.toString(),
     entityType: "Submission",
     metadata: {
-      completionCount: (submission as unknown as { completionCount: number }).completionCount,
+      completionCount: submissionCompletionCount,
       date: typedOccurrence.date,
       occurrenceId,
     },
     subjectUserId: typedSubject._id,
   });
 
-  if (typedSubject.telegramId) {
+  if (isFirstSubmission && typedSubject.telegramId) {
     const selfSubmit = actor.id === serializedSubject.id;
     const congratsText = selfSubmit
       ? `🎉 Bạn đã hoàn thành "${template.title}" — +${expReward} XP!`

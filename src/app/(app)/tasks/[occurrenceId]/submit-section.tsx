@@ -80,14 +80,21 @@ export function SubmitSection({
       <button
         type="button"
         disabled={isPending || status === "CLOSED"}
+        aria-busy={isPending}
         onClick={handleSubmit}
-        className="btn-gradient flex h-11 w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+        className="btn-gradient flex h-11 w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background" />
+          <>
+            <span
+              aria-hidden
+              className="h-4 w-4 animate-spin rounded-full border-2 border-background/30 border-t-background"
+            />
+            Đang nộp…
+          </>
         ) : (
           <>
-            <Send className="h-4 w-4" />
+            <Send className="h-4 w-4" aria-hidden />
             {status === "CLOSED" ? "Đã đóng" : "Nộp nhiệm vụ"}
           </>
         )}

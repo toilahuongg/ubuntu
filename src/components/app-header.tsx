@@ -5,7 +5,8 @@ import { ROLE_LABELS } from "@/lib/domain";
 export function AppHeader({ user }: { user: SessionUser }) {
   return (
     <header
-      className="sticky top-0 z-40 border-b border-white/10 bg-background/50 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25"
+      role="banner"
+      className="sticky top-0 z-40 border-b border-white/10 bg-background/50 px-4 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-12px_rgba(0,0,0,0.6)] backdrop-blur-2xl backdrop-saturate-150 supports-[backdrop-filter]:bg-background/25 sm:px-6 lg:px-8"
       style={{ height: "var(--header-height)" }}
     >
       <div
