@@ -19,7 +19,7 @@ export default async function OnboardingPendingPage() {
   }
 
   if (user.status !== "PENDING") {
-    redirect("/dashboard");
+    redirect("/api/session/refresh?next=/dashboard");
   }
 
   return (

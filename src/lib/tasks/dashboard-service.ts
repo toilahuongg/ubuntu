@@ -91,7 +91,7 @@ async function loadVisibleTasksAndSubs(
 ): Promise<VisibleScopeData> {
   await connectToDatabase();
   if (!actor.teamId) {
-    throw new Error("Người dùng chưa được gán vào nhóm.");
+    return { visibleUsers: [], relevantTasks: [], allTasks: [], submissions: [] };
   }
   const visibleUsers = await listVisibleUsersForActor(actor);
   return loadScopeDataForVisibleUsers(dateKey, visibleUsers);

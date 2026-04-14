@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
+import { refreshSessionUser } from "@/lib/services/auth-service";
 import { BottomNav } from "@/components/bottom-nav";
 import { AppHeader } from "@/components/app-header";
 
@@ -16,7 +17,14 @@ export default async function AppLayout({
   }
 
   if (session.status === "PENDING") {
-    redirect("/onboarding");
+    const fresh = await refreshSessionUser(session.id);
+    if (!fresh) {
+      redirect("/login");
+    }
+    if (fresh.status === "PENDING") {
+      redirect("/onboarding");
+    }
+    redirect("/api/session/refresh?next=/dashboard");
   }
 
   if (session.status === "INACTIVE") {

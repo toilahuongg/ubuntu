@@ -7,6 +7,7 @@ import { authenticateGoogleUser } from "@/lib/services/auth-service";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: requireEnv("AUTH_SECRET"),
+  trustHost: true,
   providers: [
     Google({
       clientId: requireEnv("GOOGLE_CLIENT_ID"),
