@@ -1,7 +1,14 @@
 import { model, models, Schema, Types } from "mongoose";
 
 import { TASK_SCOPES, type TaskScope } from "@/lib/domain";
-import { DEFAULT_EXP_REWARD, DEFAULT_LATE_WINDOW_DAYS } from "@/lib/tasks/constants";
+import {
+  DEFAULT_EXP_REWARD,
+  DEFAULT_LATE_WINDOW_DAYS,
+  DEFAULT_POINT_REWARD,
+  DEFAULT_TASK_TYPE,
+  TASK_TYPES,
+  type TaskType,
+} from "@/lib/tasks/constants";
 
 const taskSchema = new Schema(
   {
@@ -9,6 +16,7 @@ const taskSchema = new Schema(
     deadlineTime: { required: true, type: String },
     description: { default: "", trim: true, type: String },
     expReward: { default: DEFAULT_EXP_REWARD, min: 0, type: Number },
+    pointReward: { default: DEFAULT_POINT_REWARD, min: 0, type: Number },
     lateWindowDays: {
       default: DEFAULT_LATE_WINDOW_DAYS,
       max: 365,
@@ -18,6 +26,14 @@ const taskSchema = new Schema(
     isActive: { default: true, type: Boolean },
     regionId: { default: null, ref: "Region", type: Schema.Types.ObjectId },
     scope: { default: "TEAM", enum: TASK_SCOPES, type: String },
+    taskType: {
+      default: DEFAULT_TASK_TYPE,
+      enum: TASK_TYPES,
+      required: true,
+      type: String,
+    },
+    targetCount: { default: null, min: 1, type: Number },
+    completedAt: { default: null, type: Date },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId },
     title: { required: true, trim: true, type: String },
     zoneId: { default: null, ref: "Zone", type: Schema.Types.ObjectId },
@@ -31,10 +47,14 @@ export type TaskRecord = {
   deadlineTime: string;
   description: string;
   expReward: number;
+  pointReward: number;
   lateWindowDays: number;
   isActive: boolean;
   regionId: Types.ObjectId | null;
   scope: TaskScope;
+  taskType: TaskType;
+  targetCount: number | null;
+  completedAt: Date | null;
   teamId: Types.ObjectId;
   title: string;
   zoneId: Types.ObjectId | null;

@@ -3,9 +3,17 @@ import Link from "next/link";
 import { Calendar, CheckCircle2, ChevronRight, Clock } from "lucide-react";
 
 import { formatDateLabel } from "@/lib/dates";
+import type { ActivityEntry } from "@/lib/tasks/activity-service";
 import type { MemberDashboardView } from "@/lib/tasks/types";
+import { ActivityFeed } from "./activity-feed";
 
-export function MemberDashboard({ data }: { data: MemberDashboardView }) {
+export function MemberDashboard({
+  data,
+  activities,
+}: {
+  data: MemberDashboardView;
+  activities: ActivityEntry[];
+}) {
   const progressPercent =
     data.nextLevelXp > 0
       ? Math.min(
@@ -103,6 +111,8 @@ export function MemberDashboard({ data }: { data: MemberDashboardView }) {
           </p>
         </div>
       )}
+
+      <ActivityFeed activities={activities} />
     </div>
   );
 }

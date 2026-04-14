@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { getTodayDateKey } from "@/lib/dates";
+import { listRecentActivities } from "@/lib/tasks/activity-service";
 import {
   buildLeaderDashboard,
   buildMemberDashboard,
@@ -16,10 +17,16 @@ export default async function DashboardPage() {
   const dateKey = getTodayDateKey();
 
   if (session.role === "MEMBER") {
-    const data = await buildMemberDashboard(session, dateKey);
-    return <MemberDashboard data={data} />;
+    const [data, activities] = await Promise.all([
+      buildMemberDashboard(session, dateKey),
+      listRecentActivities(session, 10),
+    ]);
+    return <MemberDashboard data={data} activities={activities} />;
   }
 
-  const data = await buildLeaderDashboard(session, dateKey);
-  return <LeaderDashboard data={data} />;
+  const [data, activities] = await Promise.all([
+    buildLeaderDashboard(session, dateKey),
+    listRecentActivities(session, 10),
+  ]);
+  return <LeaderDashboard data={data} activities={activities} />;
 }

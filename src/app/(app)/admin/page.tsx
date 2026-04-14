@@ -21,6 +21,7 @@ import {
   getAdminSnapshot,
   listPendingUsers,
 } from "@/lib/services/organization-service";
+import { MembersRoster } from "./members-roster";
 import { PendingUsers } from "./pending-users";
 import { TeamSection } from "./team-section";
 import { ZoneSection } from "./zone-section";
@@ -74,6 +75,7 @@ export default async function AdminPage() {
           </h2>
           <TelegramSection session={session} />
         </section>
+        <MembersRoster actor={session} />
       </div>
     );
   }
@@ -161,6 +163,8 @@ export default async function AdminPage() {
       </Link>
 
       {pendingUsers.length > 0 && <PendingUsers users={pendingUsers} />}
+
+      <MembersRoster actor={session} />
 
       <section id="teams" className="scroll-mt-20">
         <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">

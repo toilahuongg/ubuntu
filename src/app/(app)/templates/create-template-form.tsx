@@ -5,10 +5,15 @@ import { Plus, X } from "lucide-react";
 
 import { createTaskAction } from "./actions";
 
+type TaskTypeOption = "COUNT_TOTAL" | "MONTHLY_PER_MEMBER";
+
 export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [taskType, setTaskType] = useState<TaskTypeOption>(
+    "MONTHLY_PER_MEMBER",
+  );
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -54,6 +59,63 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
       </div>
 
       <div>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+          Loại nhiệm vụ *
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setTaskType("MONTHLY_PER_MEMBER")}
+            className={`h-10 rounded-xl border px-3 text-xs font-medium transition-colors ${
+              taskType === "MONTHLY_PER_MEMBER"
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border bg-overlay-subtle text-muted-foreground"
+            }`}
+          >
+            Tổng hợp theo tháng
+          </button>
+          <button
+            type="button"
+            onClick={() => setTaskType("COUNT_TOTAL")}
+            className={`h-10 rounded-xl border px-3 text-xs font-medium transition-colors ${
+              taskType === "COUNT_TOTAL"
+                ? "border-primary bg-primary/10 text-foreground"
+                : "border-border bg-overlay-subtle text-muted-foreground"
+            }`}
+          >
+            Tổng hợp theo số lần
+          </button>
+        </div>
+        <input type="hidden" name="taskType" value={taskType} />
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {taskType === "MONTHLY_PER_MEMBER"
+            ? "Mỗi thành viên tự đặt mục tiêu số lần cho từng tháng."
+            : "Tổng số lần của tất cả thành viên đạt mục tiêu thì task đóng."}
+        </p>
+      </div>
+
+      {taskType === "COUNT_TOTAL" && (
+        <div>
+          <label
+            htmlFor="targetCount"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
+          >
+            Mục tiêu tổng (số lần) *
+          </label>
+          <input
+            id="targetCount"
+            name="targetCount"
+            type="number"
+            min={1}
+            required
+            placeholder="VD: 100"
+            inputMode="numeric"
+            className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+          />
+        </div>
+      )}
+
+      <div>
         <label htmlFor="title" className="mb-1.5 block text-xs font-medium text-muted-foreground">
           Tiêu đề *
         </label>
@@ -79,7 +141,7 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
           <label htmlFor="deadlineTime" className="mb-1.5 block text-xs font-medium text-muted-foreground">
             Hạn chót *
@@ -100,6 +162,20 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
           <input
             id="expReward"
             name="expReward"
+            type="number"
+            min={0}
+            defaultValue={10}
+            inputMode="numeric"
+            className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+          />
+        </div>
+        <div>
+          <label htmlFor="pointReward" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            Điểm thưởng
+          </label>
+          <input
+            id="pointReward"
+            name="pointReward"
             type="number"
             min={0}
             defaultValue={10}

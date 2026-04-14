@@ -1,6 +1,15 @@
 import type { Role, SessionUser, TaskScope } from "@/lib/domain";
+import type { TaskType } from "@/lib/tasks/constants";
 
-export type TaskStatus = "OPEN" | "LOCKED";
+export type TaskStatus = "OPEN" | "LOCKED" | "COMPLETED";
+
+export type TaskProgressKind = "TOTAL" | "MONTHLY_MEMBER";
+
+export type TaskProgress = {
+  kind: TaskProgressKind;
+  current: number;
+  target: number | null;
+};
 
 export type TaskSummary = {
   id: string;
@@ -8,8 +17,12 @@ export type TaskSummary = {
   description: string;
   deadlineTime: string;
   expReward: number;
+  pointReward: number;
   lateWindowDays: number;
   scope: TaskScope;
+  taskType: TaskType;
+  targetCount: number | null;
+  completedAt: string | null;
   isActive: boolean;
   teamId: string;
   zoneId: string | null;
@@ -24,16 +37,27 @@ export type TaskCard = {
   date: string;
   deadlineAt: string;
   expReward: number;
+  pointReward: number;
   status: TaskStatus;
   completionCount: number;
   totalCount: number;
   myCompletionCount: number;
+  taskType: TaskType;
+  progress: TaskProgress;
 };
 
 export type RosterEntry = {
   id: string;
   fullName: string;
   role: Role;
+  completionCount: number;
+  monthlyCompletion?: number;
+  monthlyGoal?: number | null;
+  contribution?: number;
+};
+
+export type BackfillDay = {
+  dateKey: string;
   completionCount: number;
 };
 
@@ -42,13 +66,23 @@ export type TaskDetail = {
   title: string;
   description: string;
   date: string;
+  yearMonth: string;
   deadlineAt: string;
   expReward: number;
+  pointReward: number;
+  lateWindowDays: number;
   status: TaskStatus;
+  taskType: TaskType;
+  targetCount: number | null;
+  totalAcrossAll: number;
+  monthlyGoal: number | null;
+  monthlyCompletion: number;
   myCompletionCount: number;
+  totalCompletions: number;
   selectedSubject: SessionUser;
   rosterMembers: SessionUser[];
   roster: RosterEntry[];
+  backfillDays: BackfillDay[];
 };
 
 export type DashboardMemberTaskStatus = {

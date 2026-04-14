@@ -11,6 +11,14 @@ export function getTodayDateKey(date = new Date()) {
   return formatInTimeZone(date, getAppTimezone(), "yyyy-MM-dd");
 }
 
+export function getYearMonthFromDateKey(dateKey: string) {
+  return dateKey.slice(0, 7);
+}
+
+export function getCurrentYearMonth(date = new Date()) {
+  return formatInTimeZone(date, getAppTimezone(), "yyyy-MM");
+}
+
 export function createDeadlineAt(dateKey: string, time: string) {
   return fromZonedTime(`${dateKey}T${time}:00`, getAppTimezone());
 }

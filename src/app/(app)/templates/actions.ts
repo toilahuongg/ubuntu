@@ -7,7 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
 import type { SessionUser } from "@/lib/domain";
 import { canManageTasks } from "@/lib/permissions";
-import { createTask, toggleTask } from "@/lib/tasks/task-service";
+import { createTask, deleteTask, toggleTask } from "@/lib/tasks/task-service";
 import {
   taskInputSchema,
   toggleTaskInputSchema,
@@ -27,13 +27,21 @@ export async function createTaskAction(
 ): Promise<ActionResult<{ id: string }>> {
   return runAction(async () => {
     const session = await requireManager();
+    const rawTargetCount = formData.get("targetCount");
     const parsed = taskInputSchema.parse({
       title: formData.get("title") ?? "",
       description: (formData.get("description") as string) ?? "",
       deadlineTime: formData.get("deadlineTime") ?? "",
       expReward: Number(formData.get("expReward") ?? 10),
+      pointReward: Number(formData.get("pointReward") ?? 10),
       lateWindowDays: Number(formData.get("lateWindowDays") ?? 7),
       isActive: formData.get("isActive") === "true",
+      taskType:
+        (formData.get("taskType") as string | null) ?? "MONTHLY_PER_MEMBER",
+      targetCount:
+        rawTargetCount != null && rawTargetCount !== ""
+          ? Number(rawTargetCount)
+          : undefined,
     });
     const id = await createTask(session, parsed);
     revalidatePath("/templates");
@@ -49,6 +57,18 @@ export async function toggleTaskAction(
     const session = await requireManager();
     const parsed = toggleTaskInputSchema.parse({ taskId });
     await toggleTask(session, parsed.taskId);
+    revalidatePath("/templates");
+    revalidatePath("/dashboard");
+  });
+}
+
+export async function deleteTaskAction(
+  taskId: string,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManager();
+    const parsed = toggleTaskInputSchema.parse({ taskId });
+    await deleteTask(session, parsed.taskId);
     revalidatePath("/templates");
     revalidatePath("/dashboard");
   });

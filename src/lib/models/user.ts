@@ -16,6 +16,7 @@ const userSchema = new Schema(
     zoneId: { default: null, ref: "Zone", type: Schema.Types.ObjectId },
     telegramId: { default: null, type: Number },
     totalXp: { default: 0, type: Number },
+    totalPoints: { default: 0, type: Number },
     username: { default: null, trim: true, type: String },
     googleId: { default: null, trim: true, type: String },
     email: { default: null, lowercase: true, trim: true, type: String },

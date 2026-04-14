@@ -9,10 +9,18 @@ import {
 } from "lucide-react";
 
 import { formatDateLabel } from "@/lib/dates";
-import { ROLE_LABELS, SCOPE_LABELS } from "@/lib/domain";
+import { SCOPE_LABELS } from "@/lib/domain";
+import type { ActivityEntry } from "@/lib/tasks/activity-service";
 import type { LeaderDashboardView } from "@/lib/tasks/types";
+import { ActivityFeed } from "./activity-feed";
 
-export function LeaderDashboard({ data }: { data: LeaderDashboardView }) {
+export function LeaderDashboard({
+  data,
+  activities,
+}: {
+  data: LeaderDashboardView;
+  activities: ActivityEntry[];
+}) {
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
       <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
@@ -109,43 +117,7 @@ export function LeaderDashboard({ data }: { data: LeaderDashboardView }) {
         </div>
       )}
 
-      {data.roster.length > 0 && (
-        <section>
-          <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Thành viên
-          </h2>
-          <div className="glass-card divide-y divide-border overflow-hidden">
-            {data.roster.map((member) => (
-              <div
-                key={member.id}
-                className="flex items-center justify-between px-4 py-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p
-                    className="truncate text-sm font-medium"
-                    title={member.fullName}
-                  >
-                    {member.fullName}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {ROLE_LABELS[member.role] ?? member.role}
-                  </p>
-                </div>
-                <div className="ml-3 flex shrink-0 items-center gap-3 whitespace-nowrap text-xs">
-                  <span className="text-foreground/70">
-                    {member.completed} xong
-                  </span>
-                  {member.pending > 0 && (
-                    <span className="text-muted-foreground">
-                      {member.pending} chờ
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <ActivityFeed activities={activities} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getCurrentYearMonth } from "@/lib/dates";
 import type { SessionUser } from "@/lib/domain";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
@@ -10,7 +11,10 @@ import {
   UserModel,
   type UserRecord,
 } from "@/lib/models";
-import { listVisibleUsersForActor } from "@/lib/services/organization-service";
+import {
+  listTeamMembersForViewing,
+  listVisibleUsersForActor,
+} from "@/lib/services/organization-service";
 import { DEFAULT_EXP_REWARD } from "@/lib/tasks/constants";
 import { toObjectId } from "@/lib/utils/ids";
 
@@ -89,6 +93,71 @@ export async function listRecentActivities(
         actorMap.has(actorId)
           ? { id: actorId, fullName: actorMap.get(actorId) ?? "" }
           : null,
+      selfSubmitted: actorId === subjectId,
+    };
+  });
+}
+
+export async function listTaskActivitiesThisMonth(
+  actor: SessionUser,
+  taskId: string,
+): Promise<ActivityEntry[]> {
+  await connectToDatabase();
+
+  const yearMonth = getCurrentYearMonth();
+
+  const visibleUsers =
+    actor.role === "MEMBER"
+      ? await listTeamMembersForViewing(actor)
+      : await listVisibleUsersForActor(actor);
+
+  if (visibleUsers.length === 0) return [];
+
+  const visibleIds = visibleUsers.map((u) => toObjectId(u.id));
+
+  const submissions = (await SubmissionModel.find({
+    taskId: toObjectId(taskId),
+    subjectUserId: { $in: visibleIds },
+    date: { $regex: `^${yearMonth}` },
+  })
+    .sort({ submittedAt: -1 })
+    .lean()) as SubmissionRecordModel[];
+
+  if (submissions.length === 0) return [];
+
+  const task = (await TaskModel.findById(taskId).lean()) as TaskRecord | null;
+
+  const actorIds = Array.from(
+    new Set(submissions.map((s) => s.actorUserId.toString())),
+  ).map(toObjectId);
+
+  const actors = (await UserModel.find({ _id: { $in: actorIds } })
+    .select({ fullName: 1 })
+    .lean()) as UserRecord[];
+
+  const actorMap = new Map(
+    actors.map((a) => [a._id.toString(), a.fullName ?? ""]),
+  );
+  const subjectMap = new Map(visibleUsers.map((u) => [u.id, u.fullName]));
+
+  return submissions.map((s) => {
+    const subjectId = s.subjectUserId.toString();
+    const actorId = s.actorUserId.toString();
+    return {
+      id: s._id.toString(),
+      taskId,
+      taskTitle: task?.title ?? "Nhiệm vụ đã xoá",
+      expReward: task?.expReward ?? DEFAULT_EXP_REWARD,
+      completionCount: s.completionCount ?? 1,
+      submittedAt: (s.submittedAt ?? s.createdAt ?? new Date()).toISOString(),
+      date: s.date,
+      subject: {
+        id: subjectId,
+        fullName: subjectMap.get(subjectId) ?? "Thành viên",
+      },
+      actor: actorMap.has(actorId)
+        ? { id: actorId, fullName: actorMap.get(actorId) ?? "" }
+        : null,
       selfSubmitted: actorId === subjectId,
     };
   });

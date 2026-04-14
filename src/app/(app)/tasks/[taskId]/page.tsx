@@ -1,28 +1,31 @@
 import { redirect } from "next/navigation";
-import { ArrowLeft, Clock, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, Clock, Target, Trophy, UserCheck, Zap } from "lucide-react";
 import Link from "next/link";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { getTaskDetail } from "@/lib/tasks/task-service";
 import { getTodayDateKey } from "@/lib/dates";
-import { ROLE_LABELS } from "@/lib/domain";
+import { listTaskActivitiesThisMonth } from "@/lib/tasks/activity-service";
+import { canProxySubmit } from "@/lib/permissions";
 import { SubmitSection } from "./submit-section";
+import { MonthlyGoalForm } from "./monthly-goal-form";
+import { MonthActivity } from "./month-activity";
 
 export default async function TaskDetailPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ taskId: string }>;
-  searchParams: Promise<{ subject?: string }>;
 }) {
   const session = await getSessionUser();
   if (!session) redirect("/login");
 
   const { taskId } = await params;
-  const { subject } = await searchParams;
   const dateKey = getTodayDateKey();
 
-  const detail = await getTaskDetail(session, taskId, dateKey, subject);
+  const [detail, activities] = await Promise.all([
+    getTaskDetail(session, taskId, dateKey, session.id),
+    listTaskActivitiesThisMonth(session, taskId),
+  ]);
 
   const deadlineTime = new Date(detail.deadlineAt).toLocaleTimeString("vi-VN", {
     hour: "2-digit",
@@ -30,7 +33,19 @@ export default async function TaskDetailPage({
   });
 
   const statusLabel =
-    detail.status === "OPEN" ? "Đang mở" : "Đã khoá";
+    detail.status === "COMPLETED"
+      ? "Đã hoàn thành"
+      : detail.status === "OPEN"
+        ? "Đang mở"
+        : "Đã khoá";
+
+  const isCountTotal = detail.taskType === "COUNT_TOTAL";
+  const isMonthly = detail.taskType === "MONTHLY_PER_MEMBER";
+
+  const proxyCandidates = detail.rosterMembers.filter(
+    (m) => m.id !== session.id && canProxySubmit(session, m),
+  );
+  const canShowProxyLink = proxyCandidates.length > 0;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
@@ -48,7 +63,7 @@ export default async function TaskDetailPage({
             {detail.description}
           </p>
         )}
-        <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Clock className="h-3.5 w-3.5" />
             Hạn: {deadlineTime}
@@ -59,57 +74,126 @@ export default async function TaskDetailPage({
               +{detail.expReward} XP
             </span>
           )}
+          <span className="flex items-center gap-1">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            {detail.totalCompletions} lượt hôm nay
+          </span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-              detail.status === "OPEN"
-                ? "bg-overlay-medium text-foreground"
-                : "bg-muted text-muted-foreground"
+              detail.status === "COMPLETED"
+                ? "bg-primary/20 text-primary"
+                : detail.status === "OPEN"
+                  ? "bg-overlay-medium text-foreground"
+                  : "bg-muted text-muted-foreground"
             }`}
           >
             {statusLabel}
           </span>
+          <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase">
+            {isCountTotal ? "Tổng số lần" : "Theo tháng"}
+          </span>
         </div>
       </div>
 
+      {isCountTotal && detail.targetCount !== null && (
+        <section className="glass-card space-y-2 p-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="h-4 w-4 text-primary" aria-hidden />
+            <h2 className="text-sm font-semibold">
+              Tiến độ chung của cả nhóm
+            </h2>
+          </div>
+          <ProgressBar
+            current={detail.totalAcrossAll}
+            target={detail.targetCount}
+          />
+          <p className="text-xs text-muted-foreground">
+            {detail.totalAcrossAll} / {detail.targetCount} lượt
+            {detail.status === "COMPLETED" && " — 🎉 Đã hoàn thành mục tiêu!"}
+          </p>
+        </section>
+      )}
+
+      {isMonthly && (
+        <section className="space-y-3">
+          <div className="glass-card space-y-2 p-4">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" aria-hidden />
+              <h2 className="text-sm font-semibold">
+                Tiến độ tháng {detail.yearMonth} của bạn
+              </h2>
+            </div>
+            {detail.monthlyGoal !== null ? (
+              <>
+                <ProgressBar
+                  current={detail.monthlyCompletion}
+                  target={detail.monthlyGoal}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {detail.monthlyCompletion} / {detail.monthlyGoal} lượt
+                </p>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Chưa đặt mục tiêu cho tháng này. Đã hoàn thành {detail.monthlyCompletion} lượt.
+              </p>
+            )}
+          </div>
+          <MonthlyGoalForm
+            taskId={detail.id}
+            yearMonth={detail.yearMonth}
+            currentGoal={detail.monthlyGoal}
+          />
+        </section>
+      )}
+
       <SubmitSection
         taskId={detail.id}
-        allowedSubjects={detail.rosterMembers}
-        selectedSubject={detail.selectedSubject}
+        subjectUserId={session.id}
         myCompletionCount={detail.myCompletionCount}
         status={detail.status}
+        backfillDays={detail.backfillDays}
       />
 
-      <section>
-        <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Bảng hoàn thành
-        </h2>
-        <div className="glass-card divide-y divide-border overflow-hidden">
-          {detail.roster.map((member) => (
-            <div
-              key={member.id}
-              className="flex items-center justify-between px-4 py-3"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {member.fullName}
-                </p>
-                <p className="text-[11px] text-muted-foreground">
-                  {ROLE_LABELS[member.role] ?? member.role}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {member.completionCount > 0 ? (
-                  <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-overlay-medium px-2 text-xs font-bold">
-                    {member.completionCount}
-                  </span>
-                ) : (
-                  <span className="text-xs text-muted-foreground/50">—</span>
-                )}
-              </div>
+      {canShowProxyLink && (
+        <Link
+          href={`/tasks/${detail.id}/proxy`}
+          className="glass-card flex items-center justify-between p-4 transition-colors hover:bg-overlay-subtle"
+        >
+          <div className="flex items-center gap-3">
+            <UserCheck className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-semibold">Nhập hộ cho thành viên</p>
+              <p className="text-xs text-muted-foreground">
+                {proxyCandidates.length} thành viên khả dụng
+              </p>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </Link>
+      )}
+
+      <MonthActivity activities={activities} />
+    </div>
+  );
+}
+
+function ProgressBar({
+  current,
+  target,
+}: {
+  current: number;
+  target: number;
+}) {
+  const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-overlay-subtle">
+      <div
+        className="h-full rounded-full bg-primary transition-all"
+        style={{ width: `${pct}%` }}
+        aria-valuenow={pct}
+        role="progressbar"
+      />
     </div>
   );
 }

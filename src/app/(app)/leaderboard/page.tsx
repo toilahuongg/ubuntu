@@ -122,7 +122,7 @@ function XpValue({ xp }: { xp: number }) {
     <span className="text-sm font-bold tabular-nums">
       {xp.toLocaleString("vi-VN")}
       <span className="ml-0.5 text-[10px] font-normal text-muted-foreground">
-        XP
+        điểm
       </span>
     </span>
   );

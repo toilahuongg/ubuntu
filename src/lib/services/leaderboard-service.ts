@@ -5,9 +5,9 @@ import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { getAppTimezone } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
+  PointTransactionModel,
   RegionModel,
   UserModel,
-  XpTransactionModel,
   type UserRecord,
 } from "@/lib/models";
 import { getLevelInfo } from "@/lib/level-utils";
@@ -53,7 +53,7 @@ async function getTopUsersByMonthlyXp(
   await connectToDatabase();
   const since = getMonthStart();
 
-  const topIds = (await XpTransactionModel.aggregate([
+  const topIds = (await PointTransactionModel.aggregate([
     { $match: { createdAt: { $gte: since } } },
     { $group: { _id: "$userId", monthlyXp: { $sum: "$amount" } } },
     {
@@ -101,7 +101,7 @@ export async function getTopRegions(
   await connectToDatabase();
   const since = getMonthStart();
 
-  const aggregated = (await XpTransactionModel.aggregate([
+  const aggregated = (await PointTransactionModel.aggregate([
     { $match: { createdAt: { $gte: since } } },
     { $group: { _id: "$userId", monthlyXp: { $sum: "$amount" } } },
     {

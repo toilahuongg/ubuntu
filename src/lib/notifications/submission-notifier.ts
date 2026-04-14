@@ -22,11 +22,15 @@ export function formatGroupSubmissionMessage(input: {
   fullName: string;
   taskTitle: string;
   xpAwarded: number;
+  completionCount: number;
 }): string {
   const name = escapeHtml(input.fullName);
   const title = escapeHtml(input.taskTitle);
   const xp = Math.max(0, Math.floor(input.xpAwarded));
-  return `📌 <b>${name}</b> vừa hoàn thành <b>${title}</b> (+${xp} XP)`;
+  const countSuffix =
+    input.completionCount > 1 ? ` (×${input.completionCount})` : "";
+  const xpSuffix = xp > 0 ? ` (+${xp} XP)` : "";
+  return `📌 <b>${name}</b> vừa hoàn thành <b>${title}</b>${countSuffix}${xpSuffix}`;
 }
 
 export async function notifySubmissionToGroups(input: {
@@ -38,6 +42,7 @@ export async function notifySubmissionToGroups(input: {
   };
   taskTitle: string;
   xpAwarded: number;
+  completionCount: number;
 }): Promise<void> {
   await connectToDatabase();
 
@@ -74,7 +79,58 @@ export async function notifySubmissionToGroups(input: {
     fullName: input.subject.fullName,
     taskTitle: input.taskTitle,
     xpAwarded: input.xpAwarded,
+    completionCount: input.completionCount,
   });
+
+  await Promise.allSettled(
+    Array.from(chatIds).map((chatId) =>
+      safeSendTelegramMessage({ chatId, parseMode: "HTML", text }),
+    ),
+  );
+}
+
+export async function notifyTaskCompletionToGroups(input: {
+  scope: {
+    teamId?: string | null;
+    zoneId?: string | null;
+    regionId?: string | null;
+  };
+  taskTitle: string;
+  targetCount: number;
+}): Promise<void> {
+  await connectToDatabase();
+
+  const [team, zone, region] = await Promise.all([
+    input.scope.teamId
+      ? (TeamModel.findById(input.scope.teamId)
+          .select({ telegramChatId: 1 })
+          .lean() as Promise<TeamRecord | null>)
+      : null,
+    input.scope.zoneId
+      ? (ZoneModel.findById(input.scope.zoneId)
+          .select({ telegramChatId: 1 })
+          .lean() as Promise<ZoneRecord | null>)
+      : null,
+    input.scope.regionId
+      ? (RegionModel.findById(input.scope.regionId)
+          .select({ telegramChatId: 1 })
+          .lean() as Promise<RegionRecord | null>)
+      : null,
+  ]);
+
+  const chatIds = new Set<number>();
+  for (const entity of [team, zone, region]) {
+    const chatId = (entity as { telegramChatId?: number | null } | null)
+      ?.telegramChatId;
+    if (typeof chatId === "number") {
+      chatIds.add(chatId);
+    }
+  }
+
+  if (chatIds.size === 0) return;
+
+  const title = escapeHtml(input.taskTitle);
+  const text = `🏆 Nhiệm vụ <b>${title}</b> đã hoàn thành mục tiêu ${input.targetCount}!`;
 
   await Promise.allSettled(
     Array.from(chatIds).map((chatId) =>

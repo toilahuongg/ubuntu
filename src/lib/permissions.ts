@@ -13,11 +13,7 @@ export function isRegionalLead(user: SessionUser) {
 }
 
 export function canManageTasks(user: SessionUser) {
-  return (
-    user.role === "TEAM_LEAD" ||
-    user.role === "ZONE_LEAD" ||
-    user.role === "REGIONAL_LEAD"
-  );
+  return user.role === "TEAM_LEAD";
 }
 
 export function canAccessManagement(user: SessionUser) {

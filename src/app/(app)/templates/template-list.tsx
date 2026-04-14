@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Clock, ToggleLeft, ToggleRight, Zap } from "lucide-react";
+import { Clock, ToggleLeft, ToggleRight, Trash2, Trophy, Zap } from "lucide-react";
 
-import { toggleTaskAction } from "./actions";
+import { deleteTaskAction, toggleTaskAction } from "./actions";
 import { SCOPE_LABELS } from "@/lib/domain";
 import type { TaskSummary, TemplateCoverage } from "@/lib/tasks/types";
 
@@ -55,6 +55,18 @@ function TaskCard({
     });
   }
 
+  function handleDelete() {
+    const confirmed = window.confirm(
+      `Xoá nhiệm vụ "${task.title}"? Tất cả lượt nộp và mục tiêu tháng liên quan cũng sẽ bị xoá.`,
+    );
+    if (!confirmed) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteTaskAction(task.id);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
   return (
     <div className="glass-card flex flex-col gap-1 p-4">
       <div className="flex items-center justify-between">
@@ -82,6 +94,10 @@ function TaskCard({
               <Zap className="h-3 w-3" />
               {task.expReward} XP
             </span>
+            <span className="flex items-center gap-1">
+              <Trophy className="h-3 w-3" />
+              {task.pointReward} điểm
+            </span>
             <span>Nhập bù: {task.lateWindowDays} ngày</span>
             <span
               className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
@@ -100,19 +116,30 @@ function TaskCard({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleToggle}
-          disabled={isPending}
-          className="ml-3 flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground disabled:opacity-50"
-          aria-label={task.isActive ? "Tắt nhiệm vụ" : "Bật nhiệm vụ"}
-        >
-          {task.isActive ? (
-            <ToggleRight className="h-5 w-5 text-foreground" />
-          ) : (
-            <ToggleLeft className="h-5 w-5" />
-          )}
-        </button>
+        <div className="ml-3 flex items-center">
+          <button
+            type="button"
+            onClick={handleToggle}
+            disabled={isPending}
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground disabled:opacity-50"
+            aria-label={task.isActive ? "Tắt nhiệm vụ" : "Bật nhiệm vụ"}
+          >
+            {task.isActive ? (
+              <ToggleRight className="h-5 w-5 text-foreground" />
+            ) : (
+              <ToggleLeft className="h-5 w-5" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isPending}
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+            aria-label="Xoá nhiệm vụ"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       {error && (
         <p role="alert" className="text-[11px] text-destructive">

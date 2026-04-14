@@ -7,6 +7,7 @@ import { getTodayDateKey } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   AuditLogModel,
+  PointTransactionModel,
   SubmissionModel,
   type SubmissionRecordModel,
   TaskModel,
@@ -21,11 +22,16 @@ import { getLevelFromXp } from "@/lib/xp";
 import {
   DEFAULT_EXP_REWARD,
   DEFAULT_LATE_WINDOW_DAYS,
+  DEFAULT_POINT_REWARD,
 } from "@/lib/tasks/constants";
 import { appliesToUser, isWithinLateWindow } from "@/lib/tasks/policy";
-import { taskToScope } from "@/lib/tasks/task-service";
+import { DEFAULT_TASK_TYPE } from "@/lib/tasks/constants";
+import { sumTaskCompletions, taskToScope } from "@/lib/tasks/task-service";
 import { safeSendTelegramMessage } from "@/lib/telegram-bot";
-import { notifySubmissionToGroups } from "@/lib/notifications/submission-notifier";
+import {
+  notifySubmissionToGroups,
+  notifyTaskCompletionToGroups,
+} from "@/lib/notifications/submission-notifier";
 import { toObjectId } from "@/lib/utils/ids";
 
 export type SaveSubmissionResult = {
@@ -35,6 +41,7 @@ export type SaveSubmissionResult = {
   xpAwarded: number;
   newLevel: number | null;
   leveledUp: boolean;
+  taskJustCompleted: boolean;
 };
 
 export async function saveSubmission(
@@ -42,7 +49,9 @@ export async function saveSubmission(
   taskId: string,
   subjectUserId: string,
   dateKey: string = getTodayDateKey(),
+  options: { notify?: boolean } = {},
 ): Promise<SaveSubmissionResult> {
+  const shouldNotify = options.notify ?? true;
   await connectToDatabase();
 
   const [taskRaw, subjectRaw] = await Promise.all([
@@ -79,12 +88,19 @@ export async function saveSubmission(
 
   assertCanProxySubmit(actor, subjectSession);
 
+  const taskType = taskRaw.taskType ?? DEFAULT_TASK_TYPE;
+
+  if (taskType === "COUNT_TOTAL" && taskRaw.completedAt) {
+    throw new Error("Nhiệm vụ đã hoàn thành — không thể nộp thêm.");
+  }
+
   const lateWindowDays = taskRaw.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS;
   if (!isWithinLateWindow(dateKey, lateWindowDays)) {
     throw new Error("Đã qua cửa sổ nhập bù cho nhiệm vụ này.");
   }
 
   const expReward = taskRaw.expReward ?? DEFAULT_EXP_REWARD;
+  const pointReward = taskRaw.pointReward ?? DEFAULT_POINT_REWARD;
 
   const supportsTransactions = (() => {
     try {
@@ -168,6 +184,27 @@ export async function saveSubmission(
       }
     }
 
+    if (isFirstSubmission && pointReward > 0) {
+      await PointTransactionModel.create(
+        [
+          {
+            amount: pointReward,
+            description: `Hoàn thành: ${taskRaw.title}`,
+            source: "task_completion",
+            sourceId: taskRaw._id,
+            userId: subjectRaw._id,
+          },
+        ],
+        session ? { session } : undefined,
+      );
+
+      await UserModel.updateOne(
+        { _id: subjectRaw._id },
+        { $inc: { totalPoints: pointReward } },
+        session ? { session } : undefined,
+      );
+    }
+
     await AuditLogModel.create(
       [
         {
@@ -190,6 +227,25 @@ export async function saveSubmission(
       session ? { session } : undefined,
     );
 
+    let taskJustCompleted = false;
+    if (
+      taskType === "COUNT_TOTAL" &&
+      taskRaw.targetCount &&
+      !taskRaw.completedAt
+    ) {
+      const total = await sumTaskCompletions(taskRaw._id.toString());
+      if (total >= taskRaw.targetCount) {
+        const res = await TaskModel.updateOne(
+          { _id: taskRaw._id, completedAt: null },
+          { $set: { completedAt: new Date() } },
+          session ? { session } : undefined,
+        );
+        if (res.modifiedCount > 0) {
+          taskJustCompleted = true;
+        }
+      }
+    }
+
     return {
       submissionId: updated._id.toString(),
       completionCount: updated.completionCount,
@@ -197,6 +253,7 @@ export async function saveSubmission(
       xpAwarded,
       newLevel,
       leveledUp,
+      taskJustCompleted,
     };
   };
 
@@ -212,7 +269,7 @@ export async function saveSubmission(
     result = await runBody();
   }
 
-  if (result.isFirstSubmission) {
+  if (shouldNotify) {
     void notifySubmissionToGroups({
       subject: {
         fullName: subjectRaw.fullName,
@@ -222,16 +279,34 @@ export async function saveSubmission(
       },
       taskTitle: taskRaw.title,
       xpAwarded: result.xpAwarded,
+      completionCount: result.completionCount,
     }).catch((err) => {
       console.error("[submission-notifier]", err);
     });
+
+    if (result.taskJustCompleted && taskRaw.targetCount) {
+      void notifyTaskCompletionToGroups({
+        scope: {
+          teamId: taskRaw.teamId.toString(),
+          zoneId: taskRaw.zoneId?.toString() ?? null,
+          regionId: taskRaw.regionId?.toString() ?? null,
+        },
+        taskTitle: taskRaw.title,
+        targetCount: taskRaw.targetCount,
+      }).catch((err) => {
+        console.error("[submission-notifier]", err);
+      });
+    }
   }
 
-  if (result.isFirstSubmission && subjectRaw.telegramId) {
+  if (shouldNotify && subjectRaw.telegramId) {
     const selfSubmit = actor.id === subjectSession.id;
+    const countSuffix =
+      result.completionCount > 1 ? ` (lần ${result.completionCount})` : "";
+    const xpSuffix = result.xpAwarded > 0 ? ` — +${result.xpAwarded} XP!` : "!";
     const text = selfSubmit
-      ? `🎉 Bạn đã hoàn thành "${taskRaw.title}" — +${expReward} XP!`
-      : `🎉 ${actor.fullName} đã ghi nhận "${taskRaw.title}" cho bạn — +${expReward} XP!`;
+      ? `🎉 Bạn đã hoàn thành "${taskRaw.title}"${countSuffix}${xpSuffix}`
+      : `🎉 ${actor.fullName} đã ghi nhận "${taskRaw.title}"${countSuffix} cho bạn${xpSuffix}`;
     await safeSendTelegramMessage({
       chatId: subjectRaw.telegramId,
       text,

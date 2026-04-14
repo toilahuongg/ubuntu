@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
   Layers,
   LayoutDashboard,
   MapPin,
@@ -37,11 +36,6 @@ const NAV_ITEMS: NavItem[] = [
     label: "Khu vực",
     icon: MapPin,
     roles: ["REGIONAL_LEAD"],
-  },
-  {
-    href: "/activities",
-    label: "Hoạt động",
-    icon: Activity,
   },
   {
     href: "/leaderboard",
