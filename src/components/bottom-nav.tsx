@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Layers,
   LayoutDashboard,
   ListChecks,
   MapPin,
@@ -29,7 +30,13 @@ const NAV_ITEMS: NavItem[] = [
     href: "/templates",
     label: "Nhiệm vụ",
     icon: ListChecks,
-    roles: ["TEAM_LEAD"],
+    roles: ["TEAM_LEAD", "ZONE_LEAD", "REGIONAL_LEAD"],
+  },
+  {
+    href: "/zone",
+    label: "Địa vực",
+    icon: Layers,
+    roles: ["ZONE_LEAD"],
   },
   {
     href: "/region",

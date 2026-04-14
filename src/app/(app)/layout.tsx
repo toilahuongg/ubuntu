@@ -16,7 +16,7 @@ export default async function AppLayout({
   }
 
   if (session.status === "PENDING") {
-    redirect("/onboarding/select-region");
+    redirect("/onboarding");
   }
 
   if (session.status === "INACTIVE") {

@@ -13,7 +13,8 @@ const userSchema = new Schema(
     role: { enum: ROLES, required: true, type: String },
     status: { default: "ACTIVE", enum: USER_STATUSES, type: String },
     teamId: { default: null, ref: "Team", type: Schema.Types.ObjectId },
-    telegramId: { default: null, index: true, sparse: true, type: Number, unique: true },
+    zoneId: { default: null, ref: "Zone", type: Schema.Types.ObjectId },
+    telegramId: { default: null, type: Number },
     totalXp: { default: 0, type: Number },
     username: { default: null, trim: true, type: String },
   },
@@ -21,6 +22,16 @@ const userSchema = new Schema(
 );
 
 userSchema.index({ totalXp: -1, level: -1 });
+
+// Unique only for users that actually have a telegramId (not null).
+// Plain sparse:true won't work because we explicitly store `null`.
+userSchema.index(
+  { telegramId: 1 },
+  {
+    partialFilterExpression: { telegramId: { $type: "number" } },
+    unique: true,
+  },
+);
 
 export type UserRecord = InferSchemaType<typeof userSchema> & {
   _id: Types.ObjectId;

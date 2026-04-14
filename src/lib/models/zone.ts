@@ -1,20 +1,19 @@
 import { InferSchemaType, model, models, Schema, Types } from "mongoose";
 
-const regionSchema = new Schema(
+const zoneSchema = new Schema(
   {
     code: { required: true, trim: true, type: String, unique: true },
     leadUserIds: [{ ref: "User", type: Schema.Types.ObjectId }],
     name: { required: true, trim: true, type: String },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId },
-    zoneId: { ref: "Zone", required: true, type: Schema.Types.ObjectId },
   },
   { timestamps: true },
 );
 
-export type RegionRecord = InferSchemaType<typeof regionSchema> & {
+export type ZoneRecord = InferSchemaType<typeof zoneSchema> & {
   _id: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 };
 
-export const RegionModel = models.Region || model("Region", regionSchema);
+export const ZoneModel = models.Zone || model("Zone", zoneSchema);

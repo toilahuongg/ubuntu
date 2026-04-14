@@ -6,7 +6,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import {
   canAccessManagement,
   canAccessRegionManagement,
-  canManageTeamRegions,
+  canAccessZoneManagement,
 } from "@/lib/permissions";
 import { refreshSessionUser } from "@/lib/services/auth-service";
 
@@ -44,10 +44,10 @@ export async function requireManagementUser() {
   return user;
 }
 
-export async function requireTeamLeadUser() {
+export async function requireZoneLeadUser() {
   const user = await requireCurrentUser();
 
-  if (!canManageTeamRegions(user)) {
+  if (!canAccessZoneManagement(user)) {
     redirect("/dashboard");
   }
 

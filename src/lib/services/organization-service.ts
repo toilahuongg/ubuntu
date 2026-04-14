@@ -9,6 +9,8 @@ import {
   type TeamRecord,
   UserModel,
   type UserRecord,
+  ZoneModel,
+  type ZoneRecord,
 } from "@/lib/models";
 import { stringifyId, toObjectId } from "@/lib/utils/ids";
 
@@ -19,6 +21,7 @@ type SaveUserInput = {
   role: Role;
   status: UserStatus;
   teamId?: string;
+  zoneId?: string;
   telegramId?: number;
   userId?: string;
   username?: string;
@@ -32,6 +35,17 @@ type TeamSummary = {
   name: string;
 };
 
+type ZoneSummary = {
+  code: string;
+  id: string;
+  leadUserIds: string[];
+  memberCount: number;
+  name: string;
+  regionCount: number;
+  teamId: string;
+  teamName?: string;
+};
+
 type RegionSummary = {
   code: string;
   id: string;
@@ -40,12 +54,15 @@ type RegionSummary = {
   name: string;
   teamId: string;
   teamName?: string;
+  zoneId: string;
+  zoneName?: string;
 };
 
 export type AdminSnapshot = {
   regions: RegionSummary[];
   teams: TeamSummary[];
   users: SerializedUser[];
+  zones: ZoneSummary[];
 };
 
 function serializeUser(record: UserRecord): SerializedUser {
@@ -62,82 +79,123 @@ function serializeUser(record: UserRecord): SerializedUser {
     telegramId: record.telegramId,
     updatedAt: record.updatedAt?.toISOString(),
     username: record.username,
+    zoneId: stringifyId((record as UserRecord & { zoneId?: unknown }).zoneId),
   };
 }
 
 async function syncLeadAssignments(user: SerializedUser) {
-  await TeamModel.updateMany(
-    { leadUserIds: toObjectId(user.id) },
-    { $pull: { leadUserIds: toObjectId(user.id) } },
-  );
-  await RegionModel.updateMany(
-    { leadUserIds: toObjectId(user.id) },
-    { $pull: { leadUserIds: toObjectId(user.id) } },
-  );
+  const userObjectId = toObjectId(user.id);
+
+  await Promise.all([
+    TeamModel.updateMany(
+      { leadUserIds: userObjectId },
+      { $pull: { leadUserIds: userObjectId } },
+    ),
+    ZoneModel.updateMany(
+      { leadUserIds: userObjectId },
+      { $pull: { leadUserIds: userObjectId } },
+    ),
+    RegionModel.updateMany(
+      { leadUserIds: userObjectId },
+      { $pull: { leadUserIds: userObjectId } },
+    ),
+  ]);
 
   if (user.role === "TEAM_LEAD" && user.teamId) {
     await TeamModel.findByIdAndUpdate(user.teamId, {
-      $addToSet: { leadUserIds: toObjectId(user.id) },
+      $addToSet: { leadUserIds: userObjectId },
+    });
+  }
+
+  if (user.role === "ZONE_LEAD" && user.zoneId) {
+    await ZoneModel.findByIdAndUpdate(user.zoneId, {
+      $addToSet: { leadUserIds: userObjectId },
     });
   }
 
   if (user.role === "REGIONAL_LEAD" && user.regionId) {
     await RegionModel.findByIdAndUpdate(user.regionId, {
-      $addToSet: { leadUserIds: toObjectId(user.id) },
+      $addToSet: { leadUserIds: userObjectId },
     });
   }
 }
 
-export async function getAdminSnapshot() {
+export async function getAdminSnapshot(): Promise<AdminSnapshot> {
   await connectToDatabase();
 
-  const [teams, regions, users] = await Promise.all([
-    TeamModel.find().sort({ name: 1 }).lean(),
-    RegionModel.find().sort({ name: 1 }).lean(),
-    UserModel.find().sort({ createdAt: -1 }).lean(),
+  const [teams, zones, regions, users] = await Promise.all([
+    TeamModel.find().sort({ name: 1 }).lean() as Promise<TeamRecord[]>,
+    ZoneModel.find().sort({ name: 1 }).lean() as Promise<ZoneRecord[]>,
+    RegionModel.find().sort({ name: 1 }).lean() as Promise<RegionRecord[]>,
+    UserModel.find().sort({ createdAt: -1 }).lean() as Promise<UserRecord[]>,
   ]);
 
-  const typedTeams = teams as TeamRecord[];
-  const typedRegions = regions as RegionRecord[];
-  const typedUsers = users as UserRecord[];
-
   const teamCounts = new Map<string, number>();
+  const zoneCounts = new Map<string, number>();
   const regionCounts = new Map<string, number>();
+  const zoneRegionCounts = new Map<string, number>();
 
-  for (const user of typedUsers) {
+  for (const user of users) {
     const teamId = stringifyId(user.teamId);
+    const zoneId = stringifyId((user as UserRecord & { zoneId?: unknown }).zoneId);
     const regionId = stringifyId(user.regionId);
 
-    if (teamId) {
-      teamCounts.set(teamId, (teamCounts.get(teamId) || 0) + 1);
-    }
+    if (teamId) teamCounts.set(teamId, (teamCounts.get(teamId) || 0) + 1);
+    if (zoneId) zoneCounts.set(zoneId, (zoneCounts.get(zoneId) || 0) + 1);
+    if (regionId) regionCounts.set(regionId, (regionCounts.get(regionId) || 0) + 1);
+  }
 
-    if (regionId) {
-      regionCounts.set(regionId, (regionCounts.get(regionId) || 0) + 1);
+  for (const region of regions) {
+    const zoneId = (region as RegionRecord & { zoneId?: unknown }).zoneId
+      ? (region as RegionRecord & { zoneId: { toString(): string } }).zoneId.toString()
+      : null;
+    if (zoneId) {
+      zoneRegionCounts.set(zoneId, (zoneRegionCounts.get(zoneId) || 0) + 1);
     }
   }
 
-  const teamMap = new Map(typedTeams.map((team) => [team._id.toString(), team]));
+  const teamMap = new Map(teams.map((team) => [team._id.toString(), team]));
+  const zoneMap = new Map(zones.map((zone) => [zone._id.toString(), zone]));
 
   return {
-    regions: typedRegions.map((region) => ({
-      code: region.code,
-      id: region._id.toString(),
-      leadUserIds: region.leadUserIds.map((value) => value.toString()),
-      memberCount: regionCounts.get(region._id.toString()) || 0,
-      name: region.name,
-      teamId: region.teamId.toString(),
-      teamName: teamMap.get(region.teamId.toString())?.name,
-    })),
-    teams: typedTeams.map((team) => ({
+    regions: regions.map((region) => {
+      const zoneIdRaw = (region as RegionRecord & { zoneId?: unknown }).zoneId;
+      const zoneId = zoneIdRaw
+        ? (zoneIdRaw as { toString(): string }).toString()
+        : "";
+      const teamIdRaw = region.teamId;
+      const teamId = teamIdRaw ? teamIdRaw.toString() : "";
+      return {
+        code: region.code,
+        id: region._id.toString(),
+        leadUserIds: region.leadUserIds.map((value) => value.toString()),
+        memberCount: regionCounts.get(region._id.toString()) || 0,
+        name: region.name,
+        teamId,
+        teamName: teamId ? teamMap.get(teamId)?.name : undefined,
+        zoneId,
+        zoneName: zoneId ? zoneMap.get(zoneId)?.name : undefined,
+      };
+    }),
+    teams: teams.map((team) => ({
       code: team.code,
       id: team._id.toString(),
       leadUserIds: team.leadUserIds.map((value) => value.toString()),
       memberCount: teamCounts.get(team._id.toString()) || 0,
       name: team.name,
     })),
-    users: typedUsers.map(serializeUser),
-  } satisfies AdminSnapshot;
+    users: users.map(serializeUser),
+    zones: zones.map((zone) => ({
+      code: zone.code,
+      id: zone._id.toString(),
+      leadUserIds: zone.leadUserIds.map((value) => value.toString()),
+      memberCount: zoneCounts.get(zone._id.toString()) || 0,
+      name: zone.name,
+      regionCount: zoneRegionCounts.get(zone._id.toString()) || 0,
+      teamId: zone.teamId.toString(),
+      teamName: teamMap.get(zone.teamId.toString())?.name,
+    })),
+  };
 }
 
 export async function getUserById(userId: string) {
@@ -160,18 +218,33 @@ export async function markUserLogin(userId: string) {
 export async function listVisibleUsersForActor(actor: SessionUser) {
   await connectToDatabase();
 
-  if (actor.role === "TEAM_LEAD" && !actor.teamId) {
-    const users = (await UserModel.find({ status: "ACTIVE" })
-      .sort({ fullName: 1 })
-      .lean()) as UserRecord[];
+  if (actor.role === "TEAM_LEAD") {
+    if (!actor.teamId) {
+      const users = (await UserModel.find({ status: "ACTIVE" })
+        .sort({ role: 1, fullName: 1 })
+        .lean()) as UserRecord[];
+      return users.map(serializeUser);
+    }
 
-    return users.map(serializeUser);
-  }
-
-  if (actor.role === "TEAM_LEAD" && actor.teamId) {
     const users = (await UserModel.find({
       status: "ACTIVE",
       teamId: toObjectId(actor.teamId),
+    })
+      .sort({ role: 1, fullName: 1 })
+      .lean()) as UserRecord[];
+
+    const result = users.map(serializeUser);
+    if (!result.some((u) => u.id === actor.id)) {
+      const self = await getUserById(actor.id);
+      if (self) result.unshift(self);
+    }
+    return result;
+  }
+
+  if (actor.role === "ZONE_LEAD" && actor.zoneId) {
+    const users = (await UserModel.find({
+      status: "ACTIVE",
+      zoneId: toObjectId(actor.zoneId),
     })
       .sort({ role: 1, fullName: 1 })
       .lean()) as UserRecord[];
@@ -214,66 +287,172 @@ export async function listDevLoginUsers() {
 
 export async function createTeam(name: string, code: string) {
   await connectToDatabase();
-
-  const team = await TeamModel.create({
-    code,
-    name,
-  });
-
+  const team = await TeamModel.create({ code, name });
   return team._id.toString();
 }
 
-export async function createRegion(input: {
+export async function updateTeam(
+  teamId: string,
+  input: { name: string; code: string },
+) {
+  await connectToDatabase();
+  const team = await TeamModel.findByIdAndUpdate(
+    teamId,
+    { code: input.code.trim(), name: input.name.trim() },
+    { new: true },
+  );
+  if (!team) throw new Error("Nhóm không tồn tại.");
+  return team._id.toString();
+}
+
+export async function updateZone(
+  zoneId: string,
+  input: { name: string; code: string },
+) {
+  await connectToDatabase();
+  const zone = await ZoneModel.findByIdAndUpdate(
+    zoneId,
+    { code: input.code.trim(), name: input.name.trim() },
+    { new: true },
+  );
+  if (!zone) throw new Error("Địa Vực không tồn tại.");
+  return zone._id.toString();
+}
+
+export async function updateRegion(
+  regionId: string,
+  input: { name: string; code: string },
+) {
+  await connectToDatabase();
+  const region = await RegionModel.findByIdAndUpdate(
+    regionId,
+    { code: input.code.trim(), name: input.name.trim() },
+    { new: true },
+  );
+  if (!region) throw new Error("Khu vực không tồn tại.");
+  return region._id.toString();
+}
+
+export async function createZone(input: {
   code: string;
   name: string;
   teamId: string;
 }) {
   await connectToDatabase();
+  const zone = await ZoneModel.create({
+    code: input.code,
+    name: input.name,
+    teamId: toObjectId(input.teamId),
+  });
+  return zone._id.toString();
+}
+
+export async function createRegion(input: {
+  code: string;
+  name: string;
+  zoneId: string;
+}) {
+  await connectToDatabase();
+
+  const zone = (await ZoneModel.findById(input.zoneId).lean()) as ZoneRecord | null;
+  if (!zone) {
+    throw new Error("Địa Vực không tồn tại.");
+  }
 
   const region = await RegionModel.create({
     code: input.code,
     name: input.name,
-    teamId: toObjectId(input.teamId),
+    teamId: zone.teamId,
+    zoneId: zone._id,
   });
 
   return region._id.toString();
 }
 
+/**
+ * Resolve the user's ancestor IDs based on role and lowest-level assignment.
+ * DB denormalizes teamId/zoneId/regionId for query efficiency, but the
+ * caller only supplies the lowest level (per product spec).
+ */
+async function resolveUserHierarchy(input: {
+  role: Role;
+  teamId?: string;
+  zoneId?: string;
+  regionId?: string;
+}) {
+  if (input.role === "MEMBER" || input.role === "REGIONAL_LEAD") {
+    if (!input.regionId) {
+      return { regionId: null, teamId: null, zoneId: null };
+    }
+    const region = (await RegionModel.findById(input.regionId).lean()) as RegionRecord | null;
+    if (!region) throw new Error("Khu vực không tồn tại.");
+    return {
+      regionId: region._id.toString(),
+      teamId: region.teamId.toString(),
+      zoneId: region.zoneId.toString(),
+    };
+  }
+
+  if (input.role === "ZONE_LEAD") {
+    if (!input.zoneId) {
+      return { regionId: null, teamId: null, zoneId: null };
+    }
+    const zone = (await ZoneModel.findById(input.zoneId).lean()) as ZoneRecord | null;
+    if (!zone) throw new Error("Địa Vực không tồn tại.");
+    return {
+      regionId: null,
+      teamId: zone.teamId.toString(),
+      zoneId: zone._id.toString(),
+    };
+  }
+
+  // TEAM_LEAD
+  return {
+    regionId: null,
+    teamId: input.teamId || null,
+    zoneId: null,
+  };
+}
+
 export async function saveUser(input: SaveUserInput) {
   await connectToDatabase();
 
-  let normalizedTeamId = input.teamId;
-  let normalizedRegionId = input.regionId;
+  const hierarchy = await resolveUserHierarchy({
+    regionId: input.regionId,
+    role: input.role,
+    teamId: input.teamId,
+    zoneId: input.zoneId,
+  });
 
-  if (input.regionId) {
-    const region = (await RegionModel.findById(input.regionId).lean()) as RegionRecord | null;
-
-    if (!region) {
-      throw new Error("Khu vực không tồn tại.");
-    }
-
-    normalizedTeamId = region.teamId.toString();
-    normalizedRegionId = region._id.toString();
-  }
-
-  if (input.role === "TEAM_LEAD" && !input.teamId) {
-    normalizedRegionId = undefined;
-  }
-
-  const payload = {
+  const payload: Record<string, unknown> = {
     fullName: input.fullName,
     gender: input.gender === "female" ? "female" : "male",
-    regionId: normalizedRegionId ? toObjectId(normalizedRegionId) : null,
+    regionId: hierarchy.regionId ? toObjectId(hierarchy.regionId) : null,
     role: input.role,
     status: input.status,
-    teamId: normalizedTeamId ? toObjectId(normalizedTeamId) : null,
-    telegramId: input.telegramId ?? null,
-    username: input.username?.trim() || null,
+    teamId: hierarchy.teamId ? toObjectId(hierarchy.teamId) : null,
+    zoneId: hierarchy.zoneId ? toObjectId(hierarchy.zoneId) : null,
   };
 
-  const user = input.userId
-    ? await UserModel.findByIdAndUpdate(input.userId, payload, { new: true })
-    : await UserModel.create(payload);
+  // Only set telegramId / username when explicitly provided,
+  // otherwise we'd wipe them on edit and collide on the unique index.
+  if (input.telegramId !== undefined) {
+    payload.telegramId = input.telegramId;
+  }
+  if (input.username !== undefined) {
+    payload.username = input.username.trim() || null;
+  }
+
+  let user;
+  if (input.userId) {
+    user = await UserModel.findByIdAndUpdate(input.userId, payload, { new: true });
+  } else {
+    user = await UserModel.create({
+      ...payload,
+      telegramId: payload.telegramId ?? null,
+      username: payload.username ?? null,
+    });
+  }
 
   if (!user) {
     throw new Error("Không thể lưu người dùng.");
@@ -290,14 +469,25 @@ export async function getRegionById(regionId: string) {
   return (await RegionModel.findById(regionId).lean()) as RegionRecord | null;
 }
 
+export async function getZoneById(zoneId: string) {
+  await connectToDatabase();
+  return (await ZoneModel.findById(zoneId).lean()) as ZoneRecord | null;
+}
+
 export async function listTeams() {
   await connectToDatabase();
   return (await TeamModel.find().sort({ name: 1 }).lean()) as TeamRecord[];
 }
 
-export async function listRegions(teamId?: string) {
+export async function listZones(teamId?: string) {
   await connectToDatabase();
   const query = teamId ? { teamId: toObjectId(teamId) } : {};
+  return (await ZoneModel.find(query).sort({ name: 1 }).lean()) as ZoneRecord[];
+}
+
+export async function listRegions(zoneId?: string) {
+  await connectToDatabase();
+  const query = zoneId ? { zoneId: toObjectId(zoneId) } : {};
   return (await RegionModel.find(query).sort({ name: 1 }).lean()) as RegionRecord[];
 }
 
@@ -319,35 +509,6 @@ export async function createPendingUser(input: {
   return serializeUser(user.toObject() as UserRecord);
 }
 
-export async function updateUserRegion(userId: string, regionId: string | null) {
-  await connectToDatabase();
-
-  let teamId: string | null = null;
-
-  if (regionId) {
-    const region = (await RegionModel.findById(regionId).lean()) as RegionRecord | null;
-    if (!region) {
-      throw new Error("Khu vực không tồn tại.");
-    }
-    teamId = region.teamId.toString();
-  }
-
-  const user = await UserModel.findByIdAndUpdate(
-    userId,
-    {
-      regionId: regionId ? toObjectId(regionId) : null,
-      teamId: teamId ? toObjectId(teamId) : null,
-    },
-    { new: true },
-  );
-
-  if (!user) {
-    throw new Error("Không tìm thấy người dùng.");
-  }
-
-  return serializeUser(user.toObject() as UserRecord);
-}
-
 export async function approveUser(userId: string) {
   await connectToDatabase();
 
@@ -362,76 +523,6 @@ export async function approveUser(userId: string) {
   }
 
   return serializeUser(user.toObject() as UserRecord);
-}
-
-export type TeamLeadSnapshot = {
-  regions: RegionSummary[];
-  members: SerializedUser[];
-};
-
-export async function getTeamLeadSnapshot(teamId: string): Promise<TeamLeadSnapshot> {
-  await connectToDatabase();
-
-  const [regions, users] = await Promise.all([
-    RegionModel.find({ teamId: toObjectId(teamId) }).sort({ name: 1 }).lean() as Promise<RegionRecord[]>,
-    UserModel.find({ teamId: toObjectId(teamId), status: "ACTIVE" }).sort({ role: 1, fullName: 1 }).lean() as Promise<UserRecord[]>,
-  ]);
-
-  const regionCounts = new Map<string, number>();
-  for (const user of users) {
-    const regionId = stringifyId(user.regionId);
-    if (regionId) {
-      regionCounts.set(regionId, (regionCounts.get(regionId) || 0) + 1);
-    }
-  }
-
-  return {
-    regions: regions.map((region) => ({
-      code: region.code,
-      id: region._id.toString(),
-      leadUserIds: region.leadUserIds.map((v) => v.toString()),
-      memberCount: regionCounts.get(region._id.toString()) || 0,
-      name: region.name,
-      teamId: region.teamId.toString(),
-    })),
-    members: users.map(serializeUser),
-  };
-}
-
-export async function assignRegionalLead(
-  actorTeamId: string,
-  userId: string,
-  regionId: string,
-) {
-  await connectToDatabase();
-
-  const region = (await RegionModel.findById(regionId).lean()) as RegionRecord | null;
-  if (!region || region.teamId.toString() !== actorTeamId) {
-    throw new Error("Khu vực không thuộc nhóm của bạn.");
-  }
-
-  const user = (await UserModel.findById(userId).lean()) as UserRecord | null;
-  if (!user || stringifyId(user.teamId) !== actorTeamId) {
-    throw new Error("Thành viên không thuộc nhóm của bạn.");
-  }
-
-  const updatedUser = await UserModel.findByIdAndUpdate(
-    userId,
-    {
-      regionId: toObjectId(regionId),
-      role: "REGIONAL_LEAD",
-    },
-    { new: true },
-  );
-
-  if (!updatedUser) {
-    throw new Error("Không thể cập nhật người dùng.");
-  }
-
-  const serialized = serializeUser(updatedUser.toObject() as UserRecord);
-  await syncLeadAssignments(serialized);
-
-  return serialized;
 }
 
 export async function updateUserProfile(

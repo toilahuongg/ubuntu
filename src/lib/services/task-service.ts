@@ -3,6 +3,7 @@ import "server-only";
 import type {
   SerializedUser,
   SessionUser,
+  TemplateScope,
 } from "@/lib/domain";
 import { createDeadlineAt } from "@/lib/dates";
 import { assertCanProxySubmit, canManageTemplates } from "@/lib/permissions";
@@ -32,8 +33,62 @@ type TemplateSummary = {
   expReward: number;
   id: string;
   isActive: boolean;
+  regionId: string | null;
+  scope: TemplateScope;
   title: string;
+  zoneId: string | null;
 };
+
+function resolveActorScope(actor: SessionUser): {
+  scope: TemplateScope;
+  teamId: string;
+  zoneId: string | null;
+  regionId: string | null;
+} {
+  if (actor.role === "REGIONAL_LEAD" && actor.regionId) {
+    return {
+      regionId: actor.regionId,
+      scope: "REGION",
+      teamId: actor.teamId!,
+      zoneId: actor.zoneId ?? null,
+    };
+  }
+  if (actor.role === "ZONE_LEAD" && actor.zoneId) {
+    return {
+      regionId: null,
+      scope: "ZONE",
+      teamId: actor.teamId!,
+      zoneId: actor.zoneId,
+    };
+  }
+  if (actor.role === "TEAM_LEAD" && actor.teamId) {
+    return {
+      regionId: null,
+      scope: "TEAM",
+      teamId: actor.teamId,
+      zoneId: null,
+    };
+  }
+  throw new Error("Bạn không có phạm vi để tạo nhiệm vụ.");
+}
+
+function occurrenceAppliesToUser(
+  occurrence: Pick<TaskOccurrenceRecord, "scope" | "teamId" | "zoneId" | "regionId">,
+  user: Pick<SerializedUser, "teamId" | "zoneId" | "regionId">,
+) {
+  if (!user.teamId || occurrence.teamId.toString() !== user.teamId) {
+    return false;
+  }
+  const scope = (occurrence.scope ?? "TEAM") as TemplateScope;
+  if (scope === "TEAM") return true;
+  if (scope === "ZONE") {
+    return !!user.zoneId && occurrence.zoneId?.toString() === user.zoneId;
+  }
+  if (scope === "REGION") {
+    return !!user.regionId && occurrence.regionId?.toString() === user.regionId;
+  }
+  return false;
+}
 
 type TaskCard = {
   completionCount: number;
@@ -87,6 +142,11 @@ export type OccurrenceDetail = {
 };
 
 function mapTemplate(record: TaskTemplateRecord): TemplateSummary {
+  const scoped = record as TaskTemplateRecord & {
+    scope?: TemplateScope;
+    zoneId?: { toString(): string } | null;
+    regionId?: { toString(): string } | null;
+  };
   return {
     createdAt: record.createdAt.toISOString(),
     deadlineTime: record.deadlineTime,
@@ -94,14 +154,17 @@ function mapTemplate(record: TaskTemplateRecord): TemplateSummary {
     expReward: (record as TaskTemplateRecord & { expReward: number }).expReward ?? 10,
     id: record._id.toString(),
     isActive: record.isActive,
+    regionId: scoped.regionId?.toString() ?? null,
+    scope: scoped.scope ?? "TEAM",
     title: record.title,
+    zoneId: scoped.zoneId?.toString() ?? null,
   };
 }
 
 function serializeOccurrenceCard(
   occurrence: TaskOccurrenceRecord,
   template: TaskTemplateRecord,
-  visibleUsers: SerializedUser[],
+  applicableUsers: SerializedUser[],
   submissions: SubmissionRecordModel[],
   actorId: string,
 ): TaskCard {
@@ -122,7 +185,7 @@ function serializeOccurrenceCard(
     myCompletionCount: (mySubmission as SubmissionRecordModel & { completionCount?: number })?.completionCount ?? 0,
     status: occurrence.status,
     title: template.title,
-    totalCount: visibleUsers.length,
+    totalCount: applicableUsers.length,
   };
 }
 
@@ -156,6 +219,27 @@ async function getTeamScopedUsers(teamId: string) {
   }));
 }
 
+function canManageTemplate(
+  actor: SessionUser,
+  template: TaskTemplateRecord & {
+    scope?: TemplateScope;
+    zoneId?: { toString(): string } | null;
+    regionId?: { toString(): string } | null;
+  },
+) {
+  if (!canManageTemplates(actor)) return false;
+  if (actor.role === "TEAM_LEAD") {
+    return !actor.teamId || template.teamId.toString() === actor.teamId;
+  }
+  if (actor.role === "ZONE_LEAD") {
+    return template.zoneId?.toString() === actor.zoneId;
+  }
+  if (actor.role === "REGIONAL_LEAD") {
+    return template.regionId?.toString() === actor.regionId;
+  }
+  return false;
+}
+
 export async function createTaskTemplate(
   actor: SessionUser,
   input: {
@@ -163,11 +247,21 @@ export async function createTaskTemplate(
     description?: string;
     expReward?: number;
     isActive: boolean;
+    scope?: TemplateScope;
     title: string;
   },
 ) {
-  if (!canManageTemplates(actor) || !actor.teamId) {
-    throw new Error("Chỉ nhóm trưởng mới được tạo mẫu nhiệm vụ.");
+  if (!canManageTemplates(actor)) {
+    throw new Error("Bạn không có quyền tạo mẫu nhiệm vụ.");
+  }
+
+  const actorScope = resolveActorScope(actor);
+  const requestedScope = input.scope ?? actorScope.scope;
+
+  // A leader can only create templates at their own scope or broader-but-they-own.
+  // Simplest correct rule: scope must equal actor's scope.
+  if (requestedScope !== actorScope.scope) {
+    throw new Error("Phạm vi nhiệm vụ không hợp lệ với cấp của bạn.");
   }
 
   await connectToDatabase();
@@ -178,8 +272,11 @@ export async function createTaskTemplate(
     description: input.description || "",
     expReward: input.expReward ?? 10,
     isActive: input.isActive,
-    teamId: toObjectId(actor.teamId),
+    regionId: actorScope.regionId ? toObjectId(actorScope.regionId) : null,
+    scope: actorScope.scope,
+    teamId: toObjectId(actorScope.teamId),
     title: input.title,
+    zoneId: actorScope.zoneId ? toObjectId(actorScope.zoneId) : null,
   });
 
   await AuditLogModel.create({
@@ -187,24 +284,29 @@ export async function createTaskTemplate(
     actorUserId: toObjectId(actor.id),
     entityId: template._id.toString(),
     entityType: "TaskTemplate",
-    metadata: { teamId: actor.teamId, title: input.title },
+    metadata: { scope: actorScope.scope, teamId: actorScope.teamId, title: input.title },
   });
 
   return template._id.toString();
 }
 
 export async function toggleTaskTemplate(actor: SessionUser, templateId: string) {
-  if (!canManageTemplates(actor) || !actor.teamId) {
+  if (!canManageTemplates(actor)) {
     throw new Error("Bạn không có quyền đổi trạng thái template.");
   }
 
   await connectToDatabase();
 
   const template = (await TaskTemplateModel.findById(templateId)) as
-    | (TaskTemplateRecord & { save: () => Promise<unknown> })
+    | (TaskTemplateRecord & {
+        save: () => Promise<unknown>;
+        scope?: TemplateScope;
+        zoneId?: { toString(): string } | null;
+        regionId?: { toString(): string } | null;
+      })
     | null;
 
-  if (!template || template.teamId.toString() !== actor.teamId) {
+  if (!template || !canManageTemplate(actor, template)) {
     throw new Error("Không tìm thấy template phù hợp.");
   }
 
@@ -237,11 +339,19 @@ export async function generateOccurrencesForDate(dateKey: string) {
       continue;
     }
 
+    const scoped = template as TaskTemplateRecord & {
+      scope?: TemplateScope;
+      zoneId?: unknown;
+      regionId?: unknown;
+    };
     await TaskOccurrenceModel.create({
       date: dateKey,
       deadlineAt: createDeadlineAt(dateKey, template.deadlineTime),
+      regionId: scoped.regionId ?? null,
+      scope: scoped.scope ?? "TEAM",
       taskTemplateId: template._id,
       teamId: template.teamId,
+      zoneId: scoped.zoneId ?? null,
     });
 
     createdCount += 1;
@@ -257,37 +367,47 @@ export async function getDashboardData(actor: SessionUser, dateKey: string) {
     throw new Error("Người dùng chưa được gán vào nhóm.");
   }
 
-  const [visibleUsers, occurrences, templates] = await Promise.all([
+  const [visibleUsers, allOccurrences, allTemplates] = await Promise.all([
     listVisibleUsersForActor(actor),
     TaskOccurrenceModel.find({ date: dateKey, teamId: toObjectId(actor.teamId) })
       .sort({ deadlineAt: 1 })
-      .lean(),
+      .lean() as Promise<TaskOccurrenceRecord[]>,
     TaskTemplateModel.find({ teamId: toObjectId(actor.teamId) })
       .sort({ createdAt: -1 })
-      .lean(),
+      .lean() as Promise<TaskTemplateRecord[]>,
   ]);
 
-  const typedOccurrences = occurrences as TaskOccurrenceRecord[];
-  const typedTemplates = templates as TaskTemplateRecord[];
+  // Only occurrences whose scope includes at least one visible user are relevant.
+  const relevantOccurrences = allOccurrences.filter((occurrence) =>
+    visibleUsers.some((user) => occurrenceAppliesToUser(occurrence, user)),
+  );
 
   const submissions = (await SubmissionModel.find({
-    occurrenceId: { $in: typedOccurrences.map((occurrence) => occurrence._id) },
+    occurrenceId: { $in: relevantOccurrences.map((occurrence) => occurrence._id) },
     subjectUserId: { $in: visibleUsers.map((user) => toObjectId(user.id)) },
   }).lean()) as SubmissionRecordModel[];
 
-  const templateMap = new Map(typedTemplates.map((template) => [template._id.toString(), template]));
-
-  const cards = typedOccurrences.map((occurrence) =>
-    serializeOccurrenceCard(
-      occurrence,
-      templateMap.get(occurrence.taskTemplateId.toString())!,
-      visibleUsers,
-      submissions,
-      actor.id,
-    ),
+  const templateMap = new Map(
+    allTemplates.map((template) => [template._id.toString(), template]),
   );
 
+  const cards = relevantOccurrences.map((occurrence) => {
+    const applicableUsers = visibleUsers.filter((user) =>
+      occurrenceAppliesToUser(occurrence, user),
+    );
+    return serializeOccurrenceCard(
+      occurrence,
+      templateMap.get(occurrence.taskTemplateId.toString())!,
+      applicableUsers,
+      submissions,
+      actor.id,
+    );
+  });
+
   const roster = visibleUsers.map((user) => {
+    const applicableForUser = relevantOccurrences.filter((occurrence) =>
+      occurrenceAppliesToUser(occurrence, user),
+    );
     const completed = submissions.filter(
       (submission) => submission.subjectUserId.toString() === user.id,
     ).length;
@@ -296,13 +416,18 @@ export async function getDashboardData(actor: SessionUser, dateKey: string) {
       completed,
       fullName: user.fullName,
       id: user.id,
-      pending: Math.max(cards.length - completed, 0),
+      pending: Math.max(applicableForUser.length - completed, 0),
       role: user.role,
     };
   });
 
+  const totalSlots = relevantOccurrences.reduce((sum, occurrence) => {
+    return (
+      sum +
+      visibleUsers.filter((user) => occurrenceAppliesToUser(occurrence, user)).length
+    );
+  }, 0);
   const completedSubmissions = submissions.length;
-  const totalSlots = cards.length * Math.max(visibleUsers.length, 1);
 
   return {
     cards,
@@ -315,7 +440,7 @@ export async function getDashboardData(actor: SessionUser, dateKey: string) {
       visibleUsers: visibleUsers.length,
     },
     roster,
-    templates: typedTemplates.map(mapTemplate),
+    templates: allTemplates.map(mapTemplate),
   } satisfies DashboardData;
 }
 
@@ -334,10 +459,8 @@ export async function getOccurrenceDetail(
     throw new Error("Không tìm thấy nhiệm vụ trong ngày.");
   }
 
-  if (
-    !(actor.role === "TEAM_LEAD" && !actor.teamId) &&
-    occurrence.teamId.toString() !== actor.teamId
-  ) {
+  const isGlobalTeamLead = actor.role === "TEAM_LEAD" && !actor.teamId;
+  if (!isGlobalTeamLead && occurrence.teamId.toString() !== actor.teamId) {
     throw new Error("Bạn không có quyền xem nhiệm vụ này.");
   }
 
@@ -429,10 +552,13 @@ export async function saveSubmission(
     teamId: typedSubject.teamId?.toString() || null,
     telegramId: typedSubject.telegramId,
     username: typedSubject.username,
+    zoneId:
+      (typedSubject as UserRecord & { zoneId?: { toString(): string } | null })
+        .zoneId?.toString() || null,
   };
 
-  if (typedOccurrence.teamId.toString() !== serializedSubject.teamId) {
-    throw new Error("Người dùng này không thuộc nhóm của nhiệm vụ.");
+  if (!occurrenceAppliesToUser(typedOccurrence, serializedSubject)) {
+    throw new Error("Nhiệm vụ này không áp dụng cho người dùng đã chọn.");
   }
 
   assertCanProxySubmit(actor, serializedSubject);
@@ -575,6 +701,15 @@ export async function getReminderCandidates(dateKey: string) {
     }
 
     for (const user of typedUsers) {
+      const applies = occurrenceAppliesToUser(occurrence, {
+        regionId: user.regionId?.toString() || null,
+        teamId: user.teamId?.toString() || null,
+        zoneId:
+          (user as UserRecord & { zoneId?: { toString(): string } | null })
+            .zoneId?.toString() || null,
+      });
+      if (!applies) continue;
+
       const isSubmitted = typedSubmissions.some(
         (submission) => submission.subjectUserId.toString() === user._id.toString(),
       );
@@ -641,7 +776,7 @@ export async function getRegionDashboardData(
 
   await connectToDatabase();
 
-  const [members, occurrences] = await Promise.all([
+  const [members, allOccurrences] = await Promise.all([
     listVisibleUsersForActor(actor),
     TaskOccurrenceModel.find({
       date: dateKey,
@@ -650,6 +785,11 @@ export async function getRegionDashboardData(
       .sort({ deadlineAt: 1 })
       .lean() as Promise<TaskOccurrenceRecord[]>,
   ]);
+
+  // Only occurrences that apply to at least one region member
+  const occurrences = allOccurrences.filter((occurrence) =>
+    members.some((m) => occurrenceAppliesToUser(occurrence, m)),
+  );
 
   const templates = (await TaskTemplateModel.find({
     _id: { $in: occurrences.map((o) => o.taskTemplateId) },
@@ -718,12 +858,164 @@ export async function getRegionDashboardData(
   };
 }
 
+export type ZoneDashboardData = {
+  date: string;
+  occurrences: Array<{
+    deadlineAt: string;
+    expReward: number;
+    id: string;
+    scope: TemplateScope;
+    status: "OPEN" | "CLOSED";
+    title: string;
+  }>;
+  members: Array<{
+    completed: number;
+    fullName: string;
+    id: string;
+    regionId: string | null;
+    role: string;
+    status: Array<{
+      applicable: boolean;
+      completionCount: number;
+      occurrenceId: string;
+    }>;
+  }>;
+  summary: {
+    completionPercent: number;
+    completedSlots: number;
+    memberCount: number;
+    pendingSlots: number;
+  };
+};
+
+export async function getZoneDashboardData(
+  actor: SessionUser,
+  dateKey: string,
+): Promise<ZoneDashboardData> {
+  if (actor.role !== "ZONE_LEAD" || !actor.zoneId || !actor.teamId) {
+    throw new Error("Bạn không có địa vực để quản lý.");
+  }
+
+  await connectToDatabase();
+
+  const [members, allOccurrences] = await Promise.all([
+    listVisibleUsersForActor(actor),
+    TaskOccurrenceModel.find({
+      date: dateKey,
+      teamId: toObjectId(actor.teamId),
+    })
+      .sort({ deadlineAt: 1 })
+      .lean() as Promise<TaskOccurrenceRecord[]>,
+  ]);
+
+  const occurrences = allOccurrences.filter((occurrence) =>
+    members.some((m) => occurrenceAppliesToUser(occurrence, m)),
+  );
+
+  const templates = (await TaskTemplateModel.find({
+    _id: { $in: occurrences.map((o) => o.taskTemplateId) },
+  }).lean()) as TaskTemplateRecord[];
+  const templateMap = new Map(templates.map((t) => [t._id.toString(), t]));
+
+  const submissions = (await SubmissionModel.find({
+    occurrenceId: { $in: occurrences.map((o) => o._id) },
+    subjectUserId: { $in: members.map((m) => toObjectId(m.id)) },
+  }).lean()) as SubmissionRecordModel[];
+
+  const occurrenceSummaries = occurrences.map((occurrence) => {
+    const template = templateMap.get(occurrence.taskTemplateId.toString());
+    return {
+      deadlineAt: occurrence.deadlineAt.toISOString(),
+      expReward:
+        (template as (TaskTemplateRecord & { expReward?: number }) | undefined)
+          ?.expReward ?? 10,
+      id: occurrence._id.toString(),
+      scope: ((occurrence as TaskOccurrenceRecord & { scope?: TemplateScope })
+        .scope ?? "TEAM") as TemplateScope,
+      status: occurrence.status,
+      title: template?.title ?? "(đã xoá)",
+    };
+  });
+
+  let totalSlots = 0;
+  let completedSlots = 0;
+
+  const memberRows = members.map((member) => {
+    const status = occurrences.map((occurrence) => {
+      const applicable = occurrenceAppliesToUser(occurrence, member);
+      if (applicable) totalSlots += 1;
+      const submission = submissions.find(
+        (s) =>
+          s.occurrenceId.toString() === occurrence._id.toString() &&
+          s.subjectUserId.toString() === member.id,
+      );
+      const completionCount =
+        (submission as (SubmissionRecordModel & { completionCount?: number }) | undefined)
+          ?.completionCount ?? 0;
+      if (applicable && completionCount > 0) completedSlots += 1;
+      return {
+        applicable,
+        completionCount,
+        occurrenceId: occurrence._id.toString(),
+      };
+    });
+
+    const completed = status.filter((s) => s.applicable && s.completionCount > 0).length;
+
+    return {
+      completed,
+      fullName: member.fullName,
+      id: member.id,
+      regionId: member.regionId ?? null,
+      role: member.role,
+      status,
+    };
+  });
+
+  return {
+    date: dateKey,
+    occurrences: occurrenceSummaries,
+    members: memberRows,
+    summary: {
+      completionPercent:
+        totalSlots > 0 ? Math.round((completedSlots / totalSlots) * 100) : 0,
+      completedSlots,
+      memberCount: members.length,
+      pendingSlots: Math.max(totalSlots - completedSlots, 0),
+    },
+  };
+}
+
 export async function getTemplateCollectionForActor(actor: SessionUser) {
   if (!actor.teamId) {
     return [];
   }
 
-  return getTemplatesForTeam(actor.teamId);
+  await connectToDatabase();
+  const all = (await TaskTemplateModel.find({
+    teamId: toObjectId(actor.teamId),
+  })
+    .sort({ createdAt: -1 })
+    .lean()) as TaskTemplateRecord[];
+
+  const filtered = all.filter((record) => {
+    const scoped = record as TaskTemplateRecord & {
+      scope?: TemplateScope;
+      zoneId?: { toString(): string } | null;
+      regionId?: { toString(): string } | null;
+    };
+    const scope = scoped.scope ?? "TEAM";
+    if (scope === "TEAM") return true;
+    if (scope === "ZONE") {
+      return !!actor.zoneId && scoped.zoneId?.toString() === actor.zoneId;
+    }
+    if (scope === "REGION") {
+      return !!actor.regionId && scoped.regionId?.toString() === actor.regionId;
+    }
+    return false;
+  });
+
+  return filtered.map(mapTemplate);
 }
 
 async function findActiveUserByTelegramId(telegramId: number) {
@@ -760,7 +1052,7 @@ export async function getTelegramTodayDigest(
     return "Bạn chưa được gán vào nhóm nào.";
   }
 
-  const [occurrences, submissions] = await Promise.all([
+  const [allOccurrences, submissions] = await Promise.all([
     TaskOccurrenceModel.find({
       date: dateKey,
       teamId: user.teamId,
@@ -771,6 +1063,17 @@ export async function getTelegramTodayDigest(
       subjectUserId: user._id,
     }).lean() as Promise<SubmissionRecordModel[]>,
   ]);
+
+  const userShape = {
+    regionId: user.regionId?.toString() || null,
+    teamId: user.teamId?.toString() || null,
+    zoneId:
+      (user as UserRecord & { zoneId?: { toString(): string } | null })
+        .zoneId?.toString() || null,
+  };
+  const occurrences = allOccurrences.filter((o) =>
+    occurrenceAppliesToUser(o, userShape),
+  );
 
   if (occurrences.length === 0) {
     return `📅 ${dateKey}\nHôm nay chưa có nhiệm vụ nào.`;
@@ -883,5 +1186,8 @@ export async function getSessionUserByTelegramId(
     teamId: user.teamId?.toString() || null,
     telegramId: user.telegramId,
     username: user.username,
+    zoneId:
+      (user as UserRecord & { zoneId?: { toString(): string } | null })
+        .zoneId?.toString() || null,
   };
 }

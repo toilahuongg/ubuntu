@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx src/scripts/seed.ts",
+    "fix-indexes": "tsx src/scripts/fix-telegram-index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "tg:webhook:set": "tsx src/scripts/telegram-webhook.ts set",

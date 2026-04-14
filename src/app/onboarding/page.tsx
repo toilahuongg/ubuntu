@@ -1,36 +1,26 @@
 import { redirect } from "next/navigation";
-import { MapPin } from "lucide-react";
+import { Clock } from "lucide-react";
 
 import { getSessionUser } from "@/lib/auth/session";
-import { listRegions, listTeams } from "@/lib/services/organization-service";
-import { RegionForm } from "./region-form";
+import { refreshSessionUser } from "@/lib/services/auth-service";
+import { LogoutButton } from "./logout-button";
 
-export default async function SelectRegionPage() {
+export default async function OnboardingPendingPage() {
   const session = await getSessionUser();
 
   if (!session) {
     redirect("/login");
   }
 
-  if (session.status !== "PENDING") {
-    redirect("/dashboard");
+  const user = await refreshSessionUser(session.id);
+
+  if (!user) {
+    redirect("/login");
   }
 
-  const [teams, regions] = await Promise.all([listTeams(), listRegions()]);
-
-  const teamMap = new Map(teams.map((t) => [t._id.toString(), t.name]));
-
-  const grouped = teams.map((team) => ({
-    teamId: team._id.toString(),
-    teamName: team.name,
-    regions: regions
-      .filter((r) => r.teamId.toString() === team._id.toString())
-      .map((r) => ({
-        id: r._id.toString(),
-        name: r.name,
-        code: r.code,
-      })),
-  }));
+  if (user.status !== "PENDING") {
+    redirect("/dashboard");
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
@@ -42,20 +32,29 @@ export default async function SelectRegionPage() {
       <div className="relative z-10 w-full max-w-sm animate-slide-up">
         <div className="mb-8 flex flex-col items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
-            <MapPin className="h-7 w-7 text-white" />
+            <Clock className="h-7 w-7 text-white" />
           </div>
           <div className="text-center">
             <h1 className="font-display text-xl font-bold tracking-tight">
-              Chọn Khu Vực
+              Đang chờ xét duyệt
             </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Xin chào <strong>{session.fullName}</strong>! Chọn khu vực bạn
-              thuộc về.
+            <p className="mt-2 text-sm text-muted-foreground">
+              Xin chào <strong>{user.fullName}</strong>! Tài khoản của bạn đã
+              được tạo và đang chờ quản trị viên xét duyệt. Vui lòng quay lại
+              sau.
             </p>
           </div>
         </div>
 
-        <RegionForm groups={grouped} />
+        <div className="glass-card p-5">
+          <p className="text-center text-sm text-muted-foreground">
+            Bạn sẽ có thể truy cập ứng dụng ngay khi được phê duyệt.
+          </p>
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <LogoutButton />
+        </div>
       </div>
     </main>
   );

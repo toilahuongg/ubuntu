@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Shield } from "lucide-react";
 
 type TelegramWidgetUser = {
@@ -15,7 +15,6 @@ type TelegramWidgetUser = {
 };
 
 export function LoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(
@@ -31,45 +30,71 @@ export function LoginContent() {
         return;
       }
 
-      if (data.status === "PENDING") {
-        router.replace("/onboarding/select-region");
-      } else {
-        router.replace("/dashboard");
+      const target =
+        data.status === "PENDING" ? "/onboarding" : "/dashboard";
+      // Use a hard navigation so the just-set session cookie is picked up
+      // reliably by the destination route (soft RSC navigation can race with
+      // Set-Cookie processing in some WebViews, leaving the user stuck).
+      window.location.assign(target);
+    },
+    [],
+  );
+
+  const handleTelegramWebAppLogin = useCallback(
+    async (initData: string) => {
+      setStatus("loading");
+      setError(null);
+
+      try {
+        const res = await fetch("/api/auth/telegram", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ initData }),
+        });
+        const data = await res.json();
+        handleLoginResult(res, data);
+      } catch {
+        setStatus("error");
+        setError("Không thể kết nối máy chủ.");
       }
     },
-    [router],
+    [handleLoginResult],
   );
 
   useEffect(() => {
-    const w = window as unknown as {
-      Telegram?: { WebApp?: { initData?: string; ready?: () => void } };
+    // Telegram WebApp injects window.Telegram.WebApp via telegram-web-app.js
+    // (loaded in root layout). On slow devices the object may appear a few
+    // ticks after mount — poll briefly before giving up and showing the
+    // widget fallback.
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 20; // ~2s total
+
+    const tick = () => {
+      if (cancelled) return;
+      const w = window as unknown as {
+        Telegram?: { WebApp?: { initData?: string; ready?: () => void } };
+      };
+      const tg = w.Telegram?.WebApp;
+
+      if (tg && typeof tg.initData === "string" && tg.initData.length > 0) {
+        setIsTelegramWebApp(true);
+        tg.ready?.();
+        handleTelegramWebAppLogin(tg.initData);
+        return;
+      }
+
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        setTimeout(tick, 100);
+      }
     };
-    const tg = w.Telegram?.WebApp;
 
-    if (tg?.initData) {
-      setIsTelegramWebApp(true);
-      tg.ready?.();
-      handleTelegramWebAppLogin(tg.initData);
-    }
-  }, []);
-
-  async function handleTelegramWebAppLogin(initData: string) {
-    setStatus("loading");
-    setError(null);
-
-    try {
-      const res = await fetch("/api/auth/telegram", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ initData }),
-      });
-      const data = await res.json();
-      handleLoginResult(res, data);
-    } catch {
-      setStatus("error");
-      setError("Không thể kết nối máy chủ.");
-    }
-  }
+    tick();
+    return () => {
+      cancelled = true;
+    };
+  }, [handleTelegramWebAppLogin]);
 
   const handleWidgetLogin = useCallback(
     async (user: TelegramWidgetUser) => {

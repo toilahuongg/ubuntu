@@ -9,7 +9,7 @@ export default async function Home() {
   }
 
   if (session.status === "PENDING") {
-    redirect("/onboarding/select-region");
+    redirect("/onboarding");
   }
 
   redirect("/dashboard");

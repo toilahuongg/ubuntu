@@ -9,6 +9,7 @@ import {
   TaskTemplateModel,
   TeamModel,
   UserModel,
+  ZoneModel,
 } from "@/lib/models";
 
 async function main() {
@@ -21,6 +22,7 @@ async function main() {
     TaskTemplateModel.deleteMany({}),
     UserModel.deleteMany({}),
     RegionModel.deleteMany({}),
+    ZoneModel.deleteMany({}),
     TeamModel.deleteMany({}),
   ]);
 
@@ -29,118 +31,69 @@ async function main() {
     name: "Team Mien Nam",
   });
 
-  const [regionA, regionB] = await RegionModel.create([
+  const [zoneSG, zoneMT] = await ZoneModel.create([
+    { code: "DV-SG", name: "Dia Vuc Sai Gon", teamId: team._id },
+    { code: "DV-MT", name: "Dia Vuc Mien Tay", teamId: team._id },
+  ]);
+
+  const [regionA, regionB, regionC] = await RegionModel.create([
     {
       code: "SG-01",
-      name: "Khu vuc Sai Gon",
+      name: "Khu vuc Quan 1",
       teamId: team._id,
+      zoneId: zoneSG._id,
+    },
+    {
+      code: "SG-02",
+      name: "Khu vuc Quan 7",
+      teamId: team._id,
+      zoneId: zoneSG._id,
     },
     {
       code: "CT-01",
       name: "Khu vuc Can Tho",
       teamId: team._id,
+      zoneId: zoneMT._id,
     },
   ]);
 
-  const [teamLead, regionalLeadA, regionalLeadB, memberA1, memberA2, memberB1] =
-    await UserModel.create([
-      {
-        fullName: "Tran Nhom Truong",
-        role: "TEAM_LEAD",
-        status: "ACTIVE",
-        teamId: team._id,
-        telegramId: 900002,
-        username: "team_lead_ops",
-      },
-      {
-        fullName: "Le Khu Vuc A",
-        regionId: regionA._id,
-        role: "REGIONAL_LEAD",
-        status: "ACTIVE",
-        teamId: team._id,
-        telegramId: 900003,
-        username: "regional_a",
-      },
-      {
-        fullName: "Pham Khu Vuc B",
-        regionId: regionB._id,
-        role: "REGIONAL_LEAD",
-        status: "ACTIVE",
-        teamId: team._id,
-        telegramId: 900004,
-        username: "regional_b",
-      },
-      {
-        fullName: "Nguyen Thanh Vien A1",
-        regionId: regionA._id,
-        role: "MEMBER",
-        status: "ACTIVE",
-        teamId: team._id,
-        telegramId: 900005,
-        username: "member_a1",
-      },
-      {
-        fullName: "Nguyen Thanh Vien A2",
-        regionId: regionA._id,
-        role: "MEMBER",
-        status: "ACTIVE",
-        teamId: team._id,
-        telegramId: 900006,
-        username: "member_a2",
-      },
-      {
-        fullName: "Vo Thanh Vien B1",
-        regionId: regionB._id,
-        role: "MEMBER",
-        status: "ACTIVE",
-        teamId: team._id,
-        telegramId: 900007,
-        username: "member_b1",
-      },
-    ]);
+  const memberSeeds = [
+    { fullName: "Thanh Vien 01", region: regionA, zone: zoneSG },
+    { fullName: "Thanh Vien 02", region: regionA, zone: zoneSG },
+    { fullName: "Thanh Vien 03", region: regionA, zone: zoneSG },
+    { fullName: "Thanh Vien 04", region: regionB, zone: zoneSG },
+    { fullName: "Thanh Vien 05", region: regionB, zone: zoneSG },
+    { fullName: "Thanh Vien 06", region: regionB, zone: zoneSG },
+    { fullName: "Thanh Vien 07", region: regionC, zone: zoneMT },
+    { fullName: "Thanh Vien 08", region: regionC, zone: zoneMT },
+    { fullName: "Thanh Vien 09", region: regionC, zone: zoneMT },
+    { fullName: "Thanh Vien 10", region: regionC, zone: zoneMT },
+  ];
 
-  await Promise.all([
-    TeamModel.findByIdAndUpdate(team._id, {
-      $addToSet: { leadUserIds: teamLead._id },
-    }),
-    RegionModel.findByIdAndUpdate(regionA._id, {
-      $addToSet: { leadUserIds: regionalLeadA._id },
-    }),
-    RegionModel.findByIdAndUpdate(regionB._id, {
-      $addToSet: { leadUserIds: regionalLeadB._id },
-    }),
-  ]);
-
-  await TaskTemplateModel.create([
-    {
-      createdBy: teamLead._id,
-      deadlineTime: "11:30",
-      description: "Tong hop cac diem ban trong buoi sang va ghi chu bat thuong.",
-      expReward: 10,
-      isActive: true,
+  const members = await UserModel.create(
+    memberSeeds.map((seed, index) => ({
+      fullName: seed.fullName,
+      regionId: seed.region._id,
+      role: "MEMBER",
+      status: "ACTIVE",
       teamId: team._id,
-      title: "Bao cao doanh so buoi sang",
-    },
-    {
-      createdBy: teamLead._id,
-      deadlineTime: "17:30",
-      description: "Check tinh trang diem ban cuoi ngay va muc hoan thanh chi tieu.",
-      expReward: 15,
-      isActive: true,
-      teamId: team._id,
-      title: "Check list cuoi ngay",
-    },
-  ]);
+      telegramId: 900001 + index,
+      username: `member_${String(index + 1).padStart(2, "0")}`,
+      zoneId: seed.zone._id,
+    })),
+  );
 
   console.log("Seed completed.");
-  console.table([
-    { name: teamLead.fullName, role: teamLead.role, telegramId: teamLead.telegramId },
-    { name: regionalLeadA.fullName, role: regionalLeadA.role, telegramId: regionalLeadA.telegramId },
-    { name: regionalLeadB.fullName, role: regionalLeadB.role, telegramId: regionalLeadB.telegramId },
-    { name: memberA1.fullName, role: memberA1.role, telegramId: memberA1.telegramId },
-    { name: memberA2.fullName, role: memberA2.role, telegramId: memberA2.telegramId },
-    { name: memberB1.fullName, role: memberB1.role, telegramId: memberB1.telegramId },
-  ]);
+  console.table(
+    (members as Array<{ fullName: string; role: string; telegramId: number | null; username: string | null }>).map(
+      (m) => ({
+        name: m.fullName,
+        role: m.role,
+        telegramId: m.telegramId,
+        username: m.username,
+      }),
+    ),
+  );
 }
 
 main()

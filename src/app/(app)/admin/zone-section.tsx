@@ -1,60 +1,68 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Building2, Pencil, Users, X } from "lucide-react";
+import { Layers, MapPin, Pencil, Users, X } from "lucide-react";
 
-import { updateTeamAction } from "@/app/(app)/actions";
+import { updateZoneAction } from "@/app/(app)/actions";
 
-type Team = {
+type Zone = {
   code: string;
   id: string;
   leadUserIds: string[];
   memberCount: number;
   name: string;
+  regionCount: number;
+  teamId: string;
+  teamName?: string;
 };
 
-export function TeamSection({ teams }: { teams: Team[] }) {
+export function ZoneSection({ zones }: { zones: Zone[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  if (teams.length === 0) {
+  if (zones.length === 0) {
     return (
       <div className="glass-card py-8 text-center text-sm text-muted-foreground">
-        Chưa có nhóm nào.
+        Chưa có địa vực nào.
       </div>
     );
   }
 
   return (
     <div className="glass-card divide-y divide-border overflow-hidden">
-      {teams.map((team) =>
-        editingId === team.id ? (
-          <EditTeamRow
-            key={team.id}
-            team={team}
+      {zones.map((zone) =>
+        editingId === zone.id ? (
+          <EditZoneRow
+            key={zone.id}
+            zone={zone}
             onClose={() => setEditingId(null)}
           />
         ) : (
           <div
-            key={team.id}
+            key={zone.id}
             className="flex items-center justify-between px-4 py-3"
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <p className="truncate text-sm font-medium">{team.name}</p>
+                <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <p className="truncate text-sm font-medium">{zone.name}</p>
               </div>
               <p className="ml-5.5 text-[11px] text-muted-foreground">
-                {team.code}
+                {zone.code}
+                {zone.teamName && ` · ${zone.teamName}`}
               </p>
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {zone.regionCount}
+              </span>
+              <span className="flex items-center gap-1">
                 <Users className="h-3 w-3" />
-                {team.memberCount}
+                {zone.memberCount}
               </span>
               <button
                 type="button"
-                onClick={() => setEditingId(team.id)}
+                onClick={() => setEditingId(zone.id)}
                 className="cursor-pointer rounded-lg p-1.5 transition-colors hover:bg-white/10 hover:text-foreground"
                 aria-label="Sửa"
               >
@@ -68,12 +76,12 @@ export function TeamSection({ teams }: { teams: Team[] }) {
   );
 }
 
-function EditTeamRow({ team, onClose }: { team: Team; onClose: () => void }) {
+function EditZoneRow({ zone, onClose }: { zone: Zone; onClose: () => void }) {
   const [isPending, startTransition] = useTransition();
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
-      await updateTeamAction(formData);
+      await updateZoneAction(formData);
       onClose();
     });
   }
@@ -82,7 +90,7 @@ function EditTeamRow({ team, onClose }: { team: Team; onClose: () => void }) {
     <form action={handleSubmit} className="space-y-3 px-4 py-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Sửa nhóm
+          Sửa địa vực
         </p>
         <button
           type="button"
@@ -92,21 +100,26 @@ function EditTeamRow({ team, onClose }: { team: Team; onClose: () => void }) {
           <X className="h-4 w-4" />
         </button>
       </div>
-      <input type="hidden" name="id" value={team.id} />
+      <input type="hidden" name="id" value={zone.id} />
       <input
         name="name"
         required
-        defaultValue={team.name}
-        placeholder="Tên nhóm"
+        defaultValue={zone.name}
+        placeholder="Tên địa vực"
         className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
       />
       <input
         name="code"
         required
-        defaultValue={team.code}
+        defaultValue={zone.code}
         placeholder="Mã"
         className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
       />
+      {zone.teamName && (
+        <p className="text-[11px] text-muted-foreground">
+          Thuộc nhóm: {zone.teamName} (không đổi được)
+        </p>
+      )}
       <button
         type="submit"
         disabled={isPending}

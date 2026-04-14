@@ -3,6 +3,8 @@
 import { useTransition } from "react";
 import { Clock, ToggleLeft, ToggleRight, Zap } from "lucide-react";
 import { toggleTemplateAction } from "@/app/(app)/actions";
+import { SCOPE_LABELS } from "@/lib/domain";
+import type { TemplateScope } from "@/lib/domain";
 
 type TemplateSummary = {
   createdAt: string;
@@ -11,7 +13,10 @@ type TemplateSummary = {
   expReward: number;
   id: string;
   isActive: boolean;
+  regionId: string | null;
+  scope: TemplateScope;
   title: string;
+  zoneId: string | null;
 };
 
 export function TemplateList({
@@ -57,6 +62,9 @@ function TemplateCard({ template }: { template: TemplateSummary }) {
           </p>
         )}
         <div className="mt-1.5 flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="rounded-md bg-white/5 px-1.5 py-0.5">
+            {SCOPE_LABELS[template.scope]}
+          </span>
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {template.deadlineTime}

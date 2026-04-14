@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
 import { createTemplateAction } from "@/app/(app)/actions";
 
-export function CreateTemplateForm() {
+export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -31,7 +31,12 @@ export function CreateTemplateForm() {
   return (
     <form action={handleSubmit} className="glass-card space-y-4 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Tạo mẫu nhiệm vụ</h3>
+        <div>
+          <h3 className="text-sm font-semibold">Tạo mẫu nhiệm vụ</h3>
+          <p className="text-[11px] text-muted-foreground">
+            Phạm vi: {scopeLabel}
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setIsOpen(false)}

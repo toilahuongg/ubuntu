@@ -1,13 +1,18 @@
 import { InferSchemaType, model, models, Schema, Types } from "mongoose";
 
+import { TEMPLATE_SCOPES } from "@/lib/domain";
+
 const taskOccurrenceSchema = new Schema(
   {
     date: { required: true, type: String },
     deadlineAt: { required: true, type: Date },
+    regionId: { default: null, ref: "Region", type: Schema.Types.ObjectId },
     reminderSentAt: { default: null, type: Date },
+    scope: { default: "TEAM", enum: TEMPLATE_SCOPES, type: String },
     status: { default: "OPEN", enum: ["OPEN", "CLOSED"], type: String },
     taskTemplateId: { ref: "TaskTemplate", required: true, type: Schema.Types.ObjectId },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId },
+    zoneId: { default: null, ref: "Zone", type: Schema.Types.ObjectId },
   },
   { timestamps: true },
 );
