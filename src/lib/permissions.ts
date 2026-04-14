@@ -1,27 +1,35 @@
 import type { SessionUser } from "@/lib/domain";
 
-export function isAdmin(user: SessionUser) {
-  return user.role === "ADMIN";
+export function isTeamLead(user: SessionUser) {
+  return user.role === "TEAM_LEAD";
 }
 
 export function canManageTemplates(user: SessionUser) {
   return user.role === "TEAM_LEAD";
 }
 
-export function canAccessAdmin(user: SessionUser) {
-  return isAdmin(user);
+export function canAccessManagement(user: SessionUser) {
+  return isTeamLead(user);
+}
+
+export function canManageTeamRegions(user: SessionUser) {
+  return user.role === "TEAM_LEAD" && !!user.teamId;
 }
 
 export function canViewTeamDashboard(user: SessionUser) {
-  return user.role === "TEAM_LEAD" || isAdmin(user);
+  return isTeamLead(user);
 }
 
 export function canViewRegionDashboard(user: SessionUser) {
   return user.role === "REGIONAL_LEAD" || canViewTeamDashboard(user);
 }
 
+export function canAccessRegionManagement(user: SessionUser) {
+  return user.role === "REGIONAL_LEAD" && !!user.regionId;
+}
+
 export function canManageUser(actor: SessionUser, subject: SessionUser) {
-  if (isAdmin(actor)) {
+  if (isTeamLead(actor)) {
     return true;
   }
 
@@ -33,12 +41,11 @@ export function canProxySubmit(actor: SessionUser, subject: SessionUser) {
     return true;
   }
 
-  if (isAdmin(actor)) {
-    return true;
-  }
-
-  if (actor.role === "TEAM_LEAD" && actor.teamId && actor.teamId === subject.teamId) {
-    return true;
+  if (actor.role === "TEAM_LEAD") {
+    if (!actor.teamId) {
+      return true;
+    }
+    return actor.teamId === subject.teamId;
   }
 
   if (

@@ -3,34 +3,33 @@ import "server-only";
 import type {
   SerializedUser,
   SessionUser,
-  SubmissionRecord,
-  TaskFieldDefinition,
 } from "@/lib/domain";
 import { createDeadlineAt } from "@/lib/dates";
 import { assertCanProxySubmit, canManageTemplates } from "@/lib/permissions";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   AuditLogModel,
-  RegionModel,
   SubmissionModel,
   type SubmissionRecordModel,
   TaskOccurrenceModel,
   type TaskOccurrenceRecord,
   TaskTemplateModel,
   type TaskTemplateRecord,
-  TeamModel,
   UserModel,
   type UserRecord,
+  XpTransactionModel,
 } from "@/lib/models";
 import { listVisibleUsersForActor } from "@/lib/services/organization-service";
 import { toObjectId } from "@/lib/utils/ids";
-import { validateSubmissionValues } from "@/lib/validation";
+import { getLevelFromXp } from "@/lib/xp";
+import { getLevelInfo } from "@/lib/level-utils";
+import { safeSendTelegramMessage } from "@/lib/telegram-bot";
 
 type TemplateSummary = {
   createdAt: string;
   deadlineTime: string;
   description: string;
-  formSchema: TaskFieldDefinition[];
+  expReward: number;
   id: string;
   isActive: boolean;
   title: string;
@@ -41,9 +40,9 @@ type TaskCard = {
   date: string;
   deadlineAt: string;
   description: string;
-  formSchema: TaskFieldDefinition[];
+  expReward: number;
   id: string;
-  mySubmissionId?: string;
+  myCompletionCount: number;
   status: "OPEN" | "CLOSED";
   title: string;
   totalCount: number;
@@ -73,21 +72,15 @@ export type OccurrenceDetail = {
   date: string;
   deadlineAt: string;
   description: string;
-  formSchema: TaskFieldDefinition[];
+  expReward: number;
   id: string;
+  myCompletionCount: number;
   roster: Array<{
+    completionCount: number;
     fullName: string;
     id: string;
     role: string;
-    submitted: boolean;
-    submissionId?: string;
   }>;
-  selectedSubmission?: {
-    id: string;
-    submittedAt: string;
-    updatedAt: string;
-    values: SubmissionRecord;
-  };
   selectedSubject: SerializedUser;
   status: "OPEN" | "CLOSED";
   title: string;
@@ -98,19 +91,10 @@ function mapTemplate(record: TaskTemplateRecord): TemplateSummary {
     createdAt: record.createdAt.toISOString(),
     deadlineTime: record.deadlineTime,
     description: record.description,
-    formSchema: record.formSchema as TaskFieldDefinition[],
+    expReward: (record as TaskTemplateRecord & { expReward: number }).expReward ?? 10,
     id: record._id.toString(),
     isActive: record.isActive,
     title: record.title,
-  };
-}
-
-function mapSubmission(record: SubmissionRecordModel) {
-  return {
-    id: record._id.toString(),
-    submittedAt: record.submittedAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
-    values: record.values as SubmissionRecord,
   };
 }
 
@@ -133,9 +117,9 @@ function serializeOccurrenceCard(
     date: occurrence.date,
     deadlineAt: occurrence.deadlineAt.toISOString(),
     description: template.description,
-    formSchema: template.formSchema as TaskFieldDefinition[],
+    expReward: (template as TaskTemplateRecord & { expReward: number }).expReward ?? 10,
     id: occurrence._id.toString(),
-    mySubmissionId: mySubmission?._id.toString(),
+    myCompletionCount: (mySubmission as SubmissionRecordModel & { completionCount?: number })?.completionCount ?? 0,
     status: occurrence.status,
     title: template.title,
     totalCount: visibleUsers.length,
@@ -177,7 +161,7 @@ export async function createTaskTemplate(
   input: {
     deadlineTime: string;
     description?: string;
-    formSchema: TaskFieldDefinition[];
+    expReward?: number;
     isActive: boolean;
     title: string;
   },
@@ -192,7 +176,7 @@ export async function createTaskTemplate(
     createdBy: toObjectId(actor.id),
     deadlineTime: input.deadlineTime,
     description: input.description || "",
-    formSchema: input.formSchema,
+    expReward: input.expReward ?? 10,
     isActive: input.isActive,
     teamId: toObjectId(actor.teamId),
     title: input.title,
@@ -268,43 +252,6 @@ export async function generateOccurrencesForDate(dateKey: string) {
 
 export async function getDashboardData(actor: SessionUser, dateKey: string) {
   await connectToDatabase();
-
-  if (actor.role === "ADMIN") {
-    const [teamCount, regionCount, userCount, occurrenceCount] = await Promise.all([
-      TeamModel.countDocuments(),
-      RegionModel.countDocuments(),
-      UserModel.countDocuments({ status: "ACTIVE" }),
-      TaskOccurrenceModel.countDocuments({ date: dateKey }),
-    ]);
-
-    return {
-      cards: [],
-      date: dateKey,
-      highlights: {
-        completed: teamCount + regionCount,
-        completionPercent: 100,
-        pending: occurrenceCount,
-        visibleUsers: userCount,
-      },
-      roster: [
-        {
-          completed: teamCount,
-          fullName: "Nhóm đang hoạt động",
-          id: "teams",
-          pending: 0,
-          role: "Tổng quan",
-        },
-        {
-          completed: regionCount,
-          fullName: "Khu vực đã cấu hình",
-          id: "regions",
-          pending: 0,
-          role: "Tổng quan",
-        },
-      ],
-      templates: [],
-    } satisfies DashboardData;
-  }
 
   if (!actor.teamId) {
     throw new Error("Người dùng chưa được gán vào nhóm.");
@@ -387,7 +334,10 @@ export async function getOccurrenceDetail(
     throw new Error("Không tìm thấy nhiệm vụ trong ngày.");
   }
 
-  if (actor.role !== "ADMIN" && occurrence.teamId.toString() !== actor.teamId) {
+  if (
+    !(actor.role === "TEAM_LEAD" && !actor.teamId) &&
+    occurrence.teamId.toString() !== actor.teamId
+  ) {
     throw new Error("Bạn không có quyền xem nhiệm vụ này.");
   }
 
@@ -409,12 +359,9 @@ export async function getOccurrenceDetail(
     throw new Error("Bạn chưa có đối tượng để nộp nhiệm vụ.");
   }
 
-  const allTeamUsers =
-    actor.role === "ADMIN"
-      ? await getTeamScopedUsers(occurrence.teamId.toString())
-      : actor.teamId
-        ? await getTeamScopedUsers(actor.teamId)
-        : [];
+  const allTeamUsers = actor.teamId
+    ? await getTeamScopedUsers(actor.teamId)
+    : await getTeamScopedUsers(occurrence.teamId.toString());
 
   const submissions = (await SubmissionModel.find({
     occurrenceId: occurrence._id,
@@ -429,22 +376,21 @@ export async function getOccurrenceDetail(
     date: occurrence.date,
     deadlineAt: occurrence.deadlineAt.toISOString(),
     description: template.description,
-    formSchema: template.formSchema as TaskFieldDefinition[],
+    expReward: (template as TaskTemplateRecord & { expReward: number }).expReward ?? 10,
     id: occurrence._id.toString(),
+    myCompletionCount: (selectedSubmission as SubmissionRecordModel & { completionCount?: number })?.completionCount ?? 0,
     roster: allTeamUsers.map((user) => {
       const submission = submissions.find(
         (item) => item.subjectUserId.toString() === user.id,
       );
 
       return {
+        completionCount: (submission as SubmissionRecordModel & { completionCount?: number })?.completionCount ?? 0,
         fullName: user.fullName,
         id: user.id,
         role: user.role,
-        submitted: Boolean(submission),
-        submissionId: submission?._id.toString(),
       };
     }),
-    selectedSubmission: selectedSubmission ? mapSubmission(selectedSubmission) : undefined,
     selectedSubject,
     status: occurrence.status,
     title: template.title,
@@ -455,7 +401,6 @@ export async function saveSubmission(
   actor: SessionUser,
   occurrenceId: string,
   subjectUserId: string,
-  formData: FormData,
 ) {
   await connectToDatabase();
 
@@ -500,21 +445,16 @@ export async function saveSubmission(
     throw new Error("Template gốc không còn tồn tại.");
   }
 
-  const values = validateSubmissionValues(
-    template.formSchema as TaskFieldDefinition[],
-    formData,
-  );
-
   const submission = await SubmissionModel.findOneAndUpdate(
     {
       occurrenceId: typedOccurrence._id,
       subjectUserId: typedSubject._id,
     },
     {
+      $inc: { completionCount: 1 },
       $set: {
         actorUserId: toObjectId(actor.id),
         updatedAt: new Date(),
-        values,
       },
       $setOnInsert: {
         submittedAt: new Date(),
@@ -526,6 +466,38 @@ export async function saveSubmission(
     },
   );
 
+  const expReward = (template as TaskTemplateRecord & { expReward: number }).expReward ?? 10;
+
+  let newLevel: number | null = null;
+  let leveledUp = false;
+
+  if (expReward > 0) {
+    await XpTransactionModel.create({
+      amount: expReward,
+      description: `Hoàn thành: ${template.title}`,
+      source: "task_completion",
+      sourceId: typedOccurrence._id,
+      userId: typedSubject._id,
+    });
+
+    const updatedUser = await UserModel.findByIdAndUpdate(
+      typedSubject._id,
+      { $inc: { totalXp: expReward } },
+      { new: true },
+    ).lean() as UserRecord | null;
+
+    if (updatedUser) {
+      newLevel = getLevelFromXp(updatedUser.totalXp);
+      if (newLevel !== updatedUser.level) {
+        leveledUp = true;
+        await UserModel.updateOne(
+          { _id: typedSubject._id },
+          { $set: { level: newLevel } },
+        );
+      }
+    }
+  }
+
   await AuditLogModel.create({
     action:
       actor.id === serializedSubject.id
@@ -535,12 +507,35 @@ export async function saveSubmission(
     entityId: submission._id.toString(),
     entityType: "Submission",
     metadata: {
+      completionCount: (submission as unknown as { completionCount: number }).completionCount,
       date: typedOccurrence.date,
       occurrenceId,
-      values,
     },
     subjectUserId: typedSubject._id,
   });
+
+  if (typedSubject.telegramId) {
+    const selfSubmit = actor.id === serializedSubject.id;
+    const congratsText = selfSubmit
+      ? `🎉 Bạn đã hoàn thành "${template.title}" — +${expReward} XP!`
+      : `🎉 ${actor.fullName} đã ghi nhận "${template.title}" cho bạn — +${expReward} XP!`;
+
+    await safeSendTelegramMessage({
+      chatId: typedSubject.telegramId,
+      text: congratsText,
+    });
+
+    if (leveledUp && newLevel !== null) {
+      const levelInfo = getLevelInfo(
+        newLevel,
+        (typedSubject as UserRecord & { gender?: string }).gender,
+      );
+      await safeSendTelegramMessage({
+        chatId: typedSubject.telegramId,
+        text: `🎖 Chúc mừng! Bạn đã lên cấp ${newLevel} — ${levelInfo.nameVi}.`,
+      });
+    }
+  }
 
   return submission._id.toString();
 }
@@ -609,10 +604,284 @@ export async function markReminderSent(occurrenceIds: string[]) {
   );
 }
 
+export type RegionDashboardData = {
+  date: string;
+  occurrences: Array<{
+    deadlineAt: string;
+    expReward: number;
+    id: string;
+    status: "OPEN" | "CLOSED";
+    title: string;
+  }>;
+  members: Array<{
+    completed: number;
+    fullName: string;
+    id: string;
+    role: string;
+    status: Array<{
+      completionCount: number;
+      occurrenceId: string;
+    }>;
+  }>;
+  summary: {
+    completionPercent: number;
+    completedSlots: number;
+    memberCount: number;
+    pendingSlots: number;
+  };
+};
+
+export async function getRegionDashboardData(
+  actor: SessionUser,
+  dateKey: string,
+): Promise<RegionDashboardData> {
+  if (actor.role !== "REGIONAL_LEAD" || !actor.regionId || !actor.teamId) {
+    throw new Error("Bạn không có khu vực để quản lý.");
+  }
+
+  await connectToDatabase();
+
+  const [members, occurrences] = await Promise.all([
+    listVisibleUsersForActor(actor),
+    TaskOccurrenceModel.find({
+      date: dateKey,
+      teamId: toObjectId(actor.teamId),
+    })
+      .sort({ deadlineAt: 1 })
+      .lean() as Promise<TaskOccurrenceRecord[]>,
+  ]);
+
+  const templates = (await TaskTemplateModel.find({
+    _id: { $in: occurrences.map((o) => o.taskTemplateId) },
+  }).lean()) as TaskTemplateRecord[];
+
+  const templateMap = new Map(templates.map((t) => [t._id.toString(), t]));
+
+  const submissions = (await SubmissionModel.find({
+    occurrenceId: { $in: occurrences.map((o) => o._id) },
+    subjectUserId: { $in: members.map((m) => toObjectId(m.id)) },
+  }).lean()) as SubmissionRecordModel[];
+
+  const occurrenceSummaries = occurrences.map((occurrence) => {
+    const template = templateMap.get(occurrence.taskTemplateId.toString());
+    return {
+      deadlineAt: occurrence.deadlineAt.toISOString(),
+      expReward:
+        (template as (TaskTemplateRecord & { expReward?: number }) | undefined)
+          ?.expReward ?? 10,
+      id: occurrence._id.toString(),
+      status: occurrence.status,
+      title: template?.title ?? "(đã xoá)",
+    };
+  });
+
+  const memberRows = members.map((member) => {
+    const status = occurrences.map((occurrence) => {
+      const submission = submissions.find(
+        (s) =>
+          s.occurrenceId.toString() === occurrence._id.toString() &&
+          s.subjectUserId.toString() === member.id,
+      );
+      return {
+        completionCount:
+          (submission as (SubmissionRecordModel & { completionCount?: number }) | undefined)
+            ?.completionCount ?? 0,
+        occurrenceId: occurrence._id.toString(),
+      };
+    });
+
+    const completed = status.filter((s) => s.completionCount > 0).length;
+
+    return {
+      completed,
+      fullName: member.fullName,
+      id: member.id,
+      role: member.role,
+      status,
+    };
+  });
+
+  const totalSlots = occurrences.length * Math.max(members.length, 1);
+  const completedSlots = memberRows.reduce((sum, row) => sum + row.completed, 0);
+
+  return {
+    date: dateKey,
+    occurrences: occurrenceSummaries,
+    members: memberRows,
+    summary: {
+      completionPercent:
+        totalSlots > 0 ? Math.round((completedSlots / totalSlots) * 100) : 0,
+      completedSlots,
+      memberCount: members.length,
+      pendingSlots: Math.max(totalSlots - completedSlots, 0),
+    },
+  };
+}
+
 export async function getTemplateCollectionForActor(actor: SessionUser) {
   if (!actor.teamId) {
     return [];
   }
 
   return getTemplatesForTeam(actor.teamId);
+}
+
+async function findActiveUserByTelegramId(telegramId: number) {
+  await connectToDatabase();
+  const user = (await UserModel.findOne({ telegramId }).lean()) as UserRecord | null;
+  if (!user) {
+    return null;
+  }
+  if (user.status !== "ACTIVE") {
+    return user;
+  }
+  return user;
+}
+
+export async function getTelegramTodayDigest(
+  telegramId: number,
+  dateKey: string,
+): Promise<string> {
+  const user = await findActiveUserByTelegramId(telegramId);
+
+  if (!user) {
+    return "Bạn chưa có tài khoản trong hệ thống. Vui lòng đăng nhập qua web app trước.";
+  }
+
+  if (user.status === "PENDING") {
+    return "Tài khoản của bạn đang chờ duyệt. Vui lòng liên hệ quản trị viên.";
+  }
+
+  if (user.status === "INACTIVE") {
+    return "Tài khoản của bạn đã bị khóa.";
+  }
+
+  if (!user.teamId) {
+    return "Bạn chưa được gán vào nhóm nào.";
+  }
+
+  const [occurrences, submissions] = await Promise.all([
+    TaskOccurrenceModel.find({
+      date: dateKey,
+      teamId: user.teamId,
+    })
+      .sort({ deadlineAt: 1 })
+      .lean() as Promise<TaskOccurrenceRecord[]>,
+    SubmissionModel.find({
+      subjectUserId: user._id,
+    }).lean() as Promise<SubmissionRecordModel[]>,
+  ]);
+
+  if (occurrences.length === 0) {
+    return `📅 ${dateKey}\nHôm nay chưa có nhiệm vụ nào.`;
+  }
+
+  const templates = (await TaskTemplateModel.find({
+    _id: { $in: occurrences.map((o) => o.taskTemplateId) },
+  }).lean()) as TaskTemplateRecord[];
+  const templateMap = new Map(templates.map((t) => [t._id.toString(), t]));
+
+  const submittedOccurrenceIds = new Set(
+    submissions
+      .filter((s) =>
+        occurrences.some((o) => o._id.toString() === s.occurrenceId.toString()),
+      )
+      .map((s) => s.occurrenceId.toString()),
+  );
+
+  const lines = occurrences.map((occurrence) => {
+    const template = templateMap.get(occurrence.taskTemplateId.toString());
+    const title = template?.title ?? "(đã xoá)";
+    const done = submittedOccurrenceIds.has(occurrence._id.toString());
+    const mark = done ? "✅" : "⏳";
+    return `${mark} ${title}`;
+  });
+
+  const doneCount = submittedOccurrenceIds.size;
+  const total = occurrences.length;
+
+  return [
+    `📅 Nhiệm vụ hôm nay (${dateKey}) — ${doneCount}/${total}`,
+    "",
+    ...lines,
+  ].join("\n");
+}
+
+export async function getTelegramProfile(telegramId: number): Promise<string> {
+  const user = await findActiveUserByTelegramId(telegramId);
+
+  if (!user) {
+    return "Bạn chưa có tài khoản trong hệ thống.";
+  }
+
+  const totalXp = user.totalXp ?? 0;
+  const level = user.level ?? getLevelFromXp(totalXp);
+  const gender = (user as UserRecord & { gender?: string }).gender;
+  const info = getLevelInfo(level, gender);
+
+  return [
+    `👤 ${user.fullName}`,
+    `🎖 Cấp ${level} — ${info.nameVi}`,
+    `⭐ Tổng XP: ${totalXp}`,
+    `📌 Trạng thái: ${user.status}`,
+  ].join("\n");
+}
+
+export async function getTelegramLeaderboard(
+  telegramId: number,
+): Promise<string> {
+  const user = await findActiveUserByTelegramId(telegramId);
+
+  if (!user) {
+    return "Bạn chưa có tài khoản trong hệ thống.";
+  }
+
+  if (!user.teamId) {
+    return "Bạn chưa được gán vào nhóm nào.";
+  }
+
+  const members = (await UserModel.find({
+    status: "ACTIVE",
+    teamId: user.teamId,
+  })
+    .sort({ totalXp: -1, level: -1 })
+    .limit(10)
+    .lean()) as UserRecord[];
+
+  if (members.length === 0) {
+    return "Chưa có thành viên nào trong bảng xếp hạng.";
+  }
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const lines = members.map((member, index) => {
+    const marker = medals[index] ?? `${index + 1}.`;
+    const isMe = member._id.toString() === user._id.toString();
+    const name = isMe ? `${member.fullName} (bạn)` : member.fullName;
+    return `${marker} ${name} — ${member.totalXp ?? 0} XP (Lv.${member.level ?? 1})`;
+  });
+
+  return ["🏆 Bảng xếp hạng nhóm (Top 10)", "", ...lines].join("\n");
+}
+
+export async function getSessionUserByTelegramId(
+  telegramId: number,
+): Promise<SessionUser | null> {
+  const user = await findActiveUserByTelegramId(telegramId);
+  if (!user || user.status !== "ACTIVE") {
+    return null;
+  }
+  return {
+    bio: (user as UserRecord & { bio?: string }).bio ?? "",
+    fullName: user.fullName,
+    gender:
+      ((user as UserRecord & { gender?: string }).gender as SessionUser["gender"]) ??
+      "male",
+    id: user._id.toString(),
+    regionId: user.regionId?.toString() || null,
+    role: user.role,
+    status: user.status,
+    teamId: user.teamId?.toString() || null,
+    telegramId: user.telegramId,
+    username: user.username,
+  };
 }

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const user = await authenticateTelegramUser(body.initData);
     await setSessionCookie(user);
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, status: user.status });
   } catch (error) {
     return NextResponse.json(
       {

@@ -1,8 +1,16 @@
 import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/auth/session";
 
-import { getCurrentUser } from "@/lib/current-user";
+export default async function Home() {
+  const session = await getSessionUser();
 
-export default async function HomePage() {
-  const user = await getCurrentUser();
-  redirect(user ? "/dashboard" : "/login");
+  if (!session) {
+    redirect("/login");
+  }
+
+  if (session.status === "PENDING") {
+    redirect("/onboarding/select-region");
+  }
+
+  redirect("/dashboard");
 }

@@ -47,7 +47,6 @@ describe("generateOccurrencesForDate", () => {
       createdBy: actor._id,
       deadlineTime: "17:30",
       description: "Daily report",
-      formSchema: [{ id: "x", label: "X", required: true, type: "shortText" }],
       isActive: true,
       teamId: team._id,
       title: "Report",

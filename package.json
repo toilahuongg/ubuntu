@@ -9,7 +9,10 @@
     "lint": "eslint",
     "seed": "tsx src/scripts/seed.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "tg:webhook:set": "tsx src/scripts/telegram-webhook.ts set",
+    "tg:webhook:delete": "tsx src/scripts/telegram-webhook.ts delete",
+    "tg:webhook:info": "tsx src/scripts/telegram-webhook.ts info"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",

@@ -1,38 +1,36 @@
 import { describe, expect, it } from "vitest";
 
-import { validateSubmissionValues } from "@/lib/validation";
+import { taskTemplateInputSchema } from "@/lib/validation";
 
-describe("validateSubmissionValues", () => {
-  it("parses checkbox, number, and text values correctly", () => {
-    const formData = new FormData();
-    formData.set("field-sales", "42");
-    formData.set("field-note", "Da check xong");
-    formData.set("field-checked", "on");
-
-    expect(
-      validateSubmissionValues(
-        [
-          { id: "sales", label: "Sales", required: true, type: "number" },
-          { id: "note", label: "Note", required: false, type: "shortText" },
-          { id: "checked", label: "Checked", required: true, type: "checkbox" },
-        ],
-        formData,
-      ),
-    ).toEqual({
-      checked: true,
-      note: "Da check xong",
-      sales: 42,
+describe("taskTemplateInputSchema", () => {
+  it("accepts valid input", () => {
+    const result = taskTemplateInputSchema.parse({
+      deadlineTime: "17:30",
+      description: "Test task",
+      expReward: 10,
+      isActive: true,
+      title: "Daily check-in",
     });
+
+    expect(result.title).toBe("Daily check-in");
+    expect(result.expReward).toBe(10);
   });
 
-  it("throws when a required field is missing", () => {
-    const formData = new FormData();
-
+  it("rejects invalid deadline format", () => {
     expect(() =>
-      validateSubmissionValues(
-        [{ id: "note", label: "Note", required: true, type: "shortText" }],
-        formData,
-      ),
-    ).toThrow('Trường "Note" là bắt buộc.');
+      taskTemplateInputSchema.parse({
+        deadlineTime: "25:00",
+        title: "Test",
+      }),
+    ).toThrow("Deadline phải theo HH:mm");
+  });
+
+  it("rejects title that is too short", () => {
+    expect(() =>
+      taskTemplateInputSchema.parse({
+        deadlineTime: "17:30",
+        title: "AB",
+      }),
+    ).toThrow("Tiêu đề quá ngắn");
   });
 });

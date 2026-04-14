@@ -3,7 +3,11 @@ import "server-only";
 import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
-import { canAccessAdmin } from "@/lib/permissions";
+import {
+  canAccessManagement,
+  canAccessRegionManagement,
+  canManageTeamRegions,
+} from "@/lib/permissions";
 import { refreshSessionUser } from "@/lib/services/auth-service";
 
 export async function getCurrentUser() {
@@ -23,13 +27,37 @@ export async function requireCurrentUser() {
     redirect("/login");
   }
 
+  if (user.status === "PENDING") {
+    redirect("/onboarding");
+  }
+
   return user;
 }
 
-export async function requireAdminUser() {
+export async function requireManagementUser() {
   const user = await requireCurrentUser();
 
-  if (!canAccessAdmin(user)) {
+  if (!canAccessManagement(user)) {
+    redirect("/dashboard");
+  }
+
+  return user;
+}
+
+export async function requireTeamLeadUser() {
+  const user = await requireCurrentUser();
+
+  if (!canManageTeamRegions(user)) {
+    redirect("/dashboard");
+  }
+
+  return user;
+}
+
+export async function requireRegionalLeadUser() {
+  const user = await requireCurrentUser();
+
+  if (!canAccessRegionManagement(user)) {
     redirect("/dashboard");
   }
 

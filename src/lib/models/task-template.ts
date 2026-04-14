@@ -5,6 +5,7 @@ const taskTemplateSchema = new Schema(
     createdBy: { ref: "User", required: true, type: Schema.Types.ObjectId },
     deadlineTime: { required: true, type: String },
     description: { default: "", trim: true, type: String },
+    expReward: { default: 10, min: 0, type: Number },
     formSchema: { default: [], type: [Schema.Types.Mixed] },
     isActive: { default: true, type: Boolean },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId },

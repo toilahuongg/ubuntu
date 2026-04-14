@@ -42,15 +42,8 @@ async function main() {
     },
   ]);
 
-  const [admin, teamLead, regionalLeadA, regionalLeadB, memberA1, memberA2, memberB1] =
+  const [teamLead, regionalLeadA, regionalLeadB, memberA1, memberA2, memberB1] =
     await UserModel.create([
-      {
-        fullName: "Admin He Thong",
-        role: "ADMIN",
-        status: "ACTIVE",
-        telegramId: 900001,
-        username: "admin_ops",
-      },
       {
         fullName: "Tran Nhom Truong",
         role: "TEAM_LEAD",
@@ -123,20 +116,7 @@ async function main() {
       createdBy: teamLead._id,
       deadlineTime: "11:30",
       description: "Tong hop cac diem ban trong buoi sang va ghi chu bat thuong.",
-      formSchema: [
-        {
-          id: "doanh-so-sang",
-          label: "Doanh so buoi sang",
-          required: true,
-          type: "number",
-        },
-        {
-          id: "ghi-chu",
-          label: "Ghi chu van hanh",
-          required: false,
-          type: "longText",
-        },
-      ],
+      expReward: 10,
       isActive: true,
       teamId: team._id,
       title: "Bao cao doanh so buoi sang",
@@ -145,24 +125,7 @@ async function main() {
       createdBy: teamLead._id,
       deadlineTime: "17:30",
       description: "Check tinh trang diem ban cuoi ngay va muc hoan thanh chi tieu.",
-      formSchema: [
-        {
-          id: "trang-thai",
-          label: "Trang thai diem ban",
-          options: [
-            { label: "Dat", value: "Dat" },
-            { label: "Can xu ly", value: "Can xu ly" },
-          ],
-          required: true,
-          type: "singleSelect",
-        },
-        {
-          id: "da-checkin",
-          label: "Da check-in du diem",
-          required: true,
-          type: "checkbox",
-        },
-      ],
+      expReward: 15,
       isActive: true,
       teamId: team._id,
       title: "Check list cuoi ngay",
@@ -171,7 +134,6 @@ async function main() {
 
   console.log("Seed completed.");
   console.table([
-    { name: admin.fullName, role: admin.role, telegramId: admin.telegramId },
     { name: teamLead.fullName, role: teamLead.role, telegramId: teamLead.telegramId },
     { name: regionalLeadA.fullName, role: regionalLeadA.role, telegramId: regionalLeadA.telegramId },
     { name: regionalLeadB.fullName, role: regionalLeadB.role, telegramId: regionalLeadB.telegramId },

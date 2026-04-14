@@ -1,10 +1,33 @@
-import { AppShell } from "@/components/app-shell";
-import { requireCurrentUser } from "@/lib/current-user";
+import { redirect } from "next/navigation";
+
+import { getSessionUser } from "@/lib/auth/session";
+import { BottomNav } from "@/components/bottom-nav";
+import { AppHeader } from "@/components/app-header";
 
 export default async function AppLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
-  const user = await requireCurrentUser();
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getSessionUser();
 
-  return <AppShell user={user}>{children}</AppShell>;
+  if (!session) {
+    redirect("/login");
+  }
+
+  if (session.status === "PENDING") {
+    redirect("/onboarding/select-region");
+  }
+
+  if (session.status === "INACTIVE") {
+    redirect("/login?error=Tài+khoản+đã+bị+khóa");
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <AppHeader user={session} />
+      <main className="flex-1 px-4 pb-24 pt-4">{children}</main>
+      <BottomNav role={session.role} />
+    </div>
+  );
 }
