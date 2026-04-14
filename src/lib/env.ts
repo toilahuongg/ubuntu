@@ -22,11 +22,10 @@ export function requireEnv(
     | "MONGODB_URI"
     | "SESSION_SECRET"
     | "TELEGRAM_BOT_TOKEN"
+    | "TELEGRAM_WEBHOOK_SECRET"
     | "NEXT_PUBLIC_APP_URL"
     | "CRON_SECRET",
 ) {
-  console.log(process.env.MONGODB_URI);
-
   const value = process.env[name]?.trim();
 
   if (!value) {

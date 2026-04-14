@@ -26,6 +26,26 @@ describe("canProxySubmit", () => {
     ).toBe(true);
   });
 
+  it("rejects team leads without a team scope (fail-closed)", () => {
+    expect(
+      canProxySubmit(
+        {
+          fullName: "Unscoped Lead",
+          id: "lead",
+          role: "TEAM_LEAD",
+          status: "ACTIVE",
+        },
+        {
+          fullName: "Someone",
+          id: "someone",
+          role: "MEMBER",
+          status: "ACTIVE",
+          teamId: "team-x",
+        },
+      ),
+    ).toBe(false);
+  });
+
   it("lets zone leads submit for members and regional leads in their zone", () => {
     const actor = {
       fullName: "Zone",

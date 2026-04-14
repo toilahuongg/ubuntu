@@ -1018,23 +1018,21 @@ export async function getTemplateCollectionForActor(actor: SessionUser) {
   return filtered.map(mapTemplate);
 }
 
-async function findActiveUserByTelegramId(telegramId: number) {
+// Returns the raw user record regardless of status so callers can emit
+// tailored PENDING/INACTIVE messages. The previous name
+// (`findActiveUserByTelegramId`) misled reviewers into assuming a status
+// filter; the function never enforced one.
+async function findUserByTelegramId(telegramId: number) {
   await connectToDatabase();
   const user = (await UserModel.findOne({ telegramId }).lean()) as UserRecord | null;
-  if (!user) {
-    return null;
-  }
-  if (user.status !== "ACTIVE") {
-    return user;
-  }
-  return user;
+  return user ?? null;
 }
 
 export async function getTelegramTodayDigest(
   telegramId: number,
   dateKey: string,
 ): Promise<string> {
-  const user = await findActiveUserByTelegramId(telegramId);
+  const user = await findUserByTelegramId(telegramId);
 
   if (!user) {
     return "Bạn chưa có tài khoản trong hệ thống. Vui lòng đăng nhập qua web app trước.";
@@ -1111,7 +1109,7 @@ export async function getTelegramTodayDigest(
 }
 
 export async function getTelegramProfile(telegramId: number): Promise<string> {
-  const user = await findActiveUserByTelegramId(telegramId);
+  const user = await findUserByTelegramId(telegramId);
 
   if (!user) {
     return "Bạn chưa có tài khoản trong hệ thống.";
@@ -1133,7 +1131,7 @@ export async function getTelegramProfile(telegramId: number): Promise<string> {
 export async function getTelegramLeaderboard(
   telegramId: number,
 ): Promise<string> {
-  const user = await findActiveUserByTelegramId(telegramId);
+  const user = await findUserByTelegramId(telegramId);
 
   if (!user) {
     return "Bạn chưa có tài khoản trong hệ thống.";
@@ -1169,7 +1167,7 @@ export async function getTelegramLeaderboard(
 export async function getSessionUserByTelegramId(
   telegramId: number,
 ): Promise<SessionUser | null> {
-  const user = await findActiveUserByTelegramId(telegramId);
+  const user = await findUserByTelegramId(telegramId);
   if (!user || user.status !== "ACTIVE") {
     return null;
   }

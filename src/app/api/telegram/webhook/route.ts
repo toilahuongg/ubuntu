@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getTodayDateKey } from "@/lib/dates";
-import { getOptionalEnv } from "@/lib/env";
+import { requireEnv } from "@/lib/env";
 import {
   buildTelegramStartMarkup,
   safeAnswerCallbackQuery,
@@ -162,16 +162,16 @@ async function handleCallbackQuery(
 }
 
 export async function POST(request: Request) {
-  // Verify Telegram's secret token when configured. See
+  // Verify Telegram's secret token. See
   // https://core.telegram.org/bots/api#setwebhook — `secret_token`.
-  const expectedSecret = getOptionalEnv().telegramWebhookSecret;
-  if (expectedSecret) {
-    const providedSecret = request.headers.get(
-      "x-telegram-bot-api-secret-token",
-    );
-    if (providedSecret !== expectedSecret) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+  // Fail-closed: require TELEGRAM_WEBHOOK_SECRET to be set so a
+  // misconfiguration cannot silently disable authentication.
+  const expectedSecret = requireEnv("TELEGRAM_WEBHOOK_SECRET");
+  const providedSecret = request.headers.get(
+    "x-telegram-bot-api-secret-token",
+  );
+  if (providedSecret !== expectedSecret) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   let update: TelegramUpdate;

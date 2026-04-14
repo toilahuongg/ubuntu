@@ -37,10 +37,16 @@ vi.mock("@/lib/services/task-service", () => ({
 
 import { POST } from "@/app/api/telegram/webhook/route";
 
+const WEBHOOK_SECRET = "s3cret";
+
 function buildRequest(body: unknown, headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/telegram/webhook", {
     body: JSON.stringify(body),
-    headers: { "Content-Type": "application/json", ...headers },
+    headers: {
+      "Content-Type": "application/json",
+      "x-telegram-bot-api-secret-token": WEBHOOK_SECRET,
+      ...headers,
+    },
     method: "POST",
   });
 }
@@ -49,7 +55,7 @@ describe("telegram webhook route", () => {
   beforeEach(() => {
     vi.stubEnv("TELEGRAM_BOT_TOKEN", "123:test");
     vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://example.test");
-    vi.stubEnv("TELEGRAM_WEBHOOK_SECRET", "");
+    vi.stubEnv("TELEGRAM_WEBHOOK_SECRET", WEBHOOK_SECRET);
   });
 
   afterEach(() => {
@@ -134,9 +140,7 @@ describe("telegram webhook route", () => {
     );
   });
 
-  it("enforces webhook secret when configured", async () => {
-    vi.stubEnv("TELEGRAM_WEBHOOK_SECRET", "s3cret");
-
+  it("rejects requests with an invalid webhook secret", async () => {
     const res = await POST(
       buildRequest(
         { message: { chat: { id: 1 }, message_id: 1, text: "/help" } },
@@ -145,5 +149,16 @@ describe("telegram webhook route", () => {
     );
     expect(res.status).toBe(403);
     expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when webhook secret is not configured", async () => {
+    vi.stubEnv("TELEGRAM_WEBHOOK_SECRET", "");
+    await expect(
+      POST(
+        buildRequest({
+          message: { chat: { id: 1 }, message_id: 1, text: "/help" },
+        }),
+      ),
+    ).rejects.toThrow(/TELEGRAM_WEBHOOK_SECRET/);
   });
 });

@@ -50,8 +50,9 @@ export function canProxySubmit(actor: SessionUser, subject: SessionUser) {
   }
 
   if (actor.role === "TEAM_LEAD") {
+    // Fail-closed: TEAM_LEAD must be scoped to a team to proxy-submit.
     if (!actor.teamId) {
-      return true;
+      return false;
     }
     return actor.teamId === subject.teamId;
   }

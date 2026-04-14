@@ -25,7 +25,7 @@ export default async function AdminPage() {
   }
 
   const [snapshot, pendingUsers] = await Promise.all([
-    getAdminSnapshot(),
+    getAdminSnapshot(session),
     listPendingUsers(),
   ]);
 

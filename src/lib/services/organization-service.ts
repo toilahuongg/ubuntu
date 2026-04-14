@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Role, SerializedUser, SessionUser, UserStatus } from "@/lib/domain";
+import { canAccessManagement } from "@/lib/permissions";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   RegionModel,
@@ -120,7 +121,13 @@ async function syncLeadAssignments(user: SerializedUser) {
   }
 }
 
-export async function getAdminSnapshot(): Promise<AdminSnapshot> {
+export async function getAdminSnapshot(actor: SessionUser): Promise<AdminSnapshot> {
+  // Defense-in-depth: enforce auth at the service boundary so this cannot
+  // leak the full org graph if a future route forgets to gate the caller.
+  if (!canAccessManagement(actor)) {
+    throw new Error("Bạn không có quyền xem dữ liệu quản trị.");
+  }
+
   await connectToDatabase();
 
   const [teams, zones, regions, users] = await Promise.all([

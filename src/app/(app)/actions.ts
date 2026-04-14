@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
-import type { TemplateScope } from "@/lib/domain";
+import type { TemplateScope, SessionUser } from "@/lib/domain";
+import { canAccessManagement } from "@/lib/permissions";
 import {
   createTaskTemplate,
   saveSubmission,
@@ -26,6 +27,14 @@ async function requireSession() {
   const session = await getSessionUser();
   if (!session) {
     redirect("/login");
+  }
+  return session;
+}
+
+async function requireManagementUser(): Promise<SessionUser> {
+  const session = await requireSession();
+  if (!canAccessManagement(session)) {
+    throw new Error("Bạn không có quyền thực hiện thao tác này.");
   }
   return session;
 }
@@ -79,13 +88,13 @@ export async function toggleTemplateAction(templateId: string) {
 // ── Organization ──
 
 export async function approveUserAction(userId: string) {
-  await requireSession();
+  await requireManagementUser();
   await approveUser(userId);
   revalidatePath("/admin");
 }
 
 export async function createTeamAction(formData: FormData) {
-  await requireSession();
+  await requireManagementUser();
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
   await createTeam(name, code);
@@ -93,7 +102,7 @@ export async function createTeamAction(formData: FormData) {
 }
 
 export async function updateTeamAction(formData: FormData) {
-  await requireSession();
+  await requireManagementUser();
   const id = formData.get("id") as string;
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
@@ -102,7 +111,7 @@ export async function updateTeamAction(formData: FormData) {
 }
 
 export async function updateZoneAction(formData: FormData) {
-  await requireSession();
+  await requireManagementUser();
   const id = formData.get("id") as string;
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
@@ -111,7 +120,7 @@ export async function updateZoneAction(formData: FormData) {
 }
 
 export async function updateRegionAction(formData: FormData) {
-  await requireSession();
+  await requireManagementUser();
   const id = formData.get("id") as string;
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
@@ -120,7 +129,7 @@ export async function updateRegionAction(formData: FormData) {
 }
 
 export async function createZoneAction(formData: FormData) {
-  await requireSession();
+  await requireManagementUser();
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
   const teamId = formData.get("teamId") as string;
@@ -129,7 +138,7 @@ export async function createZoneAction(formData: FormData) {
 }
 
 export async function createRegionAction(formData: FormData) {
-  await requireSession();
+  await requireManagementUser();
   const name = formData.get("name") as string;
   const code = formData.get("code") as string;
   const zoneId = formData.get("zoneId") as string;
@@ -138,7 +147,7 @@ export async function createRegionAction(formData: FormData) {
 }
 
 export async function saveUserAction(formData: FormData) {
-  await requireSession();
+  await requireManagementUser();
 
   await saveUser({
     fullName: formData.get("fullName") as string,

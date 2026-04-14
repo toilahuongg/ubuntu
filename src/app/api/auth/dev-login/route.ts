@@ -21,8 +21,16 @@ function resolveRedirect(request: Request, path: string) {
 }
 
 export async function POST(request: Request) {
-  if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Dev login bi tat trong production." }, { status: 403 });
+  // Fail-closed: only allow dev-login when NODE_ENV is explicitly
+  // "development" AND an opt-in flag is set. Any other value (production,
+  // test, undefined, typos) disables this route.
+  const nodeEnv = process.env.NODE_ENV;
+  const devLoginEnabled = process.env.ENABLE_DEV_LOGIN === "true";
+  if (nodeEnv !== "development" || !devLoginEnabled) {
+    return NextResponse.json(
+      { error: "Dev login bi tat." },
+      { status: 403 },
+    );
   }
 
   const formData = await request.formData();
