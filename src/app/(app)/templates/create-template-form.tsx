@@ -141,6 +141,42 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
         />
       </div>
 
+      <div>
+        <label htmlFor="submissionMessage" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+          Lời thoại khi có người nộp (tuỳ chọn)
+        </label>
+        <textarea
+          id="submissionMessage"
+          name="submissionMessage"
+          rows={2}
+          maxLength={280}
+          placeholder="VD: 🎯 {name} vừa chốt {task} lần thứ {count}!"
+          className="w-full rounded-xl bg-overlay-subtle border border-border px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25 resize-none"
+        />
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Biến: {"{name}"}, {"{task}"}, {"{xp}"}, {"{count}"}. Để trống để dùng mẫu mặc định.
+        </p>
+      </div>
+
+      {taskType === "COUNT_TOTAL" && (
+        <div>
+          <label htmlFor="completionMessage" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            Lời thoại khi đạt mục tiêu (tuỳ chọn)
+          </label>
+          <textarea
+            id="completionMessage"
+            name="completionMessage"
+            rows={2}
+            maxLength={280}
+            placeholder="VD: 🔥 {task} đã đạt {target} lượt!"
+            className="w-full rounded-xl bg-overlay-subtle border border-border px-3 py-2 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25 resize-none"
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Biến: {"{task}"}, {"{target}"}. Để trống để dùng mẫu mặc định.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
           <label htmlFor="deadlineTime" className="mb-1.5 block text-xs font-medium text-muted-foreground">

@@ -76,6 +76,8 @@ export function mapTask(record: TaskRecord): TaskSummary {
     scope: record.scope,
     taskType: record.taskType ?? DEFAULT_TASK_TYPE,
     targetCount: record.targetCount ?? null,
+    submissionMessage: record.submissionMessage ?? "",
+    completionMessage: record.completionMessage ?? "",
     completedAt: record.completedAt ? record.completedAt.toISOString() : null,
     isActive: record.isActive,
     teamId: record.teamId.toString(),
@@ -381,6 +383,8 @@ export type CreateTaskInput = {
   isActive?: boolean;
   taskType?: TaskType;
   targetCount?: number | null;
+  submissionMessage?: string;
+  completionMessage?: string;
 };
 
 export async function createTask(
@@ -414,6 +418,8 @@ export async function createTask(
     isActive: input.isActive ?? true,
     regionId: actorScope.regionId ? toObjectId(actorScope.regionId) : null,
     scope: actorScope.scope,
+    submissionMessage: input.submissionMessage?.trim() ?? "",
+    completionMessage: input.completionMessage?.trim() ?? "",
     taskType,
     targetCount: taskType === "COUNT_TOTAL" ? input.targetCount : null,
     teamId: toObjectId(actorScope.teamId),
@@ -446,6 +452,8 @@ export type UpdateTaskInput = {
   pointReward?: number;
   lateWindowDays?: number;
   targetCount?: number | null;
+  submissionMessage?: string;
+  completionMessage?: string;
 };
 
 export async function updateTask(
@@ -489,6 +497,8 @@ export async function updateTask(
         pointReward: input.pointReward ?? DEFAULT_POINT_REWARD,
         lateWindowDays: input.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS,
         targetCount: nextTargetCount,
+        submissionMessage: input.submissionMessage?.trim() ?? "",
+        completionMessage: input.completionMessage?.trim() ?? "",
       },
     },
   );

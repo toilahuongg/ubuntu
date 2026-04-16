@@ -6,6 +6,7 @@ import {
   Layers,
   LayoutDashboard,
   MapPin,
+  Sparkles,
   Trophy,
   User,
   Settings,
@@ -41,6 +42,11 @@ const NAV_ITEMS: NavItem[] = [
     href: "/leaderboard",
     label: "Xếp hạng",
     icon: Trophy,
+  },
+  {
+    href: "/shop",
+    label: "Cửa hàng",
+    icon: Sparkles,
   },
   {
     href: "/profile",

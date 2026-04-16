@@ -11,6 +11,8 @@ import {
 } from "@/lib/models";
 import { getLevelInfo } from "@/lib/level-utils";
 import type { LeaderboardEntry } from "@/lib/services/gamification-service";
+import { getEquippedPayloadsForUsers } from "@/lib/services/cosmetics-service";
+import { serializeEquipped } from "@/lib/cosmetics/serialize";
 
 export type RegionLeaderboardEntry = {
   id: string;
@@ -87,9 +89,17 @@ async function getTopUsersByMonthlyXp(
     { $limit: limit },
   ])) as (MonthlyXpRow & { user: UserRecord })[];
 
-  return topIds.map((row, index) =>
+  const entries = topIds.map((row, index) =>
     toLeaderboardEntry(row.user, row.monthlyXp, index + 1),
   );
+
+  const equippedMap = await getEquippedPayloadsForUsers(
+    entries.map((e) => e.id),
+  );
+  return entries.map((e) => {
+    const eq = equippedMap.get(e.id);
+    return eq ? { ...e, equipped: serializeEquipped(eq) } : e;
+  });
 }
 
 export async function getTopMembers(limit = 5): Promise<LeaderboardEntry[]> {

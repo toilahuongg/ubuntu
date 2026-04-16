@@ -4,6 +4,8 @@ import { getSessionUser } from "@/lib/auth/session";
 import { refreshSessionUser } from "@/lib/services/auth-service";
 import { BottomNav } from "@/components/bottom-nav";
 import { AppHeader } from "@/components/app-header";
+import { getEquippedPayloadsForUsers } from "@/lib/services/cosmetics-service";
+import { serializeEquipped } from "@/lib/cosmetics/serialize";
 
 export default async function AppLayout({
   children,
@@ -31,6 +33,10 @@ export default async function AppLayout({
     redirect("/login?error=Tài+khoản+đã+bị+khóa");
   }
 
+  const equippedMap = await getEquippedPayloadsForUsers([session.id]);
+  const rawEquipped = equippedMap.get(session.id);
+  const equippedView = rawEquipped ? serializeEquipped(rawEquipped) : null;
+
   return (
     <div className="flex min-h-screen flex-col">
       <a
@@ -39,7 +45,7 @@ export default async function AppLayout({
       >
         Bỏ qua đến nội dung chính
       </a>
-      <AppHeader user={session} />
+      <AppHeader user={session} equipped={equippedView} />
       <main
         id="main-content"
         className="flex-1 px-4 pb-24 pt-4 sm:px-6 sm:pt-6 lg:px-8"

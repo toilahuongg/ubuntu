@@ -10,6 +10,7 @@ import {
 import { toObjectId } from "@/lib/utils/ids";
 import { getLevelInfo, type LevelInfo } from "@/lib/level-utils";
 import { getProgressToNextLevel } from "@/lib/xp";
+import type { EquippedView } from "@/lib/cosmetics/serialize";
 
 export type UserProgress = {
   currentLevelXp: number;
@@ -27,6 +28,7 @@ export type LeaderboardEntry = {
   levelInfo: LevelInfo;
   rank: number;
   totalXp: number;
+  equipped?: EquippedView;
 };
 
 export type XpHistoryEntry = {

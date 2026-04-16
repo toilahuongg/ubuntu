@@ -7,6 +7,7 @@ import { getTodayDateKey } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   AuditLogModel,
+  PointTransactionModel,
   SubmissionModel,
   type SubmissionRecordModel,
   TaskModel,
@@ -16,6 +17,10 @@ import {
   XpTransactionModel,
 } from "@/lib/models";
 import { assertCanProxySubmit } from "@/lib/permissions";
+import {
+  getDecoratedFullName,
+  grantLevelUnlocks,
+} from "@/lib/services/cosmetics-service";
 import { getLevelInfo } from "@/lib/level-utils";
 import { getLevelFromXp } from "@/lib/xp";
 import {
@@ -105,6 +110,7 @@ export async function saveSubmission(
   }
 
   const expReward = taskRaw.expReward ?? DEFAULT_EXP_REWARD;
+  const pointReward = taskRaw.pointReward ?? 0;
 
   const supportsTransactions = (() => {
     try {
@@ -203,24 +209,45 @@ export async function saveSubmission(
     let leveledUp = false;
     let xpAwarded = 0;
 
-    if (isFirstSubmission && expReward > 0) {
+    if (isFirstSubmission && (expReward > 0 || pointReward > 0)) {
       xpAwarded = expReward;
-      await XpTransactionModel.create(
-        [
-          {
-            amount: expReward,
-            description: `Hoàn thành: ${taskRaw.title}`,
-            source: "task_completion",
-            sourceId: taskRaw._id,
-            userId: subjectRaw._id,
-          },
-        ],
-        session ? { session } : undefined,
-      );
+      if (expReward > 0) {
+        await XpTransactionModel.create(
+          [
+            {
+              amount: expReward,
+              description: `Hoàn thành: ${taskRaw.title}`,
+              source: "task_completion",
+              sourceId: taskRaw._id,
+              userId: subjectRaw._id,
+            },
+          ],
+          session ? { session } : undefined,
+        );
+      }
+      if (pointReward > 0) {
+        await PointTransactionModel.create(
+          [
+            {
+              amount: pointReward,
+              description: `Thưởng nhiệm vụ: ${taskRaw.title}`,
+              source: "task_reward",
+              sourceId: taskRaw._id,
+              userId: subjectRaw._id,
+            },
+          ],
+          session ? { session } : undefined,
+        );
+      }
 
       const updatedUser = (await UserModel.findByIdAndUpdate(
         subjectRaw._id,
-        { $inc: { totalXp: expReward } },
+        {
+          $inc: {
+            totalXp: expReward,
+            pointBalance: pointReward,
+          },
+        },
         { new: true, session },
       ).lean()) as UserRecord | null;
 
@@ -233,6 +260,11 @@ export async function saveSubmission(
             { $set: { level: newLevel } },
             session ? { session } : undefined,
           );
+          try {
+            await grantLevelUnlocks(subjectRaw._id, newLevel, session);
+          } catch (err) {
+            console.error("[cosmetics] grantLevelUnlocks failed", err);
+          }
         }
       }
     }
@@ -301,10 +333,15 @@ export async function saveSubmission(
     result = await runBody();
   }
 
+  const decoratedSubjectName = await getDecoratedFullName(
+    subjectRaw._id,
+    subjectRaw.fullName,
+  ).catch(() => subjectRaw.fullName);
+
   if (shouldNotify) {
     void notifySubmissionToGroups({
       subject: {
-        fullName: subjectRaw.fullName,
+        fullName: decoratedSubjectName,
         teamId: subjectSession.teamId,
         zoneId: subjectSession.zoneId,
         regionId: subjectSession.regionId,
@@ -312,6 +349,7 @@ export async function saveSubmission(
       taskTitle: taskRaw.title,
       xpAwarded: result.xpAwarded,
       completionCount: result.completionCount,
+      template: taskRaw.submissionMessage || undefined,
     }).catch((err) => {
       console.error("[submission-notifier]", err);
     });
@@ -325,6 +363,7 @@ export async function saveSubmission(
         },
         taskTitle: taskRaw.title,
         targetCount: taskRaw.targetCount,
+        template: taskRaw.completionMessage || undefined,
       }).catch((err) => {
         console.error("[submission-notifier]", err);
       });

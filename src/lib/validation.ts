@@ -30,6 +30,8 @@ export const taskInputSchema = z
     ),
     targetCount: z.number().int().min(1).max(100000).optional(),
     title: z.string().min(3, "Tiêu đề quá ngắn").max(80),
+    submissionMessage: z.string().max(280).optional().default(""),
+    completionMessage: z.string().max(280).optional().default(""),
   })
   .refine(
     (v) =>
@@ -68,6 +70,8 @@ export const updateTaskInputSchema = z
       .default(7),
     targetCount: z.number().int().min(1).max(100000).optional(),
     title: z.string().min(3, "Tiêu đề quá ngắn").max(80),
+    submissionMessage: z.string().max(280).optional().default(""),
+    completionMessage: z.string().max(280).optional().default(""),
   });
 
 export const monthlyGoalInputSchema = z.object({

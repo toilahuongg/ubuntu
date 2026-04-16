@@ -22,6 +22,8 @@ export type TaskSummary = {
   scope: TaskScope;
   taskType: TaskType;
   targetCount: number | null;
+  submissionMessage: string;
+  completionMessage: string;
   completedAt: string | null;
   isActive: boolean;
   teamId: string;

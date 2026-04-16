@@ -7,6 +7,7 @@ import {
   ListChecks,
   MapPin,
   MessageCircle,
+  Sparkles,
   Shield,
   UserCog,
   Users,
@@ -113,6 +114,12 @@ export default async function AdminPage() {
       icon: MessageCircle,
       label: "Thông báo Telegram",
       description: "Kết nối và quản lý kênh Telegram",
+    },
+    {
+      href: "/admin/cosmetics",
+      icon: Sparkles,
+      label: "Trang bị tên",
+      description: "Quản lý cosmetic của người dùng",
     },
   ];
 

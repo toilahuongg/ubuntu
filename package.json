@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx src/scripts/seed.ts",
+    "seed:cosmetics": "tsx src/scripts/seed-cosmetics.ts",
     "fix-indexes": "tsx src/scripts/fix-telegram-index.ts",
     "test": "vitest run",
     "test:watch": "vitest",

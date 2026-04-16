@@ -1,5 +1,7 @@
 export * from "@/lib/models/audit-log";
+export * from "@/lib/models/cosmetic";
 export * from "@/lib/models/monthly-goal";
+export * from "@/lib/models/point-transaction";
 export * from "@/lib/models/region";
 export * from "@/lib/models/reminder-log";
 export * from "@/lib/models/submission";
@@ -7,5 +9,6 @@ export * from "@/lib/models/task";
 export * from "@/lib/models/team";
 export * from "@/lib/models/telegram-pending-group";
 export * from "@/lib/models/user";
+export * from "@/lib/models/user-cosmetic";
 export * from "@/lib/models/zone";
 export * from "@/lib/models/xp-transaction";

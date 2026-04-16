@@ -48,6 +48,8 @@ export async function createTaskAction(
         rawTargetCount != null && rawTargetCount !== ""
           ? Number(rawTargetCount)
           : undefined,
+      submissionMessage: (formData.get("submissionMessage") as string) ?? "",
+      completionMessage: (formData.get("completionMessage") as string) ?? "",
     });
     const id = await createTask(session, parsed);
     revalidatePath("/templates");
@@ -74,6 +76,8 @@ export async function updateTaskAction(
         rawTargetCount != null && rawTargetCount !== ""
           ? Number(rawTargetCount)
           : undefined,
+      submissionMessage: (formData.get("submissionMessage") as string) ?? "",
+      completionMessage: (formData.get("completionMessage") as string) ?? "",
     });
     const { taskId, ...rest } = parsed;
     await updateTask(session, taskId, rest);

@@ -1,8 +1,16 @@
 import { Shield } from "lucide-react";
 import type { SessionUser } from "@/lib/domain";
 import { ROLE_LABELS } from "@/lib/domain";
+import { CosmeticName } from "@/components/cosmetic-name";
+import type { EquippedView } from "@/lib/cosmetics/serialize";
 
-export function AppHeader({ user }: { user: SessionUser }) {
+export function AppHeader({
+  user,
+  equipped,
+}: {
+  user: SessionUser;
+  equipped?: EquippedView | null;
+}) {
   return (
     <header
       role="banner"
@@ -19,7 +27,9 @@ export function AppHeader({ user }: { user: SessionUser }) {
             <Shield className="h-4 w-4 text-foreground" />
           </div>
           <div className="leading-tight">
-            <p className="text-sm font-semibold">{user.fullName}</p>
+            <p className="text-sm font-semibold">
+              <CosmeticName fullName={user.fullName} equipped={equipped} />
+            </p>
             <p className="text-[11px] text-muted-foreground">
               {ROLE_LABELS[user.role]}
             </p>

@@ -1,13 +1,16 @@
 import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { LogOut, MapPin, Star, Trophy, Users, Zap, History, Map } from "lucide-react";
+import { Coins, LogOut, MapPin, Sparkles, Star, Trophy, Users, Zap, History, Map } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/current-user";
 import { ROLE_LABELS } from "@/lib/domain";
 import { getUserProgress, getXpHistory } from "@/lib/services/gamification-service";
 import { getUserOrgContext } from "@/lib/services/organization-service";
+import { getInventory } from "@/lib/services/cosmetics-service";
+import { serializeEquipped } from "@/lib/cosmetics/serialize";
 import { getAllLevelInfos } from "@/lib/level-utils";
+import { CosmeticName } from "@/components/cosmetic-name";
 import { EditProfileForm } from "./edit-profile-form";
 import { LogoutButton } from "./logout-button";
 
@@ -15,7 +18,7 @@ export default async function ProfilePage() {
   const session = await getCurrentUser();
   if (!session) redirect("/login");
 
-  const [progress, xpHistory, orgContext] = await Promise.all([
+  const [progress, xpHistory, orgContext, inventory] = await Promise.all([
     getUserProgress(session.id),
     getXpHistory(session.id, 10),
     getUserOrgContext({
@@ -23,7 +26,9 @@ export default async function ProfilePage() {
       zoneId: session.zoneId,
       regionId: session.regionId,
     }),
+    getInventory(session.id),
   ]);
+  const equippedView = serializeEquipped(inventory.equipped);
 
   const allLevels = getAllLevelInfos(session.gender ?? "male");
   const progressPercent =
@@ -48,7 +53,9 @@ export default async function ProfilePage() {
             className="drop-shadow-lg"
           />
         </div>
-        <h1 className="font-display text-lg font-bold">{session.fullName}</h1>
+        <h1 className="font-display text-lg font-bold">
+          <CosmeticName fullName={session.fullName} equipped={equippedView} />
+        </h1>
         <p className="text-xs text-muted-foreground">
           {ROLE_LABELS[session.role]}
         </p>
@@ -80,6 +87,41 @@ export default async function ProfilePage() {
           </p>
         </div>
       </div>
+
+      {/* Equipment summary */}
+      <section>
+        <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Trang bị tên
+        </h2>
+        <Link
+          href="/shop"
+          className="glass-card flex items-center gap-3 p-4 transition-colors hover:bg-overlay-subtle"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-overlay-medium">
+            <Sparkles className="h-5 w-5 text-amber-300" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">
+              <CosmeticName
+                fullName={session.fullName}
+                equipped={equippedView}
+              />
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Số dư:{" "}
+              <span className="inline-flex items-center gap-0.5">
+                <Coins className="h-3 w-3 text-amber-300" />
+                {inventory.pointBalance.toLocaleString("vi-VN")} điểm
+              </span>
+              {" · "}
+              {inventory.owned.length} trang bị đã sở hữu
+            </p>
+          </div>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            Đi đến cửa hàng →
+          </span>
+        </Link>
+      </section>
 
       {/* Organization context */}
       {(orgContext.region || orgContext.zone || orgContext.team) && (

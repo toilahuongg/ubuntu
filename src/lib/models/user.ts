@@ -16,6 +16,37 @@ const userSchema = new Schema(
     zoneId: { default: null, ref: "Zone", type: Schema.Types.ObjectId },
     telegramId: { default: null, type: Number },
     totalXp: { default: 0, type: Number },
+    pointBalance: { default: 0, min: 0, type: Number },
+    equippedCosmetics: {
+      default: () => ({
+        prefix: null,
+        suffix: null,
+        color: null,
+        effect: null,
+      }),
+      type: {
+        prefix: {
+          default: null,
+          ref: "Cosmetic",
+          type: Schema.Types.ObjectId,
+        },
+        suffix: {
+          default: null,
+          ref: "Cosmetic",
+          type: Schema.Types.ObjectId,
+        },
+        color: {
+          default: null,
+          ref: "Cosmetic",
+          type: Schema.Types.ObjectId,
+        },
+        effect: {
+          default: null,
+          ref: "Cosmetic",
+          type: Schema.Types.ObjectId,
+        },
+      },
+    },
     username: { default: null, trim: true, type: String },
     googleId: { default: null, trim: true, type: String },
     email: { default: null, lowercase: true, trim: true, type: String },

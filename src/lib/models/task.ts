@@ -35,6 +35,8 @@ const taskSchema = new Schema(
     targetCount: { default: null, min: 1, type: Number },
     completedAt: { default: null, type: Date },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId },
+    submissionMessage: { default: "", trim: true, type: String },
+    completionMessage: { default: "", trim: true, type: String },
     title: { required: true, trim: true, type: String },
     zoneId: { default: null, ref: "Zone", type: Schema.Types.ObjectId },
   },
@@ -52,6 +54,8 @@ export type TaskRecord = {
   isActive: boolean;
   regionId: Types.ObjectId | null;
   scope: TaskScope;
+  submissionMessage: string;
+  completionMessage: string;
   taskType: TaskType;
   targetCount: number | null;
   completedAt: Date | null;

@@ -18,12 +18,30 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
+function renderTemplate(
+  template: string,
+  vars: Record<string, string | number>,
+): string {
+  return template.replace(/\{(\w+)\}/g, (_, key: string) =>
+    key in vars ? escapeHtml(String(vars[key])) : `{${key}}`,
+  );
+}
+
 export function formatGroupSubmissionMessage(input: {
   fullName: string;
   taskTitle: string;
   xpAwarded: number;
   completionCount: number;
+  template?: string;
 }): string {
+  if (input.template) {
+    return renderTemplate(input.template, {
+      name: input.fullName,
+      task: input.taskTitle,
+      xp: Math.max(0, Math.floor(input.xpAwarded)),
+      count: input.completionCount,
+    });
+  }
   const name = escapeHtml(input.fullName);
   const title = escapeHtml(input.taskTitle);
   const xp = Math.max(0, Math.floor(input.xpAwarded));
@@ -43,6 +61,7 @@ export async function notifySubmissionToGroups(input: {
   taskTitle: string;
   xpAwarded: number;
   completionCount: number;
+  template?: string;
 }): Promise<void> {
   await connectToDatabase();
 
@@ -80,6 +99,7 @@ export async function notifySubmissionToGroups(input: {
     taskTitle: input.taskTitle,
     xpAwarded: input.xpAwarded,
     completionCount: input.completionCount,
+    template: input.template,
   });
 
   await Promise.allSettled(
@@ -97,6 +117,7 @@ export async function notifyTaskCompletionToGroups(input: {
   };
   taskTitle: string;
   targetCount: number;
+  template?: string;
 }): Promise<void> {
   await connectToDatabase();
 
@@ -129,8 +150,12 @@ export async function notifyTaskCompletionToGroups(input: {
 
   if (chatIds.size === 0) return;
 
-  const title = escapeHtml(input.taskTitle);
-  const text = `🏆 Nhiệm vụ <b>${title}</b> đã hoàn thành mục tiêu ${input.targetCount}!`;
+  const text = input.template
+    ? renderTemplate(input.template, {
+        task: input.taskTitle,
+        target: input.targetCount,
+      })
+    : `🏆 Nhiệm vụ <b>${escapeHtml(input.taskTitle)}</b> đã hoàn thành mục tiêu ${input.targetCount}!`;
 
   await Promise.allSettled(
     Array.from(chatIds).map((chatId) =>

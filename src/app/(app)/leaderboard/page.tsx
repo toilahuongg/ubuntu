@@ -11,6 +11,7 @@ import {
   type RegionLeaderboardEntry,
 } from "@/lib/services/leaderboard-service";
 import type { LeaderboardEntry } from "@/lib/services/gamification-service";
+import { CosmeticName } from "@/components/cosmetic-name";
 
 export default async function LeaderboardPage() {
   const session = await getSessionUser();
@@ -151,7 +152,10 @@ function UserRow({
       />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium" title={entry.fullName}>
-          {entry.fullName}
+          <CosmeticName
+            fullName={entry.fullName}
+            equipped={entry.equipped}
+          />
           {isSelf && (
             <span className="ml-1 text-xs text-muted-foreground">(bạn)</span>
           )}

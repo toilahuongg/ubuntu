@@ -11,6 +11,7 @@ import {
   type UserRecord,
 } from "@/lib/models";
 import { getUserByTelegramId } from "@/lib/services/organization-service";
+import { getEquippedPayloadsForUsers } from "@/lib/services/cosmetics-service";
 import { appliesToUser } from "@/lib/tasks/policy";
 import { taskToScope } from "@/lib/tasks/task-service";
 import { getLevelInfo } from "@/lib/level-utils";
@@ -125,11 +126,19 @@ export async function getTelegramLeaderboard(
 
   if (members.length === 0) return "Chưa có thành viên nào trong bảng xếp hạng.";
 
+  const equippedMap = await getEquippedPayloadsForUsers(
+    members.map((m) => m._id.toString()),
+  );
+
   const medals = ["🥇", "🥈", "🥉"];
   const lines = members.map((member, index) => {
     const marker = medals[index] ?? `${index + 1}.`;
     const isMe = member._id.toString() === user._id.toString();
-    const name = isMe ? `${member.fullName} (bạn)` : member.fullName;
+    const eq = equippedMap.get(member._id.toString());
+    const prefix = eq?.prefix?.payload?.icon ? `${eq.prefix.payload.icon} ` : "";
+    const suffix = eq?.suffix?.payload?.icon ? ` ${eq.suffix.payload.icon}` : "";
+    const decorated = `${prefix}${member.fullName}${suffix}`;
+    const name = isMe ? `${decorated} (bạn)` : decorated;
     return `${marker} ${name} — ${member.totalXp ?? 0} XP (Lv.${member.level ?? 1})`;
   });
 
