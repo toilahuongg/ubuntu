@@ -128,11 +128,16 @@ export async function grantCosmeticToUser(
   await connectToDatabase();
   const cosmetic = await CosmeticModel.findById(cosmeticId).lean();
   if (!cosmetic) throw new Error("Trang bị không tồn tại.");
-  const existing = await UserCosmeticModel.exists({ userId, cosmeticId });
+  const userOid = new Types.ObjectId(userId);
+  const cosmeticOid = new Types.ObjectId(cosmeticId);
+  const existing = await UserCosmeticModel.exists({
+    userId: userOid,
+    cosmeticId: cosmeticOid,
+  });
   if (existing) throw new Error("Người dùng đã sở hữu trang bị này.");
   await UserCosmeticModel.create({
-    userId,
-    cosmeticId,
+    userId: userOid,
+    cosmeticId: cosmeticOid,
     acquiredVia: "admin_grant",
   });
 }

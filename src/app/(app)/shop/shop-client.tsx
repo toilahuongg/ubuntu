@@ -59,28 +59,57 @@ function previewEquippedFor(
 export function ShopClient({
   fullName,
   initialItems,
+  initialOwned,
   initialEquipped,
   initialPointBalance,
 }: {
   fullName: string;
   initialItems: ShopItem[];
+  initialOwned: CosmeticView[];
   initialEquipped: EquippedView;
   initialPointBalance: number;
 }) {
   const [tab, setTab] = useState<Tab>("shop");
   const [items, setItems] = useState<ShopItem[]>(initialItems);
+  const [ownedItems, setOwnedItems] = useState<CosmeticView[]>(initialOwned);
   const [equipped, setEquipped] = useState<EquippedView>(initialEquipped);
   const [balance, setBalance] = useState<number>(initialPointBalance);
   const [slotFilter, setSlotFilter] = useState<CosmeticSlot | "ALL">("ALL");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const equippedIdSet = useMemo(() => {
+    const ids = new Set<string>();
+    for (const slot of ["prefix", "suffix", "color", "effect"] as const) {
+      const v = equipped[slot];
+      if (v) ids.add(v.id);
+    }
+    return ids;
+  }, [equipped]);
+
   const filtered = useMemo(() => {
-    const base =
-      tab === "inventory" ? items.filter((i) => i.owned) : items;
-    if (slotFilter === "ALL") return base;
-    return base.filter((i) => i.slot === slotFilter);
-  }, [items, tab, slotFilter]);
+    if (tab === "inventory") {
+      const list: ShopItem[] = ownedItems.map((c) => ({
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        description: "",
+        slot: c.slot,
+        rarity: c.rarity,
+        payload: { icon: c.icon, cssClass: c.cssClass, gradient: c.gradient },
+        cost: null,
+        unlockLevel: null,
+        owned: true,
+        canAfford: false,
+        levelLocked: false,
+        equipped: equippedIdSet.has(c.id),
+      }));
+      if (slotFilter === "ALL") return list;
+      return list.filter((i) => i.slot === slotFilter);
+    }
+    if (slotFilter === "ALL") return items;
+    return items.filter((i) => i.slot === slotFilter);
+  }, [items, ownedItems, equippedIdSet, tab, slotFilter]);
 
   async function refresh() {
     const [shopRes, invRes] = await Promise.all([
@@ -95,9 +124,11 @@ export function ShopClient({
       const data = (await invRes.json()) as {
         pointBalance: number;
         equipped: Record<CosmeticSlot, CosmeticView | null>;
+        owned: CosmeticView[];
       };
       setBalance(data.pointBalance);
       setEquipped(data.equipped);
+      if (data.owned) setOwnedItems(data.owned);
     }
   }
 
