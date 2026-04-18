@@ -166,33 +166,43 @@ export function CosmeticForm({ initial }: { initial: Initial | null }) {
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Hình thức hiển thị
         </p>
-        <Field label="Icon (emoji — dùng cho prefix/suffix)">
-          <input
-            name="icon"
-            value={icon}
-            onChange={(e) => setIcon(e.target.value)}
-            className={INPUT_CLS}
-            placeholder="👑 ⚔️ 🔥…"
-          />
-        </Field>
-        <Field label="CSS class (whitelist trong globals.css)">
-          <input
-            name="cssClass"
-            value={cssClass}
-            onChange={(e) => setCssClass(e.target.value)}
-            className={INPUT_CLS}
-            placeholder="cn-glow, cn-gradient-gold, cn-shimmer…"
-          />
-        </Field>
-        <Field label="Gradient (màu cách nhau bằng dấu phẩy)">
-          <input
-            name="gradient"
-            value={gradient}
-            onChange={(e) => setGradient(e.target.value)}
-            className={INPUT_CLS}
-            placeholder="#ffd700, #ff9a00"
-          />
-        </Field>
+        {(slot === "prefix" || slot === "suffix") && (
+          <Field label="Icon (emoji)">
+            <input
+              name="icon"
+              value={icon}
+              onChange={(e) => setIcon(e.target.value)}
+              className={INPUT_CLS}
+              placeholder="👑 ⚔️ 🔥 ✨ 💫…"
+            />
+          </Field>
+        )}
+        {(slot === "color" || slot === "effect") && (
+          <Field label="CSS class (whitelist trong globals.css)">
+            <input
+              name="cssClass"
+              value={cssClass}
+              onChange={(e) => setCssClass(e.target.value)}
+              className={INPUT_CLS}
+              placeholder={
+                slot === "color"
+                  ? "cn-gradient-gold, cn-gradient-rainbow…"
+                  : "cn-glow, cn-shimmer, cn-pulse, cn-rainbow…"
+              }
+            />
+          </Field>
+        )}
+        {slot === "color" && (
+          <Field label="Gradient (màu cách nhau bằng dấu phẩy)">
+            <input
+              name="gradient"
+              value={gradient}
+              onChange={(e) => setGradient(e.target.value)}
+              className={INPUT_CLS}
+              placeholder="#ffd700, #ff9a00"
+            />
+          </Field>
+        )}
       </div>
 
       <div className="glass-card space-y-3 p-4">
