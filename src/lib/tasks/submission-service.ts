@@ -21,16 +21,15 @@ import {
   getDecoratedFullName,
   grantLevelUnlocks,
 } from "@/lib/services/cosmetics-service";
-import { getLevelInfo } from "@/lib/level-utils";
 import { getLevelFromXp } from "@/lib/xp";
 import {
   DEFAULT_EXP_REWARD,
   DEFAULT_LATE_WINDOW_DAYS,
+  isDailyTaskType,
+  normalizeTaskType,
 } from "@/lib/tasks/constants";
 import { appliesToUser, isWithinLateWindow } from "@/lib/tasks/policy";
-import { DEFAULT_TASK_TYPE } from "@/lib/tasks/constants";
 import { sumTaskCompletions, taskToScope } from "@/lib/tasks/task-service";
-import { safeSendTelegramMessage } from "@/lib/telegram-bot";
 import {
   notifySubmissionToGroups,
   notifyTaskCompletionToGroups,
@@ -61,7 +60,7 @@ export async function saveSubmission(
   const shouldNotify = options.notify ?? true;
   const mode = options.mode ?? "increment";
   const rawCount = Math.floor(options.count ?? (mode === "set" ? 0 : 1));
-  const count = Math.max(0, Math.min(100, rawCount));
+  const requestedCount = Math.max(0, Math.min(100, rawCount));
   await connectToDatabase();
 
   const [taskRaw, subjectRaw] = await Promise.all([
@@ -98,7 +97,9 @@ export async function saveSubmission(
 
   assertCanProxySubmit(actor, subjectSession);
 
-  const taskType = taskRaw.taskType ?? DEFAULT_TASK_TYPE;
+  const taskType = normalizeTaskType(taskRaw.taskType);
+  const isDailyTask = isDailyTaskType(taskType);
+  const count = isDailyTask ? Math.min(1, requestedCount) : requestedCount;
 
   if (taskType === "COUNT_TOTAL" && taskRaw.completedAt) {
     throw new Error("Nhiệm vụ đã hoàn thành — không thể nộp thêm.");
@@ -137,6 +138,18 @@ export async function saveSubmission(
       .session(session ?? null)
       .lean()) as SubmissionRecordModel | null;
 
+    if (mode !== "set" && count === 0) {
+      return {
+        submissionId: existing?._id.toString() ?? "",
+        completionCount: existing?.completionCount ?? 0,
+        isFirstSubmission: false,
+        xpAwarded: 0,
+        newLevel: null,
+        leveledUp: false,
+        taskJustCompleted: false,
+      };
+    }
+
     if (mode === "set" && count === 0) {
       if (!existing) {
         return {
@@ -166,6 +179,37 @@ export async function saveSubmission(
       return {
         submissionId: existing._id.toString(),
         completionCount: 0,
+        isFirstSubmission: false,
+        xpAwarded: 0,
+        newLevel: null,
+        leveledUp: false,
+        taskJustCompleted: false,
+      };
+    }
+
+    if (isDailyTask && mode === "increment" && existing) {
+      await AuditLogModel.create(
+        [
+          {
+            action: "submission.duplicate-ignored",
+            actorUserId: toObjectId(actor.id),
+            entityId: existing._id.toString(),
+            entityType: "Submission",
+            metadata: {
+              completionCount: existing.completionCount,
+              date: dateKey,
+              taskId,
+              taskType,
+            },
+            subjectUserId: subjectRaw._id,
+          },
+        ],
+        session ? { session } : undefined,
+      );
+
+      return {
+        submissionId: existing._id.toString(),
+        completionCount: existing.completionCount,
         isFirstSubmission: false,
         xpAwarded: 0,
         newLevel: null,
@@ -338,9 +382,14 @@ export async function saveSubmission(
     subjectRaw.fullName,
   ).catch(() => subjectRaw.fullName);
 
-  if (shouldNotify) {
+  const shouldSendNotification =
+    shouldNotify &&
+    !(isDailyTask && !result.isFirstSubmission && mode === "increment");
+
+  if (shouldSendNotification) {
     void notifySubmissionToGroups({
       subject: {
+        id: subjectSession.id,
         fullName: decoratedSubjectName,
         teamId: subjectSession.teamId,
         zoneId: subjectSession.zoneId,
@@ -366,28 +415,6 @@ export async function saveSubmission(
         template: taskRaw.completionMessage || undefined,
       }).catch((err) => {
         console.error("[submission-notifier]", err);
-      });
-    }
-  }
-
-  if (shouldNotify && subjectRaw.telegramId) {
-    const selfSubmit = actor.id === subjectSession.id;
-    const countSuffix =
-      result.completionCount > 1 ? ` (lần ${result.completionCount})` : "";
-    const xpSuffix = result.xpAwarded > 0 ? ` — +${result.xpAwarded} XP!` : "!";
-    const text = selfSubmit
-      ? `🎉 Bạn đã hoàn thành "${taskRaw.title}"${countSuffix}${xpSuffix}`
-      : `🎉 ${actor.fullName} đã ghi nhận "${taskRaw.title}"${countSuffix} cho bạn${xpSuffix}`;
-    await safeSendTelegramMessage({
-      chatId: subjectRaw.telegramId,
-      text,
-    });
-
-    if (result.leveledUp && result.newLevel !== null) {
-      const info = getLevelInfo(result.newLevel, subjectRaw.gender);
-      await safeSendTelegramMessage({
-        chatId: subjectRaw.telegramId,
-        text: `🎖 Chúc mừng! Bạn đã lên cấp ${result.newLevel} — ${info.nameVi}.`,
       });
     }
   }

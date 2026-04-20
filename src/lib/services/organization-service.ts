@@ -481,12 +481,16 @@ async function resolveUserHierarchy(input: {
   zoneId?: string;
   regionId?: string;
 }) {
-  if (input.role === "MEMBER" || input.role === "REGIONAL_LEAD") {
+  if (
+    input.role === "MEMBER" ||
+    input.role === "NGV" ||
+    input.role === "REGIONAL_LEAD"
+  ) {
     // Fail-fast: roles at or below REGION must be scoped to a region.
     // Silently returning nulls here previously created orphan users that
     // could not be found by any leader's visibility query.
     if (!input.regionId) {
-      throw new Error("Vui lòng chọn Khu vực cho thành viên/khu vực trưởng.");
+      throw new Error("Vui lòng chọn Khu vực cho thành viên/NGV/KVT.");
     }
     const region = (await RegionModel.findById(input.regionId).lean()) as RegionRecord | null;
     if (!region) throw new Error("Khu vực không tồn tại.");
@@ -499,7 +503,7 @@ async function resolveUserHierarchy(input: {
 
   if (input.role === "ZONE_LEAD") {
     if (!input.zoneId) {
-      throw new Error("Vui lòng chọn Địa Vực cho Địa Vực trưởng.");
+      throw new Error("Vui lòng chọn Địa Vực cho ĐV.");
     }
     const zone = (await ZoneModel.findById(input.zoneId).lean()) as ZoneRecord | null;
     if (!zone) throw new Error("Địa Vực không tồn tại.");
@@ -512,7 +516,7 @@ async function resolveUserHierarchy(input: {
 
   // TEAM_LEAD
   if (!input.teamId) {
-    throw new Error("Vui lòng chọn Nhóm cho Nhóm trưởng.");
+    throw new Error("Vui lòng chọn Nhóm cho NT.");
   }
   const team = (await TeamModel.findById(input.teamId).lean()) as TeamRecord | null;
   if (!team) throw new Error("Nhóm không tồn tại.");

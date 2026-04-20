@@ -200,7 +200,12 @@ export async function saveUserAction(formData: FormData): Promise<ActionResult> 
       fullName: formData.get("fullName") as string,
       gender: (formData.get("gender") as string) || undefined,
       regionId: (formData.get("regionId") as string) || undefined,
-      role: formData.get("role") as "TEAM_LEAD" | "ZONE_LEAD" | "REGIONAL_LEAD" | "MEMBER",
+      role: formData.get("role") as
+        | "TEAM_LEAD"
+        | "ZONE_LEAD"
+        | "REGIONAL_LEAD"
+        | "NGV"
+        | "MEMBER",
       status: formData.get("status") as "ACTIVE" | "INACTIVE" | "PENDING",
       teamId: (formData.get("teamId") as string) || undefined,
       userId: (formData.get("userId") as string) || undefined,
@@ -221,4 +226,3 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
     revalidatePath("/admin");
   });
 }
-

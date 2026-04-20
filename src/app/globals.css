@@ -383,6 +383,12 @@
     border-radius: 1rem;
   }
 
+  .dashboard-task-goal-complete {
+    background: color-mix(in srgb, var(--primary) 10%, var(--overlay-subtle));
+    border-color: color-mix(in srgb, var(--primary) 34%, var(--overlay-medium));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+
   .glass-inset {
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.04);

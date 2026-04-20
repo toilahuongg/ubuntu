@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { Shield } from "lucide-react";
+import Image from "next/image";
+
+import { InstallAppButton } from "@/components/install-app-button";
+import { promptWebPushOnce } from "@/lib/push/prompt-once";
 
 type TelegramWidgetUser = {
   id: number;
@@ -36,7 +39,9 @@ export function LoginContent() {
       // Use a hard navigation so the just-set session cookie is picked up
       // reliably by the destination route (soft RSC navigation can race with
       // Set-Cookie processing in some WebViews, leaving the user stuck).
-      window.location.assign(target);
+      promptWebPushOnce().finally(() => {
+        window.location.assign(target);
+      });
     },
     [],
   );
@@ -130,11 +135,17 @@ export function LoginContent() {
         {/* Logo */}
         <div className="mb-10 flex flex-col items-center gap-4">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-overlay-medium backdrop-blur-sm">
-            <Shield className="h-8 w-8 text-foreground" />
+            <Image
+              src="/icons/logo.svg"
+              alt="Ubuntu"
+              width={40}
+              height={40}
+              priority
+            />
           </div>
           <div className="text-center">
             <h1 className="font-display text-2xl font-bold tracking-tight">
-              Nhiệm Vụ Mỗi Ngày
+              Ubuntu
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Quản lý nhiệm vụ hàng ngày
@@ -180,6 +191,10 @@ export function LoginContent() {
               )}
             </div>
           )}
+        </div>
+
+        <div className="mt-4">
+          <InstallAppButton />
         </div>
       </div>
     </main>

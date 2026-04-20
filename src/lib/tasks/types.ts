@@ -3,12 +3,26 @@ import type { TaskType } from "@/lib/tasks/constants";
 
 export type TaskStatus = "OPEN" | "LOCKED" | "COMPLETED";
 
-export type TaskProgressKind = "TOTAL" | "MONTHLY_MEMBER";
+export type TaskProgressKind = "TOTAL" | "MONTHLY_MEMBER" | "DAILY_MEMBER";
 
 export type TaskProgress = {
   kind: TaskProgressKind;
   current: number;
   target: number | null;
+  unitLabel: "lượt" | "ngày";
+  isGoalMissing: boolean;
+  isGoalComplete: boolean;
+};
+
+export type DashboardGoalNoticeTask = {
+  id: string;
+  title: string;
+  taskType: TaskType;
+};
+
+export type DashboardGoalNotice = {
+  missingCount: number;
+  tasks: DashboardGoalNoticeTask[];
 };
 
 export type TaskSummary = {
@@ -22,6 +36,7 @@ export type TaskSummary = {
   scope: TaskScope;
   taskType: TaskType;
   targetCount: number | null;
+  targetRoles: Role[];
   submissionMessage: string;
   completionMessage: string;
   completedAt: string | null;
@@ -45,6 +60,7 @@ export type TaskCard = {
   totalCount: number;
   myCompletionCount: number;
   taskType: TaskType;
+  isApplicableToActor: boolean;
   progress: TaskProgress;
 };
 
@@ -75,11 +91,13 @@ export type TaskDetail = {
   lateWindowDays: number;
   status: TaskStatus;
   taskType: TaskType;
+  targetRoles: Role[];
   targetCount: number | null;
   totalAcrossAll: number;
   monthlyGoal: number | null;
   monthlyCompletion: number;
   myCompletionCount: number;
+  isApplicableToActor: boolean;
   totalCompletions: number;
   selectedSubject: SessionUser;
   rosterMembers: SessionUser[];
@@ -113,6 +131,7 @@ export type DashboardView = {
   date: string;
   highlights: DashboardHighlights;
   cards: TaskCard[];
+  goalNotice: DashboardGoalNotice | null;
   roster: DashboardRosterEntry[];
   tasks: TaskSummary[];
 };
@@ -122,6 +141,7 @@ export type ScopeLabel = "TEAM" | "ZONE" | "REGION";
 export type MemberDashboardView = {
   date: string;
   cards: TaskCard[];
+  goalNotice: DashboardGoalNotice | null;
   totalXp: number;
   level: number;
   progressXp: number;

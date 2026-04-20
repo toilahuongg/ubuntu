@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+import { ROLES } from "@/lib/domain";
+import { DEFAULT_TASK_TYPE, TASK_TYPES } from "@/lib/tasks/constants";
+
+const targetRolesSchema = z
+  .array(z.enum(ROLES))
+  .min(1, "Vui lòng chọn ít nhất một vai trò nhận nhiệm vụ.");
+
 export const taskInputSchema = z
   .object({
     deadlineTime: z
@@ -25,10 +32,9 @@ export const taskInputSchema = z
       .max(365)
       .default(7),
     isActive: z.boolean().default(true),
-    taskType: z.enum(["COUNT_TOTAL", "MONTHLY_PER_MEMBER"]).default(
-      "MONTHLY_PER_MEMBER",
-    ),
+    taskType: z.enum(TASK_TYPES).default(DEFAULT_TASK_TYPE),
     targetCount: z.number().int().min(1).max(100000).optional(),
+    targetRoles: targetRolesSchema,
     title: z.string().min(3, "Tiêu đề quá ngắn").max(80),
     submissionMessage: z.string().max(280).optional().default(""),
     completionMessage: z.string().max(280).optional().default(""),
@@ -38,7 +44,7 @@ export const taskInputSchema = z
       v.taskType !== "COUNT_TOTAL" ||
       (typeof v.targetCount === "number" && v.targetCount >= 1),
     {
-      message: "Task tổng hợp theo số lần cần nhập mục tiêu ≥ 1.",
+      message: "Task theo số lần cần nhập mục tiêu ≥ 1.",
       path: ["targetCount"],
     },
   );
@@ -69,6 +75,7 @@ export const updateTaskInputSchema = z
       .max(365)
       .default(7),
     targetCount: z.number().int().min(1).max(100000).optional(),
+    targetRoles: targetRolesSchema,
     title: z.string().min(3, "Tiêu đề quá ngắn").max(80),
     submissionMessage: z.string().max(280).optional().default(""),
     completionMessage: z.string().max(280).optional().default(""),

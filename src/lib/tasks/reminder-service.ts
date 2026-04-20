@@ -13,6 +13,7 @@ import {
   UserModel,
   type UserRecord,
 } from "@/lib/models";
+import { MONTHLY_GOAL_TASK_TYPES } from "@/lib/tasks/constants";
 import { appliesToUser } from "@/lib/tasks/policy";
 import { computeTaskStatus, taskToScope } from "@/lib/tasks/task-service";
 import { toObjectId } from "@/lib/utils/ids";
@@ -135,7 +136,7 @@ export async function getMonthlyGoalReminderCandidates(
 
   const tasks = (await TaskModel.find({
     isActive: true,
-    taskType: "MONTHLY_PER_MEMBER",
+    taskType: { $in: MONTHLY_GOAL_TASK_TYPES },
   }).lean()) as TaskRecord[];
 
   if (tasks.length === 0) return [];

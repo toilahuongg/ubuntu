@@ -16,17 +16,29 @@ export default async function DashboardPage() {
 
   const dateKey = getTodayDateKey();
 
-  if (session.role === "MEMBER") {
+  if (session.role === "MEMBER" || session.role === "NGV") {
     const [data, activities] = await Promise.all([
       buildMemberDashboard(session, dateKey),
       listRecentActivities(session, 10),
     ]);
-    return <MemberDashboard data={data} activities={activities} />;
+    return (
+      <MemberDashboard
+        data={data}
+        activities={activities}
+        userId={session.id}
+      />
+    );
   }
 
   const [data, activities] = await Promise.all([
     buildLeaderDashboard(session, dateKey),
     listRecentActivities(session, 10),
   ]);
-  return <LeaderDashboard data={data} activities={activities} />;
+  return (
+    <LeaderDashboard
+      data={data}
+      activities={activities}
+      userId={session.id}
+    />
+  );
 }

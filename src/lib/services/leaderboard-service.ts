@@ -104,7 +104,7 @@ async function getTopUsersByMonthlyXp(
 
 export async function getTopMembers(limit = 5): Promise<LeaderboardEntry[]> {
   return getTopUsersByMonthlyXp(
-    { role: "MEMBER", status: "ACTIVE" },
+    { role: { $in: ["MEMBER", "NGV"] }, status: "ACTIVE" },
     limit,
   );
 }

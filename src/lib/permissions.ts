@@ -1,5 +1,9 @@
 import type { SessionUser } from "@/lib/domain";
 
+function isMemberLike(user: SessionUser) {
+  return user.role === "MEMBER" || user.role === "NGV";
+}
+
 export function isTeamLead(user: SessionUser) {
   return user.role === "TEAM_LEAD";
 }
@@ -28,6 +32,13 @@ export function canAccessRegionManagement(user: SessionUser) {
   return user.role === "REGIONAL_LEAD" && !!user.regionId;
 }
 
+export function canAccessAnalytics(user: SessionUser) {
+  if (user.role === "TEAM_LEAD") return !!user.teamId;
+  if (user.role === "ZONE_LEAD") return !!user.zoneId;
+  if (user.role === "REGIONAL_LEAD") return !!user.regionId;
+  return false;
+}
+
 export function canViewTeamDashboard(user: SessionUser) {
   return isTeamLead(user);
 }
@@ -54,14 +65,18 @@ export function canProxySubmit(actor: SessionUser, subject: SessionUser) {
   }
 
   if (actor.role === "ZONE_LEAD" && actor.zoneId) {
-    if (subject.role !== "REGIONAL_LEAD" && subject.role !== "MEMBER") {
+    if (
+      subject.role !== "REGIONAL_LEAD" &&
+      subject.role !== "NGV" &&
+      subject.role !== "MEMBER"
+    ) {
       return false;
     }
     return actor.zoneId === subject.zoneId;
   }
 
   if (actor.role === "REGIONAL_LEAD" && actor.regionId) {
-    if (subject.role !== "MEMBER") {
+    if (!isMemberLike(subject)) {
       return false;
     }
     return actor.regionId === subject.regionId;

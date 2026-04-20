@@ -1,6 +1,11 @@
 import "server-only";
 
-import type { SessionUser, SerializedUser } from "@/lib/domain";
+import {
+  normalizeTargetRoles,
+  type Role,
+  type SessionUser,
+  type SerializedUser,
+} from "@/lib/domain";
 import {
   createDeadlineAt,
   getTodayDateKey,
@@ -24,7 +29,8 @@ import {
   DEFAULT_EXP_REWARD,
   DEFAULT_LATE_WINDOW_DAYS,
   DEFAULT_POINT_REWARD,
-  DEFAULT_TASK_TYPE,
+  normalizeTaskType,
+  supportsMonthlyGoal,
   type TaskType,
 } from "@/lib/tasks/constants";
 import {
@@ -44,13 +50,17 @@ import type {
 import { toObjectId } from "@/lib/utils/ids";
 
 export function taskToScope(
-  task: Pick<TaskRecord, "scope" | "teamId" | "zoneId" | "regionId">,
+  task: Pick<
+    TaskRecord,
+    "scope" | "teamId" | "zoneId" | "regionId" | "targetRoles"
+  >,
 ): ScopeContext {
   return {
     scope: task.scope,
     teamId: task.teamId.toString(),
     zoneId: task.zoneId?.toString() ?? null,
     regionId: task.regionId?.toString() ?? null,
+    targetRoles: normalizeTargetRoles(task.targetRoles),
   };
 }
 
@@ -74,8 +84,9 @@ export function mapTask(record: TaskRecord): TaskSummary {
     pointReward: record.pointReward ?? DEFAULT_POINT_REWARD,
     lateWindowDays: record.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS,
     scope: record.scope,
-    taskType: record.taskType ?? DEFAULT_TASK_TYPE,
+    taskType: normalizeTaskType(record.taskType),
     targetCount: record.targetCount ?? null,
+    targetRoles: normalizeTargetRoles(record.targetRoles),
     submissionMessage: record.submissionMessage ?? "",
     completionMessage: record.completionMessage ?? "",
     completedAt: record.completedAt ? record.completedAt.toISOString() : null,
@@ -165,7 +176,7 @@ export async function setMonthlyGoal(
 
   const task = (await TaskModel.findById(taskId).lean()) as TaskRecord | null;
   if (!task) throw new Error("Nhiệm vụ không còn tồn tại.");
-  if ((task.taskType ?? DEFAULT_TASK_TYPE) !== "MONTHLY_PER_MEMBER") {
+  if (!supportsMonthlyGoal(task.taskType)) {
     throw new Error("Nhiệm vụ này không hỗ trợ đặt mục tiêu theo tháng.");
   }
 
@@ -202,21 +213,22 @@ export async function getTaskDetail(
     throw new Error("Nhiệm vụ không còn tồn tại.");
   }
 
-  const taskType = task.taskType ?? DEFAULT_TASK_TYPE;
+  const taskType = normalizeTaskType(task.taskType);
   const yearMonth = getYearMonthFromDateKey(dateKey);
   const scope = taskToScope(task);
+  const isApplicableToActor = appliesToUser(scope, userShape(actor));
 
   const [visibleUsers, viewableUsers, submissionsToday, monthlySubmissions] =
     await Promise.all([
       listVisibleUsersForActor(actor),
-      actor.role === "MEMBER"
+      actor.role === "MEMBER" || actor.role === "NGV"
         ? listTeamMembersForViewing(actor)
         : listVisibleUsersForActor(actor),
       SubmissionModel.find({
         date: dateKey,
         taskId: toObjectId(taskId),
       }).lean() as Promise<SubmissionRecordModel[]>,
-      taskType === "MONTHLY_PER_MEMBER"
+      supportsMonthlyGoal(taskType)
         ? (SubmissionModel.find({
             date: { $regex: `^${yearMonth}` },
             taskId: toObjectId(taskId),
@@ -248,12 +260,13 @@ export async function getTaskDetail(
   const selectedTodaySub = submissionsToday.find(
     (s) => s.subjectUserId.toString() === selectedSubject.id,
   );
+  const rosterMemberIds = new Set(rosterMembers.map((user) => user.id));
 
   const totalAcrossAll =
     taskType === "COUNT_TOTAL" ? await sumTaskCompletions(taskId) : 0;
 
   const perMemberMonthly = new Map<string, number>();
-  if (taskType === "MONTHLY_PER_MEMBER") {
+  if (supportsMonthlyGoal(taskType)) {
     for (const sub of monthlySubmissions) {
       const key = sub.subjectUserId.toString();
       perMemberMonthly.set(
@@ -264,7 +277,7 @@ export async function getTaskDetail(
   }
 
   const monthlyGoals =
-    taskType === "MONTHLY_PER_MEMBER"
+    supportsMonthlyGoal(taskType)
       ? ((await MonthlyGoalModel.find({
           taskId: toObjectId(taskId),
           userId: { $in: displayMembers.map((u) => toObjectId(u.id)) },
@@ -300,7 +313,7 @@ export async function getTaskDetail(
       role: user.role,
       completionCount: todaySub?.completionCount ?? 0,
     };
-    if (taskType === "MONTHLY_PER_MEMBER") {
+    if (supportsMonthlyGoal(taskType)) {
       entry.monthlyCompletion = perMemberMonthly.get(user.id) ?? 0;
       entry.monthlyGoal = goalByUser.get(user.id) ?? null;
     } else {
@@ -310,17 +323,17 @@ export async function getTaskDetail(
   });
 
   const monthlyCompletion =
-    taskType === "MONTHLY_PER_MEMBER"
+    supportsMonthlyGoal(taskType)
       ? perMemberMonthly.get(selectedSubject.id) ?? 0
       : 0;
   const monthlyGoal =
-    taskType === "MONTHLY_PER_MEMBER"
+    supportsMonthlyGoal(taskType)
       ? goalByUser.get(selectedSubject.id) ?? null
       : null;
 
   const lateWindowDays = task.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS;
   let backfillDays: BackfillDay[] = [];
-  if (taskType === "MONTHLY_PER_MEMBER") {
+  if (supportsMonthlyGoal(taskType)) {
     const pastDateKeys: string[] = [];
     const now = new Date();
     for (let i = 1; i <= lateWindowDays; i++) {
@@ -357,15 +370,16 @@ export async function getTaskDetail(
     lateWindowDays,
     status: computeTaskStatus(task, dateKey),
     taskType,
+    targetRoles: normalizeTargetRoles(task.targetRoles),
     targetCount: task.targetCount ?? null,
     totalAcrossAll,
     monthlyGoal,
     monthlyCompletion,
     myCompletionCount: selectedTodaySub?.completionCount ?? 0,
-    totalCompletions: submissionsToday.reduce(
-      (sum, s) => sum + (s.completionCount ?? 0),
-      0,
-    ),
+    isApplicableToActor,
+    totalCompletions: submissionsToday
+      .filter((s) => rosterMemberIds.has(s.subjectUserId.toString()))
+      .reduce((sum, s) => sum + (s.completionCount ?? 0), 0),
     selectedSubject,
     rosterMembers,
     roster,
@@ -383,6 +397,7 @@ export type CreateTaskInput = {
   isActive?: boolean;
   taskType?: TaskType;
   targetCount?: number | null;
+  targetRoles: Role[];
   submissionMessage?: string;
   completionMessage?: string;
 };
@@ -392,7 +407,7 @@ export async function createTask(
   input: CreateTaskInput,
 ): Promise<string> {
   const actorScope = resolveActorScope(actor);
-  const taskType: TaskType = input.taskType ?? DEFAULT_TASK_TYPE;
+  const taskType: TaskType = normalizeTaskType(input.taskType);
 
   if (taskType === "COUNT_TOTAL") {
     if (
@@ -400,9 +415,7 @@ export async function createTask(
       !Number.isInteger(input.targetCount) ||
       input.targetCount < 1
     ) {
-      throw new Error(
-        "Task tổng hợp theo số lần cần mục tiêu (targetCount) ≥ 1.",
-      );
+      throw new Error("Task theo số lần cần mục tiêu (targetCount) ≥ 1.");
     }
   }
 
@@ -422,6 +435,7 @@ export async function createTask(
     completionMessage: input.completionMessage?.trim() ?? "",
     taskType,
     targetCount: taskType === "COUNT_TOTAL" ? input.targetCount : null,
+    targetRoles: normalizeTargetRoles(input.targetRoles),
     teamId: toObjectId(actorScope.teamId),
     title: input.title,
     zoneId: actorScope.zoneId ? toObjectId(actorScope.zoneId) : null,
@@ -436,6 +450,7 @@ export async function createTask(
       scope: actorScope.scope,
       taskType,
       targetCount: taskType === "COUNT_TOTAL" ? input.targetCount : null,
+      targetRoles: normalizeTargetRoles(input.targetRoles),
       teamId: actorScope.teamId,
       title: input.title,
     },
@@ -452,6 +467,7 @@ export type UpdateTaskInput = {
   pointReward?: number;
   lateWindowDays?: number;
   targetCount?: number | null;
+  targetRoles: Role[];
   submissionMessage?: string;
   completionMessage?: string;
 };
@@ -469,7 +485,7 @@ export async function updateTask(
     throw new Error("Không tìm thấy nhiệm vụ phù hợp.");
   }
 
-  const taskType = record.taskType ?? DEFAULT_TASK_TYPE;
+  const taskType = normalizeTaskType(record.taskType);
   let nextTargetCount: number | null = record.targetCount ?? null;
   if (taskType === "COUNT_TOTAL") {
     if (
@@ -477,9 +493,7 @@ export async function updateTask(
       !Number.isInteger(input.targetCount) ||
       input.targetCount < 1
     ) {
-      throw new Error(
-        "Task tổng hợp theo số lần cần mục tiêu (targetCount) ≥ 1.",
-      );
+      throw new Error("Task theo số lần cần mục tiêu (targetCount) ≥ 1.");
     }
     nextTargetCount = input.targetCount;
   } else {
@@ -497,6 +511,7 @@ export async function updateTask(
         pointReward: input.pointReward ?? DEFAULT_POINT_REWARD,
         lateWindowDays: input.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS,
         targetCount: nextTargetCount,
+        targetRoles: normalizeTargetRoles(input.targetRoles),
         submissionMessage: input.submissionMessage?.trim() ?? "",
         completionMessage: input.completionMessage?.trim() ?? "",
       },
@@ -512,6 +527,7 @@ export async function updateTask(
       title: input.title,
       taskType,
       targetCount: nextTargetCount,
+      targetRoles: normalizeTargetRoles(input.targetRoles),
     },
   });
 }

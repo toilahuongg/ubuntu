@@ -16,7 +16,9 @@ import { getUserProgress } from "@/lib/services/gamification-service";
 import {
   DEFAULT_EXP_REWARD,
   DEFAULT_POINT_REWARD,
-  DEFAULT_TASK_TYPE,
+  isDailyTaskType,
+  normalizeTaskType,
+  supportsMonthlyGoal,
 } from "@/lib/tasks/constants";
 import { appliesToUser } from "@/lib/tasks/policy";
 import {
@@ -25,12 +27,14 @@ import {
   taskToScope,
 } from "@/lib/tasks/task-service";
 import type {
+  DashboardGoalNotice,
   DashboardRosterEntry,
   DashboardView,
   LeaderDashboardView,
   MemberDashboardView,
   ScopeLabel,
   TaskCard,
+  TaskProgress,
   TemplateCoverage,
 } from "@/lib/tasks/types";
 import { toObjectId } from "@/lib/utils/ids";
@@ -130,6 +134,45 @@ function aggKey(taskId: string, userId: string) {
   return `${taskId}:${userId}`;
 }
 
+export function buildTaskProgress(input: {
+  taskType: TaskRecord["taskType"];
+  current: number;
+  target: number | null;
+}): TaskProgress {
+  const taskType = normalizeTaskType(input.taskType);
+  const supportsGoal = supportsMonthlyGoal(taskType);
+  const unitLabel: TaskProgress["unitLabel"] = isDailyTaskType(taskType)
+    ? "ngày"
+    : "lượt";
+  return {
+    kind:
+      taskType === "COUNT_TOTAL"
+        ? ("TOTAL" as const)
+        : isDailyTaskType(taskType)
+          ? ("DAILY_MEMBER" as const)
+          : ("MONTHLY_MEMBER" as const),
+    current: input.current,
+    target: input.target,
+    unitLabel,
+    isGoalMissing: supportsGoal && input.target === null,
+    isGoalComplete: input.target !== null && input.current >= input.target,
+  };
+}
+
+export function buildDashboardGoalNotice(
+  cards: TaskCard[],
+): DashboardGoalNotice | null {
+  const tasks = cards
+    .filter((card) => card.progress.isGoalMissing)
+    .map((card) => ({
+      id: card.id,
+      title: card.title,
+      taskType: card.taskType,
+    }));
+
+  return tasks.length > 0 ? { missingCount: tasks.length, tasks } : null;
+}
+
 async function loadProgressAggregates(
   tasks: TaskRecord[],
   userIds: string[],
@@ -140,11 +183,9 @@ async function loadProgressAggregates(
   const goalByTaskUser = new Map<string, number>();
 
   const countTasks = tasks.filter(
-    (t) => (t.taskType ?? DEFAULT_TASK_TYPE) === "COUNT_TOTAL",
+    (t) => normalizeTaskType(t.taskType) === "COUNT_TOTAL",
   );
-  const monthlyTasks = tasks.filter(
-    (t) => (t.taskType ?? DEFAULT_TASK_TYPE) === "MONTHLY_PER_MEMBER",
-  );
+  const monthlyTasks = tasks.filter((t) => supportsMonthlyGoal(t.taskType));
 
   if (countTasks.length > 0) {
     const totals = (await SubmissionModel.aggregate([
@@ -201,10 +242,11 @@ function buildTaskCard(
   t: TaskRecord,
   ctx: {
     actorId: string;
+    actorShape: Pick<SerializedUser, "teamId" | "zoneId" | "regionId" | "role">;
     dateKey: string;
     submissions: SubmissionRecordModel[];
     visibleUsers: Array<
-      Pick<SerializedUser, "teamId" | "zoneId" | "regionId" | "role">
+      Pick<SerializedUser, "id" | "teamId" | "zoneId" | "regionId" | "role">
     >;
     totalByTask: Map<string, number>;
     monthlyByTaskUser: Map<string, number>;
@@ -212,14 +254,20 @@ function buildTaskCard(
   },
 ): TaskCard {
   const taskId = t._id.toString();
-  const taskType = t.taskType ?? DEFAULT_TASK_TYPE;
+  const taskType = normalizeTaskType(t.taskType);
   const scope = taskToScope(t);
   const applicable = ctx.visibleUsers.filter((u) =>
     appliesToUser(scope, userShape(u)),
   );
-  const taskSubs = ctx.submissions.filter(
-    (s) => s.taskId.toString() === taskId,
+  const applicableIds = new Set(
+    applicable.map((u) => u.id).filter((id): id is string => !!id),
   );
+  const taskSubs = ctx.submissions.filter(
+    (s) =>
+      s.taskId.toString() === taskId &&
+      applicableIds.has(s.subjectUserId.toString()),
+  );
+  const isApplicableToActor = appliesToUser(scope, userShape(ctx.actorShape));
   const mine = taskSubs.find((s) => s.subjectUserId.toString() === ctx.actorId);
   const distinctCompleters = new Set(
     taskSubs.map((s) => s.subjectUserId.toString()),
@@ -227,16 +275,16 @@ function buildTaskCard(
 
   const progress =
     taskType === "COUNT_TOTAL"
-      ? {
-          kind: "TOTAL" as const,
+      ? buildTaskProgress({
+          taskType,
           current: ctx.totalByTask.get(taskId) ?? 0,
           target: t.targetCount ?? null,
-        }
-      : {
-          kind: "MONTHLY_MEMBER" as const,
+        })
+      : buildTaskProgress({
+          taskType,
           current: ctx.monthlyByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? 0,
           target: ctx.goalByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? null,
-        };
+        });
 
   return {
     id: taskId,
@@ -251,6 +299,7 @@ function buildTaskCard(
     totalCount: applicable.length,
     myCompletionCount: mine?.completionCount ?? 0,
     taskType,
+    isApplicableToActor,
     progress,
   };
 }
@@ -268,10 +317,12 @@ export async function buildDashboardView(
 
   const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(sortedTasks, [actor.id], dateKey);
+  const actorShape = userShape(actor);
 
   const cards: TaskCard[] = sortedTasks.map((t) =>
     buildTaskCard(t, {
       actorId: actor.id,
+      actorShape,
       dateKey,
       submissions,
       visibleUsers,
@@ -279,6 +330,14 @@ export async function buildDashboardView(
       monthlyByTaskUser,
       goalByTaskUser,
     }),
+  );
+  const actorTaskIds = new Set(
+    sortedTasks
+      .filter((t) => appliesToUser(taskToScope(t), actorShape))
+      .map((t) => t._id.toString()),
+  );
+  const goalNotice = buildDashboardGoalNotice(
+    cards.filter((card) => actorTaskIds.has(card.id)),
   );
 
   const roster: DashboardRosterEntry[] = visibleUsers.map((user) => {
@@ -316,7 +375,16 @@ export async function buildDashboardView(
       visibleUsers.filter((u) => appliesToUser(scope, userShape(u))).length
     );
   }, 0);
-  const completedSubmissions = submissions.length;
+  const completedSubmissions = submissions.filter((submission) => {
+    const task = sortedTasks.find(
+      (t) => t._id.toString() === submission.taskId.toString(),
+    );
+    if (!task) return false;
+    const user = visibleUsers.find(
+      (u) => u.id === submission.subjectUserId.toString(),
+    );
+    return !!user && appliesToUser(taskToScope(task), userShape(user));
+  }).length;
 
   return {
     date: dateKey,
@@ -330,6 +398,7 @@ export async function buildDashboardView(
           : 0,
     },
     cards,
+    goalNotice,
     roster,
     tasks: allTasks.map(mapTask),
   };
@@ -372,10 +441,12 @@ export async function buildMemberDashboard(
   const cards: TaskCard[] = sortedPersonal.map((t) =>
     buildTaskCard(t, {
       actorId: actor.id,
+      actorShape,
       dateKey,
       submissions,
       visibleUsers: [
         {
+          id: actor.id,
           teamId: actor.teamId ?? null,
           zoneId: actor.zoneId ?? null,
           regionId: actor.regionId ?? null,
@@ -387,10 +458,12 @@ export async function buildMemberDashboard(
       goalByTaskUser,
     }),
   );
+  const goalNotice = buildDashboardGoalNotice(cards);
 
   return {
     date: dateKey,
     cards,
+    goalNotice,
     totalXp: progress.totalXp,
     level: progress.level,
     progressXp: progress.progressXp,

@@ -1,14 +1,33 @@
-export const APP_NAME = "Nhiệm Vụ Mỗi Ngày";
+export const APP_NAME = "Ubuntu";
 export const DEFAULT_TIMEZONE = "Asia/Ho_Chi_Minh";
 
 export const ROLES = [
   "TEAM_LEAD",
   "ZONE_LEAD",
   "REGIONAL_LEAD",
+  "NGV",
   "MEMBER",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
+
+export const MEMBER_LIKE_ROLES = ["NGV", "MEMBER"] as const satisfies readonly Role[];
+
+export function isRole(value: unknown): value is Role {
+  return typeof value === "string" && (ROLES as readonly string[]).includes(value);
+}
+
+export function normalizeTargetRoles(
+  targetRoles?: readonly string[] | null,
+): Role[] {
+  const roles = (targetRoles ?? []).filter(isRole);
+  if (roles.length === 0) return [...ROLES];
+  return ROLES.filter((role) => roles.includes(role));
+}
+
+export function targetsAllRoles(targetRoles: readonly Role[]): boolean {
+  return ROLES.every((role) => targetRoles.includes(role));
+}
 
 export const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING"] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
@@ -41,9 +60,10 @@ export type SerializedUser = SessionUser & {
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
-  TEAM_LEAD: "Nhóm trưởng",
-  ZONE_LEAD: "Địa Vực trưởng",
-  REGIONAL_LEAD: "Khu vực trưởng",
+  TEAM_LEAD: "NT",
+  ZONE_LEAD: "ĐV",
+  REGIONAL_LEAD: "KVT",
+  NGV: "NGV",
   MEMBER: "Thành viên",
 };
 

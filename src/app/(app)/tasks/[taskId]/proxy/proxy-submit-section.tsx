@@ -6,6 +6,7 @@ import { Check, Minus, Plus, Send, X } from "lucide-react";
 
 import type { SessionUser } from "@/lib/domain";
 import { submitTaskAction } from "@/app/(app)/tasks/actions";
+import { isDailyTaskType, type TaskType } from "@/lib/tasks/constants";
 import type { TaskStatus } from "@/lib/tasks/types";
 
 const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -76,6 +77,7 @@ export function ProxySubmitSection({
   yearMonth,
   lateWindowDays,
   monthSubmissions,
+  taskType,
 }: {
   taskId: string;
   allowedSubjects: SessionUser[];
@@ -86,6 +88,7 @@ export function ProxySubmitSection({
   yearMonth: string;
   lateWindowDays: number;
   monthSubmissions: Record<string, number>;
+  taskType: TaskType;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -97,6 +100,8 @@ export function ProxySubmitSection({
   const [yearStr, monthStr] = yearMonth.split("-");
   const monthLabel = `${MONTH_LABELS[Number(monthStr) - 1]} ${yearStr}`;
   const isCompleted = status === "COMPLETED";
+  const isDaily = isDailyTaskType(taskType);
+  const maxCount = isDaily ? 1 : 100;
 
   function handleSubjectChange(subjectId: string) {
     setError(null);
@@ -107,7 +112,7 @@ export function ProxySubmitSection({
   function handleSelectDate(dateKey: string) {
     setError(null);
     setActiveDate(dateKey);
-    setCount(monthSubmissions[dateKey] ?? 0);
+    setCount(Math.min(maxCount, monthSubmissions[dateKey] ?? 0));
   }
 
   function handleCancel() {
@@ -119,7 +124,7 @@ export function ProxySubmitSection({
   function handleConfirm() {
     if (!activeDate) return;
     const dateKey = activeDate;
-    const amount = Math.max(0, Math.min(100, Math.floor(count) || 0));
+    const amount = Math.max(0, Math.min(maxCount, Math.floor(count) || 0));
     setError(null);
     startTransition(async () => {
       const result = await submitTaskAction(
@@ -243,7 +248,7 @@ export function ProxySubmitSection({
               {submitted && (
                 <span className="mt-0.5 flex items-center gap-0.5 text-[10px]">
                   <Check className="h-2.5 w-2.5" />
-                  {cellCount > 1 ? `×${cellCount}` : ""}
+                  {!isDaily && cellCount > 1 ? `×${cellCount}` : ""}
                 </span>
               )}
               {isToday && !submitted && !isActive && (
@@ -263,7 +268,9 @@ export function ProxySubmitSection({
                 {formatActiveDate(activeDate)}
                 {monthSubmissions[activeDate] ? (
                   <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    (đã có {monthSubmissions[activeDate]} lượt)
+                    {isDaily
+                      ? "(đã nộp)"
+                      : `(đã có ${monthSubmissions[activeDate]} lượt)`}
                   </span>
                 ) : null}
               </p>
@@ -283,9 +290,9 @@ export function ProxySubmitSection({
               htmlFor="proxy-count"
               className="mb-1.5 block text-xs font-medium text-muted-foreground"
             >
-              Số lần nộp{" "}
+              {isDaily ? "Trạng thái" : "Số lần nộp"}{" "}
               <span className="text-muted-foreground/70">
-                (0 = chưa nộp)
+                {isDaily ? "(0 = chưa nộp, 1 = đã nộp)" : "(0 = chưa nộp)"}
               </span>
             </label>
             <div className="flex items-center gap-2">
@@ -302,19 +309,21 @@ export function ProxySubmitSection({
                 id="proxy-count"
                 type="number"
                 min={0}
-                max={100}
+                max={maxCount}
                 step={1}
                 value={count}
                 onChange={(e) => {
                   const v = Number.parseInt(e.target.value, 10);
-                  setCount(Number.isFinite(v) && v >= 0 ? Math.min(100, v) : 0);
+                  setCount(
+                    Number.isFinite(v) && v >= 0 ? Math.min(maxCount, v) : 0,
+                  );
                 }}
                 className="h-10 w-full flex-1 rounded-lg border border-border bg-overlay-subtle px-3 text-center text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
               <button
                 type="button"
-                onClick={() => setCount((c) => Math.min(100, c + 1))}
-                disabled={count >= 100 || isPending}
+                onClick={() => setCount((c) => Math.min(maxCount, c + 1))}
+                disabled={count >= maxCount || isPending}
                 aria-label="Tăng"
                 className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-overlay-subtle transition-colors hover:bg-overlay-medium disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -346,6 +355,11 @@ export function ProxySubmitSection({
               <>
                 <X className="h-4 w-4" aria-hidden />
                 Đánh dấu chưa nộp
+              </>
+            ) : isDaily ? (
+              <>
+                <Send className="h-4 w-4" aria-hidden />
+                Lưu đã nộp
               </>
             ) : (
               <>

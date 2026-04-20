@@ -13,7 +13,8 @@ import {
 
 import { deleteTaskAction, toggleTaskAction } from "./actions";
 import { EditTemplateForm } from "./edit-template-form";
-import { SCOPE_LABELS } from "@/lib/domain";
+import { ROLE_LABELS, SCOPE_LABELS, targetsAllRoles } from "@/lib/domain";
+import { TASK_TYPE_LABELS } from "@/lib/tasks/constants";
 import type { TaskSummary, TemplateCoverage } from "@/lib/tasks/types";
 
 export function TemplateList({
@@ -66,8 +67,12 @@ function TaskCard({
   }
 
   function handleDelete() {
+    const relatedData =
+      task.taskType === "COUNT_TOTAL"
+        ? "Tất cả lượt nộp liên quan cũng sẽ bị xoá."
+        : "Tất cả lượt nộp và mục tiêu tháng liên quan cũng sẽ bị xoá.";
     const confirmed = window.confirm(
-      `Xoá nhiệm vụ "${task.title}"? Tất cả lượt nộp và mục tiêu tháng liên quan cũng sẽ bị xoá.`,
+      `Xoá nhiệm vụ "${task.title}"? ${relatedData}`,
     );
     if (!confirmed) return;
     setError(null);
@@ -96,6 +101,14 @@ function TaskCard({
           <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
             <span className="rounded-md bg-overlay-subtle px-1.5 py-0.5">
               {SCOPE_LABELS[task.scope]}
+            </span>
+            <span className="rounded-md bg-overlay-subtle px-1.5 py-0.5">
+              {TASK_TYPE_LABELS[task.taskType]}
+            </span>
+            <span className="rounded-md bg-overlay-subtle px-1.5 py-0.5">
+              {targetsAllRoles(task.targetRoles)
+                ? "Tất cả vai trò"
+                : task.targetRoles.map((role) => ROLE_LABELS[role]).join(", ")}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />

@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { Check, X } from "lucide-react";
 
 import { updateTaskAction } from "./actions";
+import { ROLE_LABELS, ROLES } from "@/lib/domain";
+import { TASK_TYPE_LABELS } from "@/lib/tasks/constants";
 import type { TaskSummary } from "@/lib/tasks/types";
 
 export function EditTemplateForm({
@@ -37,8 +39,7 @@ export function EditTemplateForm({
         <div>
           <h3 className="text-sm font-semibold">Sửa nhiệm vụ</h3>
           <p className="text-[11px] text-muted-foreground">
-            Loại:{" "}
-            {isCountTotal ? "Tổng hợp theo số lần" : "Tổng hợp theo tháng"}
+            Loại: {TASK_TYPE_LABELS[task.taskType]}
           </p>
         </div>
         <button
@@ -48,6 +49,29 @@ export function EditTemplateForm({
         >
           <X className="h-4 w-4" />
         </button>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+          Hiển thị cho vai trò *
+        </label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {ROLES.map((role) => (
+            <label
+              key={role}
+              className="group flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-overlay-subtle px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-background has-[:checked]:shadow-[0_8px_22px_-14px_var(--primary)]"
+            >
+              <input
+                type="checkbox"
+                name="targetRoles"
+                value={role}
+                defaultChecked={task.targetRoles.includes(role)}
+                className="sr-only"
+              />
+              {ROLE_LABELS[role]}
+            </label>
+          ))}
+        </div>
       </div>
 
       {isCountTotal && (

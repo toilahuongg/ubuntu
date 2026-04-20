@@ -11,6 +11,7 @@ import { getInventory } from "@/lib/services/cosmetics-service";
 import { serializeEquipped } from "@/lib/cosmetics/serialize";
 import { getAllLevelInfos } from "@/lib/level-utils";
 import { CosmeticName } from "@/components/cosmetic-name";
+import { PushToggle } from "@/components/push-toggle";
 import { EditProfileForm } from "./edit-profile-form";
 import { LogoutButton } from "./logout-button";
 
@@ -266,6 +267,9 @@ export default async function ProfilePage() {
         initialBio={session.bio ?? ""}
         level={progress.level}
       />
+
+      {/* Push notifications */}
+      <PushToggle />
 
       {/* Logout */}
       <LogoutButton />

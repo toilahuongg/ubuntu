@@ -91,7 +91,8 @@ export function CreateUserForm({
 
   const needsTeam = role === "TEAM_LEAD";
   const needsZone = role === "ZONE_LEAD";
-  const needsRegion = role === "REGIONAL_LEAD" || role === "MEMBER";
+  const needsRegion =
+    role === "REGIONAL_LEAD" || role === "NGV" || role === "MEMBER";
 
   return (
     <form action={handleSubmit} className="glass-card space-y-3 p-4">

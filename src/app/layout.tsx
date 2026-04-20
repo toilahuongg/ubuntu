@@ -16,14 +16,14 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Nhiệm Vụ Mỗi Ngày",
+  title: "Ubuntu",
   description:
-    "Web app giao và cập nhật nhiệm vụ hàng ngày qua Telegram WebApp cho nhóm trưởng, khu vực trưởng và thành viên.",
+    "Web app giao và cập nhật nhiệm vụ hàng ngày qua Telegram WebApp cho NT, KVT và thành viên.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Nhiệm Vụ",
+    title: "Ubuntu",
   },
 };
 
@@ -50,6 +50,7 @@ export default function RootLayout({
     >
       <head>
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+        <link rel="icon" type="image/svg+xml" href="/icons/logo.svg" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>

@@ -4,15 +4,21 @@ import { Calendar, CheckCircle2, ChevronRight, Clock } from "lucide-react";
 
 import { formatDateLabel } from "@/lib/dates";
 import type { ActivityEntry } from "@/lib/tasks/activity-service";
+import { TASK_TYPE_LABELS } from "@/lib/tasks/constants";
 import type { MemberDashboardView } from "@/lib/tasks/types";
 import { ActivityFeed } from "./activity-feed";
+import { GoalNoticeBanner } from "./goal-notice-banner";
+import { TaskProgressBadge } from "./task-progress-badge";
+import { TaskTickButton } from "./task-tick-button";
 
 export function MemberDashboard({
   data,
   activities,
+  userId,
 }: {
   data: MemberDashboardView;
   activities: ActivityEntry[];
+  userId: string;
 }) {
   const progressPercent =
     data.nextLevelXp > 0
@@ -58,6 +64,8 @@ export function MemberDashboard({
         </div>
       </div>
 
+      <GoalNoticeBanner notice={data.goalNotice} />
+
       {data.cards.length > 0 ? (
         <section>
           <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -65,41 +73,60 @@ export function MemberDashboard({
           </h2>
           <div className="space-y-2">
             {data.cards.map((card) => (
-              <Link
+              <div
                 key={card.id}
-                href={`/tasks/${card.id}`}
-                className="glass-card card-hover flex items-center justify-between p-4 active:bg-overlay-medium active:scale-[0.99]"
+                className={`glass-card flex items-center gap-3 p-4 transition-colors ${
+                  card.progress.isGoalComplete
+                    ? "dashboard-task-goal-complete"
+                    : ""
+                }`}
               >
-                <div className="min-w-0 flex-1">
-                  <h3
-                    className="truncate text-sm font-semibold"
-                    title={card.title}
-                  >
-                    {card.title}
-                  </h3>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {new Date(card.deadlineAt).toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    {card.expReward > 0 && (
-                      <span className="font-medium text-foreground/70">
-                        +{card.expReward} XP
+                <TaskTickButton
+                  taskId={card.id}
+                  subjectUserId={userId}
+                  myCompletionCount={card.myCompletionCount}
+                  status={card.status}
+                  isGoalComplete={card.progress.isGoalComplete}
+                />
+                <Link
+                  href={`/tasks/${card.id}`}
+                  className="card-hover -m-2 flex min-w-0 flex-1 items-center justify-between rounded-lg p-2 active:bg-overlay-medium active:scale-[0.99]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <h3
+                      className="truncate text-sm font-semibold"
+                      title={card.title}
+                    >
+                      {card.title}
+                    </h3>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span className="rounded-md bg-overlay-subtle px-1.5 py-0.5 text-[10px] font-semibold">
+                        {TASK_TYPE_LABELS[card.taskType]}
                       </span>
-                    )}
-                    {card.myCompletionCount > 0 && (
-                      <span className="flex items-center gap-1 text-foreground/70">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Đã nộp
+                      <TaskProgressBadge progress={card.progress} />
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(card.deadlineAt).toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </span>
-                    )}
+                      {card.expReward > 0 && (
+                        <span className="font-medium text-foreground/70">
+                          +{card.expReward} XP
+                        </span>
+                      )}
+                      {card.myCompletionCount > 0 && (
+                        <span className="flex items-center gap-1 text-foreground/70">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Đã nộp
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <ChevronRight className="ml-3 h-4 w-4 text-muted-foreground" />
-              </Link>
+                  <ChevronRight className="ml-3 h-4 w-4 text-muted-foreground" />
+                </Link>
+              </div>
             ))}
           </div>
         </section>

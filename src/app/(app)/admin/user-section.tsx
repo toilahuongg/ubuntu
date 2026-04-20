@@ -59,7 +59,7 @@ export function UserSection({
 
     list = [...list].sort((a, b) => {
       if (sortKey === "name") return a.fullName.localeCompare(b.fullName, "vi");
-      if (sortKey === "role") return a.role.localeCompare(b.role);
+      if (sortKey === "role") return ROLES.indexOf(a.role) - ROLES.indexOf(b.role);
       if (sortKey === "status") return a.status.localeCompare(b.status);
       // recent: server already returns by createdAt desc; preserve order.
       return 0;
@@ -316,7 +316,8 @@ function EditUserRow({
 
   const needsTeam = role === "TEAM_LEAD";
   const needsZone = role === "ZONE_LEAD";
-  const needsRegion = role === "REGIONAL_LEAD" || role === "MEMBER";
+  const needsRegion =
+    role === "REGIONAL_LEAD" || role === "NGV" || role === "MEMBER";
 
   const isDemotingLead =
     (user.role === "TEAM_LEAD" ||

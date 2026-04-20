@@ -1,6 +1,6 @@
 import { model, models, Schema, Types } from "mongoose";
 
-import { TASK_SCOPES, type TaskScope } from "@/lib/domain";
+import { ROLES, TASK_SCOPES, type Role, type TaskScope } from "@/lib/domain";
 import {
   DEFAULT_EXP_REWARD,
   DEFAULT_LATE_WINDOW_DAYS,
@@ -33,6 +33,7 @@ const taskSchema = new Schema(
       type: String,
     },
     targetCount: { default: null, min: 1, type: Number },
+    targetRoles: { default: undefined, enum: ROLES, type: [String] },
     completedAt: { default: null, type: Date },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId },
     submissionMessage: { default: "", trim: true, type: String },
@@ -58,6 +59,7 @@ export type TaskRecord = {
   completionMessage: string;
   taskType: TaskType;
   targetCount: number | null;
+  targetRoles?: Role[] | null;
   completedAt: Date | null;
   teamId: Types.ObjectId;
   title: string;

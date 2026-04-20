@@ -1,4 +1,4 @@
-import { Shield } from "lucide-react";
+import Image from "next/image";
 import type { SessionUser } from "@/lib/domain";
 import { ROLE_LABELS } from "@/lib/domain";
 import { CosmeticName } from "@/components/cosmetic-name";
@@ -24,7 +24,13 @@ export function AppHeader({
       <div className="relative mx-auto flex h-full max-w-2xl items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-overlay-medium">
-            <Shield className="h-4 w-4 text-foreground" />
+            <Image
+              src="/icons/logo.svg"
+              alt="Ubuntu"
+              width={20}
+              height={20}
+              priority
+            />
           </div>
           <div className="leading-tight">
             <p className="text-sm font-semibold">

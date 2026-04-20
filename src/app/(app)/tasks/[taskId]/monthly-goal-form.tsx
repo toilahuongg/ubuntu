@@ -10,10 +10,12 @@ export function MonthlyGoalForm({
   taskId,
   yearMonth,
   currentGoal,
+  unitLabel = "lượt",
 }: {
   taskId: string;
   yearMonth: string;
   currentGoal: number | null;
+  unitLabel?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -50,7 +52,7 @@ export function MonthlyGoalForm({
           required
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Số lần muốn hoàn thành"
+          placeholder={`Số ${unitLabel} muốn hoàn thành`}
           inputMode="numeric"
           className="h-10 flex-1 rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
         />

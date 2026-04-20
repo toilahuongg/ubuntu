@@ -11,15 +11,21 @@ import {
 import { formatDateLabel } from "@/lib/dates";
 import { SCOPE_LABELS } from "@/lib/domain";
 import type { ActivityEntry } from "@/lib/tasks/activity-service";
+import { TASK_TYPE_LABELS } from "@/lib/tasks/constants";
 import type { LeaderDashboardView } from "@/lib/tasks/types";
 import { ActivityFeed } from "./activity-feed";
+import { GoalNoticeBanner } from "./goal-notice-banner";
+import { TaskProgressBadge } from "./task-progress-badge";
+import { TaskTickButton } from "./task-tick-button";
 
 export function LeaderDashboard({
   data,
   activities,
+  userId,
 }: {
   data: LeaderDashboardView;
   activities: ActivityEntry[];
+  userId: string;
 }) {
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
@@ -56,6 +62,8 @@ export function LeaderDashboard({
         />
       </div>
 
+      <GoalNoticeBanner notice={data.goalNotice} />
+
       {data.cards.length > 0 && (
         <section>
           <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -63,46 +71,71 @@ export function LeaderDashboard({
           </h2>
           <div className="space-y-2">
             {data.cards.map((card) => (
-              <Link
+              <div
                 key={card.id}
-                href={`/tasks/${card.id}`}
-                className="glass-card card-hover flex items-center justify-between p-4 active:bg-overlay-medium active:scale-[0.99]"
+                className={`glass-card flex items-center gap-3 p-4 transition-colors ${
+                  card.isApplicableToActor && card.progress.isGoalComplete
+                    ? "dashboard-task-goal-complete"
+                    : ""
+                }`}
               >
-                <div className="min-w-0 flex-1">
-                  <h3
-                    className="truncate text-sm font-semibold"
-                    title={card.title}
-                  >
-                    {card.title}
-                  </h3>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      {card.completionCount}/{card.totalCount}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {new Date(card.deadlineAt).toLocaleTimeString("vi-VN", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                    {card.expReward > 0 && (
-                      <span className="font-medium text-foreground/70">
-                        +{card.expReward} XP
+                {card.isApplicableToActor ? (
+                  <TaskTickButton
+                    taskId={card.id}
+                    subjectUserId={userId}
+                    myCompletionCount={card.myCompletionCount}
+                    status={card.status}
+                    isGoalComplete={card.progress.isGoalComplete}
+                  />
+                ) : (
+                  <div className="h-9 w-9 shrink-0" aria-hidden />
+                )}
+                <Link
+                  href={`/tasks/${card.id}`}
+                  className="card-hover -m-2 flex min-w-0 flex-1 items-center justify-between rounded-lg p-2 active:bg-overlay-medium active:scale-[0.99]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <h3
+                      className="truncate text-sm font-semibold"
+                      title={card.title}
+                    >
+                      {card.title}
+                    </h3>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span className="rounded-md bg-overlay-subtle px-1.5 py-0.5 text-[10px] font-semibold">
+                        {TASK_TYPE_LABELS[card.taskType]}
+                      </span>
+                      {card.isApplicableToActor && (
+                        <TaskProgressBadge progress={card.progress} />
+                      )}
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        {card.completionCount}/{card.totalCount}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {new Date(card.deadlineAt).toLocaleTimeString("vi-VN", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      {card.expReward > 0 && (
+                        <span className="font-medium text-foreground/70">
+                          +{card.expReward} XP
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="ml-3 flex items-center gap-2">
+                    {card.isApplicableToActor && card.myCompletionCount > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[10px] font-bold">
+                        {card.myCompletionCount}
                       </span>
                     )}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
-                </div>
-                <div className="ml-3 flex items-center gap-2">
-                  {card.myCompletionCount > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-[10px] font-bold">
-                      {card.myCompletionCount}
-                    </span>
-                  )}
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </Link>
+                </Link>
+              </div>
             ))}
           </div>
         </section>

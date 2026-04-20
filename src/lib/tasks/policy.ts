@@ -1,6 +1,11 @@
 import { fromZonedTime } from "date-fns-tz";
 
-import type { Role, SessionUser, TaskScope } from "@/lib/domain";
+import {
+  normalizeTargetRoles,
+  type Role,
+  type SessionUser,
+  type TaskScope,
+} from "@/lib/domain";
 import { getAppTimezone, getTodayDateKey } from "@/lib/dates";
 import { canManageTasks } from "@/lib/permissions";
 
@@ -9,6 +14,7 @@ export type ScopeContext = {
   teamId: string;
   zoneId: string | null;
   regionId: string | null;
+  targetRoles?: Role[] | null;
 };
 
 type UserScope = Pick<SessionUser, "teamId" | "zoneId" | "regionId"> & {
@@ -48,6 +54,8 @@ export function appliesToUser(
   user: UserScope,
 ): boolean {
   if (!user.teamId) return false;
+  const targetRoles = normalizeTargetRoles(task.targetRoles);
+  if (user.role && !targetRoles.includes(user.role)) return false;
   if (task.scope === "TEAM") return task.teamId === user.teamId;
   if (task.scope === "ZONE") {
     if (user.role === "TEAM_LEAD") return task.teamId === user.teamId;

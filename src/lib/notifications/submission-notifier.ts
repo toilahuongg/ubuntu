@@ -1,29 +1,16 @@
 import "server-only";
 
 import { connectToDatabase } from "@/lib/mongoose";
-import {
-  RegionModel,
-  type RegionRecord,
-  TeamModel,
-  type TeamRecord,
-  ZoneModel,
-  type ZoneRecord,
-} from "@/lib/models";
-import { safeSendTelegramMessage } from "@/lib/telegram-bot";
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
+import { UserModel } from "@/lib/models";
+import { safeSendWebPush } from "@/lib/notifications/web-push";
+import { toObjectId } from "@/lib/utils/ids";
 
 function renderTemplate(
   template: string,
   vars: Record<string, string | number>,
 ): string {
   return template.replace(/\{(\w+)\}/g, (_, key: string) =>
-    key in vars ? escapeHtml(String(vars[key])) : `{${key}}`,
+    key in vars ? String(vars[key]) : `{${key}}`,
   );
 }
 
@@ -42,17 +29,33 @@ export function formatGroupSubmissionMessage(input: {
       count: input.completionCount,
     });
   }
-  const name = escapeHtml(input.fullName);
-  const title = escapeHtml(input.taskTitle);
   const xp = Math.max(0, Math.floor(input.xpAwarded));
   const countSuffix =
     input.completionCount > 1 ? ` (×${input.completionCount})` : "";
   const xpSuffix = xp > 0 ? ` (+${xp} XP)` : "";
-  return `📌 <b>${name}</b> vừa hoàn thành <b>${title}</b>${countSuffix}${xpSuffix}`;
+  return `${input.fullName} vừa hoàn thành "${input.taskTitle}"${countSuffix}${xpSuffix}`;
+}
+
+async function findTeammateUserIds(input: {
+  teamId?: string | null;
+  excludeUserId?: string | null;
+}): Promise<string[]> {
+  const teamId = input.teamId ? toObjectId(input.teamId) : null;
+  if (!teamId) return [];
+
+  const query: Record<string, unknown> = { teamId };
+  if (input.excludeUserId) {
+    const exclude = toObjectId(input.excludeUserId);
+    if (exclude) query._id = { $ne: exclude };
+  }
+
+  const users = await UserModel.find(query).select({ _id: 1 }).lean();
+  return (users as Array<{ _id: unknown }>).map((u) => String(u._id));
 }
 
 export async function notifySubmissionToGroups(input: {
   subject: {
+    id?: string | null;
     fullName: string;
     teamId?: string | null;
     zoneId?: string | null;
@@ -65,36 +68,13 @@ export async function notifySubmissionToGroups(input: {
 }): Promise<void> {
   await connectToDatabase();
 
-  const [team, zone, region] = await Promise.all([
-    input.subject.teamId
-      ? (TeamModel.findById(input.subject.teamId)
-          .select({ telegramChatId: 1 })
-          .lean() as Promise<TeamRecord | null>)
-      : null,
-    input.subject.zoneId
-      ? (ZoneModel.findById(input.subject.zoneId)
-          .select({ telegramChatId: 1 })
-          .lean() as Promise<ZoneRecord | null>)
-      : null,
-    input.subject.regionId
-      ? (RegionModel.findById(input.subject.regionId)
-          .select({ telegramChatId: 1 })
-          .lean() as Promise<RegionRecord | null>)
-      : null,
-  ]);
+  const userIds = await findTeammateUserIds({
+    teamId: input.subject.teamId,
+    excludeUserId: input.subject.id,
+  });
+  if (userIds.length === 0) return;
 
-  const chatIds = new Set<number>();
-  for (const entity of [team, zone, region]) {
-    const chatId = (entity as { telegramChatId?: number | null } | null)
-      ?.telegramChatId;
-    if (typeof chatId === "number") {
-      chatIds.add(chatId);
-    }
-  }
-
-  if (chatIds.size === 0) return;
-
-  const text = formatGroupSubmissionMessage({
+  const body = formatGroupSubmissionMessage({
     fullName: input.subject.fullName,
     taskTitle: input.taskTitle,
     xpAwarded: input.xpAwarded,
@@ -103,8 +83,13 @@ export async function notifySubmissionToGroups(input: {
   });
 
   await Promise.allSettled(
-    Array.from(chatIds).map((chatId) =>
-      safeSendTelegramMessage({ chatId, parseMode: "HTML", text }),
+    userIds.map((userId) =>
+      safeSendWebPush(userId, {
+        title: "Nhiệm vụ hoàn thành",
+        body,
+        url: "/",
+        tag: `submission:${input.subject.id ?? ""}`,
+      }),
     ),
   );
 }
@@ -121,45 +106,24 @@ export async function notifyTaskCompletionToGroups(input: {
 }): Promise<void> {
   await connectToDatabase();
 
-  const [team, zone, region] = await Promise.all([
-    input.scope.teamId
-      ? (TeamModel.findById(input.scope.teamId)
-          .select({ telegramChatId: 1 })
-          .lean() as Promise<TeamRecord | null>)
-      : null,
-    input.scope.zoneId
-      ? (ZoneModel.findById(input.scope.zoneId)
-          .select({ telegramChatId: 1 })
-          .lean() as Promise<ZoneRecord | null>)
-      : null,
-    input.scope.regionId
-      ? (RegionModel.findById(input.scope.regionId)
-          .select({ telegramChatId: 1 })
-          .lean() as Promise<RegionRecord | null>)
-      : null,
-  ]);
+  const userIds = await findTeammateUserIds({ teamId: input.scope.teamId });
+  if (userIds.length === 0) return;
 
-  const chatIds = new Set<number>();
-  for (const entity of [team, zone, region]) {
-    const chatId = (entity as { telegramChatId?: number | null } | null)
-      ?.telegramChatId;
-    if (typeof chatId === "number") {
-      chatIds.add(chatId);
-    }
-  }
-
-  if (chatIds.size === 0) return;
-
-  const text = input.template
+  const body = input.template
     ? renderTemplate(input.template, {
         task: input.taskTitle,
         target: input.targetCount,
       })
-    : `🏆 Nhiệm vụ <b>${escapeHtml(input.taskTitle)}</b> đã hoàn thành mục tiêu ${input.targetCount}!`;
+    : `Nhiệm vụ "${input.taskTitle}" đã đạt mục tiêu ${input.targetCount}!`;
 
   await Promise.allSettled(
-    Array.from(chatIds).map((chatId) =>
-      safeSendTelegramMessage({ chatId, parseMode: "HTML", text }),
+    userIds.map((userId) =>
+      safeSendWebPush(userId, {
+        title: "Nhiệm vụ đạt mục tiêu",
+        body,
+        url: "/",
+        tag: `task-complete:${input.scope.teamId ?? ""}`,
+      }),
     ),
   );
 }

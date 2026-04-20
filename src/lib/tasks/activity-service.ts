@@ -107,7 +107,7 @@ export async function listTaskActivitiesThisMonth(
   const yearMonth = getCurrentYearMonth();
 
   const visibleUsers =
-    actor.role === "MEMBER"
+    actor.role === "MEMBER" || actor.role === "NGV"
       ? await listTeamMembersForViewing(actor)
       : await listVisibleUsersForActor(actor);
 

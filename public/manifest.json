@@ -1,6 +1,6 @@
 {
-  "name": "Nhiệm Vụ Mỗi Ngày",
-  "short_name": "Nhiệm Vụ",
+  "name": "Ubuntu",
+  "short_name": "Ubuntu",
   "description": "Giao và cập nhật nhiệm vụ hàng ngày cho nhóm",
   "start_url": "/dashboard",
   "display": "standalone",
@@ -8,6 +8,12 @@
   "theme_color": "#7C3AED",
   "orientation": "portrait-primary",
   "icons": [
+    {
+      "src": "/icons/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",

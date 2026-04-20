@@ -4,16 +4,32 @@ import { useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
 
 import { createTaskAction } from "./actions";
+import { ROLE_LABELS, ROLES } from "@/lib/domain";
+import { TASK_TYPE_LABELS, type TaskType } from "@/lib/tasks/constants";
 
-type TaskTypeOption = "COUNT_TOTAL" | "MONTHLY_PER_MEMBER";
+const TASK_TYPE_OPTIONS: Array<{
+  value: TaskType;
+  description: string;
+}> = [
+  {
+    value: "MONTHLY_PER_MEMBER",
+    description: "Đặt mục tiêu tháng, mỗi ngày có thể ghi nhiều lượt.",
+  },
+  {
+    value: "DAILY_PER_MEMBER",
+    description: "Đặt mục tiêu tháng, mỗi ngày chỉ tính một lượt hoàn thành.",
+  },
+  {
+    value: "COUNT_TOTAL",
+    description: "Cộng tổng số lần của tất cả thành viên; đạt mục tiêu thì task đóng.",
+  },
+];
 
 export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [taskType, setTaskType] = useState<TaskTypeOption>(
-    "MONTHLY_PER_MEMBER",
-  );
+  const [taskType, setTaskType] = useState<TaskType>("MONTHLY_PER_MEMBER");
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -62,36 +78,50 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
           Loại nhiệm vụ *
         </label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setTaskType("MONTHLY_PER_MEMBER")}
-            className={`h-10 rounded-xl border px-3 text-xs font-medium transition-colors ${
-              taskType === "MONTHLY_PER_MEMBER"
-                ? "border-primary bg-primary/10 text-foreground"
-                : "border-border bg-overlay-subtle text-muted-foreground"
-            }`}
-          >
-            Tổng hợp theo tháng
-          </button>
-          <button
-            type="button"
-            onClick={() => setTaskType("COUNT_TOTAL")}
-            className={`h-10 rounded-xl border px-3 text-xs font-medium transition-colors ${
-              taskType === "COUNT_TOTAL"
-                ? "border-primary bg-primary/10 text-foreground"
-                : "border-border bg-overlay-subtle text-muted-foreground"
-            }`}
-          >
-            Tổng hợp theo số lần
-          </button>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {TASK_TYPE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setTaskType(option.value)}
+              className={`min-h-10 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
+                taskType === option.value
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border bg-overlay-subtle text-muted-foreground"
+              }`}
+            >
+              {TASK_TYPE_LABELS[option.value]}
+            </button>
+          ))}
         </div>
         <input type="hidden" name="taskType" value={taskType} />
         <p className="mt-1 text-[11px] text-muted-foreground">
-          {taskType === "MONTHLY_PER_MEMBER"
-            ? "Mỗi thành viên tự đặt mục tiêu số lần cho từng tháng."
-            : "Tổng số lần của tất cả thành viên đạt mục tiêu thì task đóng."}
+          {TASK_TYPE_OPTIONS.find((option) => option.value === taskType)
+            ?.description}
         </p>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+          Hiển thị cho vai trò *
+        </label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {ROLES.map((role) => (
+            <label
+              key={role}
+              className="group flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-overlay-subtle px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-background has-[:checked]:shadow-[0_8px_22px_-14px_var(--primary)]"
+            >
+              <input
+                type="checkbox"
+                name="targetRoles"
+                value={role}
+                defaultChecked
+                className="sr-only"
+              />
+              {ROLE_LABELS[role]}
+            </label>
+          ))}
+        </div>
       </div>
 
       {taskType === "COUNT_TOTAL" && (

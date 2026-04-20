@@ -78,6 +78,7 @@ export default async function TaskProxyPage({
         yearMonth={yearMonth}
         lateWindowDays={detail.lateWindowDays}
         monthSubmissions={monthSubmissions}
+        taskType={detail.taskType}
       />
     </div>
   );

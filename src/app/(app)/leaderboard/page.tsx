@@ -63,7 +63,7 @@ export default async function LeaderboardPage() {
       </Section>
 
       <Section
-        title="Top Khu vực trưởng"
+        title="Top KVT"
         icon={<Crown className="h-4 w-4" />}
       >
         {topLeads.length === 0 ? (

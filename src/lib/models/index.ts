@@ -2,6 +2,7 @@ export * from "@/lib/models/audit-log";
 export * from "@/lib/models/cosmetic";
 export * from "@/lib/models/monthly-goal";
 export * from "@/lib/models/point-transaction";
+export * from "@/lib/models/push-subscription";
 export * from "@/lib/models/region";
 export * from "@/lib/models/reminder-log";
 export * from "@/lib/models/submission";

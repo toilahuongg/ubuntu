@@ -12,6 +12,7 @@ import {
   CosmeticModel,
   UserCosmeticModel,
 } from "@/lib/models";
+import { safeSendWebPush } from "@/lib/notifications/web-push";
 
 export type CosmeticInput = {
   code: string;
@@ -139,5 +140,14 @@ export async function grantCosmeticToUser(
     userId: userOid,
     cosmeticId: cosmeticOid,
     acquiredVia: "admin_grant",
+  });
+
+  void safeSendWebPush(userId, {
+    title: "Bạn vừa nhận quà 🎁",
+    body: `Admin tặng bạn "${cosmetic.name}". Kiểm tra kho đồ ngay!`,
+    url: "/inventory",
+    tag: `grant-${cosmeticId}`,
+  }).catch((err) => {
+    console.error("[cosmetics-admin] push notify failed", err);
   });
 }

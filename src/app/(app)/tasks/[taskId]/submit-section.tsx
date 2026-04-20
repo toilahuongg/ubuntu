@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, Send } from "lucide-react";
 
 import { submitTaskAction } from "@/app/(app)/tasks/actions";
+import { isDailyTaskType, type TaskType } from "@/lib/tasks/constants";
 import type { TaskStatus } from "@/lib/tasks/types";
 
 export function SubmitSection({
@@ -12,11 +13,13 @@ export function SubmitSection({
   subjectUserId,
   myCompletionCount,
   status,
+  taskType,
 }: {
   taskId: string;
   subjectUserId: string;
   myCompletionCount: number;
   status: TaskStatus;
+  taskType: TaskType;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -36,14 +39,23 @@ export function SubmitSection({
 
   const isLocked = status === "LOCKED" || status === "COMPLETED";
   const isCompleted = status === "COMPLETED";
+  const isDaily = isDailyTaskType(taskType);
+  const alreadySubmittedToday = isDaily && myCompletionCount > 0;
+  const submitDisabled = isPending || isLocked || alreadySubmittedToday;
 
   return (
     <div className="glass-card p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium">Số lần hoàn thành hôm nay</p>
+          <p className="text-sm font-medium">
+            {isDaily ? "Hoàn thành hôm nay" : "Số lần hoàn thành hôm nay"}
+          </p>
           <p className="text-xs text-muted-foreground">
-            Đã nộp {myCompletionCount} lần
+            {isDaily
+              ? myCompletionCount > 0
+                ? "Đã nộp hôm nay"
+                : "Chưa nộp hôm nay"
+              : `Đã nộp ${myCompletionCount} lần`}
           </p>
         </div>
         {myCompletionCount > 0 && (
@@ -61,7 +73,7 @@ export function SubmitSection({
 
       <button
         type="button"
-        disabled={isPending || isLocked}
+        disabled={submitDisabled}
         aria-busy={isPending}
         onClick={handleSubmit}
         className="btn-gradient flex h-11 w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
@@ -77,7 +89,13 @@ export function SubmitSection({
         ) : (
           <>
             <Send className="h-4 w-4" aria-hidden />
-            {isCompleted ? "Đã hoàn thành" : isLocked ? "Đã khoá" : "Nộp nhanh hôm nay"}
+            {isCompleted
+              ? "Đã hoàn thành"
+              : isLocked
+                ? "Đã khoá"
+                : alreadySubmittedToday
+                  ? "Đã nộp hôm nay"
+                  : "Nộp nhanh hôm nay"}
           </>
         )}
       </button>

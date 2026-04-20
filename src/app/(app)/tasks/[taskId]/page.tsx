@@ -7,6 +7,11 @@ import { getTaskDetail } from "@/lib/tasks/task-service";
 import { getTodayDateKey } from "@/lib/dates";
 import { listTaskActivitiesThisMonth } from "@/lib/tasks/activity-service";
 import { canProxySubmit } from "@/lib/permissions";
+import {
+  isDailyTaskType,
+  supportsMonthlyGoal,
+  TASK_TYPE_LABELS,
+} from "@/lib/tasks/constants";
 import { SubmitSection } from "./submit-section";
 import { MonthlyGoalForm } from "./monthly-goal-form";
 import { MonthActivity } from "./month-activity";
@@ -40,7 +45,10 @@ export default async function TaskDetailPage({
         : "Đã khoá";
 
   const isCountTotal = detail.taskType === "COUNT_TOTAL";
-  const isMonthly = detail.taskType === "MONTHLY_PER_MEMBER";
+  const hasMonthlyGoal =
+    supportsMonthlyGoal(detail.taskType) && detail.isApplicableToActor;
+  const isDaily = isDailyTaskType(detail.taskType);
+  const progressUnit = isDaily ? "ngày" : "lượt";
 
   const proxyCandidates = detail.rosterMembers.filter(
     (m) => m.id !== session.id && canProxySubmit(session, m),
@@ -93,7 +101,7 @@ export default async function TaskDetailPage({
             {statusLabel}
           </span>
           <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase">
-            {isCountTotal ? "Tổng số lần" : "Theo tháng"}
+            {TASK_TYPE_LABELS[detail.taskType]}
           </span>
         </div>
       </div>
@@ -117,7 +125,7 @@ export default async function TaskDetailPage({
         </section>
       )}
 
-      {isMonthly && (
+      {hasMonthlyGoal && (
         <section className="space-y-3">
           <div className="glass-card space-y-2 p-4">
             <div className="flex items-center gap-2">
@@ -133,12 +141,14 @@ export default async function TaskDetailPage({
                   target={detail.monthlyGoal}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {detail.monthlyCompletion} / {detail.monthlyGoal} lượt
+                  {detail.monthlyCompletion} / {detail.monthlyGoal}{" "}
+                  {progressUnit}
                 </p>
               </>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Chưa đặt mục tiêu cho tháng này. Đã hoàn thành {detail.monthlyCompletion} lượt.
+                Chưa đặt mục tiêu cho tháng này. Đã hoàn thành{" "}
+                {detail.monthlyCompletion} {progressUnit}.
               </p>
             )}
           </div>
@@ -146,16 +156,24 @@ export default async function TaskDetailPage({
             taskId={detail.id}
             yearMonth={detail.yearMonth}
             currentGoal={detail.monthlyGoal}
+            unitLabel={progressUnit}
           />
         </section>
       )}
 
-      <SubmitSection
-        taskId={detail.id}
-        subjectUserId={session.id}
-        myCompletionCount={detail.myCompletionCount}
-        status={detail.status}
-      />
+      {detail.isApplicableToActor ? (
+        <SubmitSection
+          taskId={detail.id}
+          subjectUserId={session.id}
+          myCompletionCount={detail.myCompletionCount}
+          status={detail.status}
+          taskType={detail.taskType}
+        />
+      ) : (
+        <div className="glass-card p-4 text-sm text-muted-foreground">
+          Nhiệm vụ này không áp dụng cho vai trò của bạn.
+        </div>
+      )}
 
       <Link
         href={`/tasks/${detail.id}/proxy`}

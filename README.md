@@ -1,6 +1,6 @@
 # Nhiệm Vụ Mỗi Ngày
 
-Web app vận hành nội bộ theo phân cấp `Khu vực trưởng > Địa Vực trưởng > Nhóm trưởng > Thành viên`. Đăng nhập bằng Telegram WebApp, chạy trên Next.js App Router + MongoDB.
+Web app vận hành nội bộ theo phân cấp `KVT > ĐV > NT > Thành viên`. Đăng nhập bằng Telegram WebApp, chạy trên Next.js App Router + MongoDB.
 
 ## Stack
 
@@ -55,7 +55,7 @@ npm run dev
 
 ## Vai trò & trạng thái
 
-- Roles: `REGIONAL_LEAD`, `ZONE_LEAD`, `TEAM_LEAD`, `MEMBER`
+- Roles: `REGIONAL_LEAD`, `ZONE_LEAD`, `TEAM_LEAD`, `NGV`, `MEMBER`
 - Trạng thái user: `ACTIVE`, `INACTIVE`, `PENDING`
 - Scope template: `REGION`, `ZONE`, `TEAM`
 

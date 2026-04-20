@@ -6,6 +6,7 @@ import {
   buildReminderMarkup,
   safeSendTelegramMessage,
 } from "@/lib/telegram-bot";
+import { safeSendWebPush } from "@/lib/notifications/web-push";
 import {
   getReminderCandidates,
   markReminderSent,
@@ -46,6 +47,13 @@ async function run(request: Request) {
     } else {
       failed += 1;
     }
+
+    await safeSendWebPush(reminder.userId, {
+      title: "Nhắc nhiệm vụ",
+      body: reminder.text,
+      url: `/tasks/${reminder.taskId}`,
+      tag: `reminder-${reminder.taskId}`,
+    });
   }
 
   await markReminderSent(dateKey, succeeded);

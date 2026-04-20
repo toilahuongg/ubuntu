@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
 import type { SessionUser } from "@/lib/domain";
 import { canManageTasks } from "@/lib/permissions";
+import { DEFAULT_TASK_TYPE } from "@/lib/tasks/constants";
 import {
   createTask,
   deleteTask,
@@ -43,11 +44,12 @@ export async function createTaskAction(
       lateWindowDays: Number(formData.get("lateWindowDays") ?? 7),
       isActive: formData.get("isActive") === "true",
       taskType:
-        (formData.get("taskType") as string | null) ?? "MONTHLY_PER_MEMBER",
+        (formData.get("taskType") as string | null) ?? DEFAULT_TASK_TYPE,
       targetCount:
         rawTargetCount != null && rawTargetCount !== ""
           ? Number(rawTargetCount)
           : undefined,
+      targetRoles: formData.getAll("targetRoles").map(String),
       submissionMessage: (formData.get("submissionMessage") as string) ?? "",
       completionMessage: (formData.get("completionMessage") as string) ?? "",
     });
@@ -76,6 +78,7 @@ export async function updateTaskAction(
         rawTargetCount != null && rawTargetCount !== ""
           ? Number(rawTargetCount)
           : undefined,
+      targetRoles: formData.getAll("targetRoles").map(String),
       submissionMessage: (formData.get("submissionMessage") as string) ?? "",
       completionMessage: (formData.get("completionMessage") as string) ?? "",
     });

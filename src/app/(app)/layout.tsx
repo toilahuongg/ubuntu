@@ -33,6 +33,31 @@ export default async function AppLayout({
     redirect("/login?error=Tài+khoản+đã+bị+khóa");
   }
 
+  // Session JWT is signed at login and not auto-updated when an admin edits
+  // the user afterwards. When the session is missing a scope but the DB has
+  // newer assignments, re-sign the cookie so dashboard scope filters work.
+  // Only probes the DB when the session looks under-scoped for its role to
+  // avoid an extra query on every request.
+  const underScoped =
+    !session.teamId ||
+    (session.role !== "TEAM_LEAD" && !session.zoneId) ||
+    ((session.role === "MEMBER" ||
+      session.role === "NGV" ||
+      session.role === "REGIONAL_LEAD") &&
+      !session.regionId);
+  if (underScoped) {
+    const fresh = await refreshSessionUser(session.id);
+    if (
+      fresh &&
+      (fresh.teamId !== session.teamId ||
+        fresh.zoneId !== session.zoneId ||
+        fresh.regionId !== session.regionId ||
+        fresh.role !== session.role)
+    ) {
+      redirect("/api/session/refresh?next=/dashboard");
+    }
+  }
+
   const equippedMap = await getEquippedPayloadsForUsers([session.id]);
   const rawEquipped = equippedMap.get(session.id);
   const equippedView = rawEquipped ? serializeEquipped(rawEquipped) : null;

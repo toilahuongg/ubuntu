@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BarChart3,
   Layers,
   LayoutDashboard,
   MapPin,
-  Sparkles,
   Trophy,
   User,
   Settings,
@@ -44,9 +44,10 @@ const NAV_ITEMS: NavItem[] = [
     icon: Trophy,
   },
   {
-    href: "/shop",
-    label: "Cửa hàng",
-    icon: Sparkles,
+    href: "/analytics",
+    label: "Phân tích",
+    icon: BarChart3,
+    roles: ["TEAM_LEAD", "ZONE_LEAD", "REGIONAL_LEAD"],
   },
   {
     href: "/profile",
