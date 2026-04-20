@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, Clock, Plus } from "lucide-react";
+import { Check, ChevronDown, Clock, Plus, X } from "lucide-react";
 
 import { submitTaskAction } from "@/app/(app)/tasks/actions";
 import { ROLE_LABELS } from "@/lib/domain";
+import { isDailyTaskType } from "@/lib/tasks/constants";
 import type {
   DashboardRosterEntry,
   TaskCard,
@@ -120,8 +121,12 @@ function TaskRow({
 
   function handleSubmit() {
     setError(null);
+    if (isPending || card.status === "LOCKED") return;
     startTransition(async () => {
-      const result = await submitTaskAction(card.id, memberId);
+      const result =
+        isDailyTaskType(card.taskType) && completionCount > 0
+          ? await submitTaskAction(card.id, memberId, undefined, 0, "set")
+          : await submitTaskAction(card.id, memberId);
       if (result.ok) {
         router.refresh();
       } else {
@@ -176,8 +181,12 @@ function TaskRow({
               <div className="h-3 w-3 animate-spin rounded-full border-2 border-foreground/30 border-t-foreground" />
             ) : isDone ? (
               <>
-                <Plus className="h-3 w-3" />
-                Nộp thêm
+                {isDailyTaskType(card.taskType) ? (
+                  <X className="h-3 w-3" />
+                ) : (
+                  <Plus className="h-3 w-3" />
+                )}
+                {isDailyTaskType(card.taskType) ? "Bỏ tick" : "Nộp thêm"}
               </>
             ) : (
               <>

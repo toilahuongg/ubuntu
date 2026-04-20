@@ -27,8 +27,11 @@ export function SubmitSection({
 
   function handleSubmit() {
     setError(null);
+    if (submitDisabled) return;
     startTransition(async () => {
-      const result = await submitTaskAction(taskId, subjectUserId);
+      const result = alreadySubmittedToday
+        ? await submitTaskAction(taskId, subjectUserId, undefined, 0, "set")
+        : await submitTaskAction(taskId, subjectUserId);
       if (result.ok) {
         router.refresh();
       } else {
@@ -41,7 +44,14 @@ export function SubmitSection({
   const isCompleted = status === "COMPLETED";
   const isDaily = isDailyTaskType(taskType);
   const alreadySubmittedToday = isDaily && myCompletionCount > 0;
-  const submitDisabled = isPending || isLocked || alreadySubmittedToday;
+  const submitDisabled = isPending || (isLocked && !alreadySubmittedToday);
+  const submitLabel = isCompleted
+    ? "Đã hoàn thành"
+    : alreadySubmittedToday
+      ? "Bỏ hoàn thành hôm nay"
+      : isLocked
+      ? "Đã khoá"
+      : "Nộp nhanh hôm nay";
 
   return (
     <div className="glass-card p-4 space-y-4">
@@ -89,13 +99,7 @@ export function SubmitSection({
         ) : (
           <>
             <Send className="h-4 w-4" aria-hidden />
-            {isCompleted
-              ? "Đã hoàn thành"
-              : isLocked
-                ? "Đã khoá"
-                : alreadySubmittedToday
-                  ? "Đã nộp hôm nay"
-                  : "Nộp nhanh hôm nay"}
+            {submitLabel}
           </>
         )}
       </button>

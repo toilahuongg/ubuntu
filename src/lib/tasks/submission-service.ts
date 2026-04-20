@@ -100,8 +100,9 @@ export async function saveSubmission(
   const taskType = normalizeTaskType(taskRaw.taskType);
   const isDailyTask = isDailyTaskType(taskType);
   const count = isDailyTask ? Math.min(1, requestedCount) : requestedCount;
+  const isClearingSubmission = mode === "set" && count === 0;
 
-  if (taskType === "COUNT_TOTAL" && taskRaw.completedAt) {
+  if (taskType === "COUNT_TOTAL" && taskRaw.completedAt && !isClearingSubmission) {
     throw new Error("Nhiệm vụ đã hoàn thành — không thể nộp thêm.");
   }
 
@@ -163,6 +164,92 @@ export async function saveSubmission(
         };
       }
       await SubmissionModel.deleteOne(filter, session ? { session } : undefined);
+
+      let newLevel: number | null = null;
+      let leveledUp = false;
+      if (expReward > 0 || pointReward > 0) {
+        if (expReward > 0) {
+          await XpTransactionModel.create(
+            [
+              {
+                amount: -expReward,
+                description: `Huỷ hoàn thành: ${taskRaw.title}`,
+                source: "task_completion",
+                sourceId: taskRaw._id,
+                userId: subjectRaw._id,
+              },
+            ],
+            session ? { session } : undefined,
+          );
+        }
+        if (pointReward > 0) {
+          await PointTransactionModel.create(
+            [
+              {
+                amount: -pointReward,
+                description: `Huỷ thưởng nhiệm vụ: ${taskRaw.title}`,
+                source: "task_reward",
+                sourceId: taskRaw._id,
+                userId: subjectRaw._id,
+              },
+            ],
+            session ? { session } : undefined,
+          );
+        }
+
+        let updatedUser = (await UserModel.findByIdAndUpdate(
+          subjectRaw._id,
+          {
+            $inc: {
+              totalXp: -expReward,
+              pointBalance: -pointReward,
+            },
+          },
+          { new: true, session },
+        ).lean()) as UserRecord | null;
+
+        if (
+          updatedUser &&
+          (updatedUser.totalXp < 0 ||
+            ((updatedUser as UserRecord & { pointBalance?: number })
+              .pointBalance ?? 0) < 0)
+        ) {
+          updatedUser = (await UserModel.findByIdAndUpdate(
+            subjectRaw._id,
+            {
+              $max: {
+                totalXp: 0,
+                pointBalance: 0,
+              },
+            },
+            { new: true, session },
+          ).lean()) as UserRecord | null;
+        }
+
+        if (updatedUser) {
+          newLevel = getLevelFromXp(updatedUser.totalXp);
+          if (newLevel !== updatedUser.level) {
+            leveledUp = newLevel > updatedUser.level;
+            await UserModel.updateOne(
+              { _id: subjectRaw._id },
+              { $set: { level: newLevel } },
+              session ? { session } : undefined,
+            );
+          }
+        }
+      }
+
+      if (taskType === "COUNT_TOTAL" && taskRaw.targetCount) {
+        const total = await sumTaskCompletions(taskRaw._id.toString());
+        if (total < taskRaw.targetCount) {
+          await TaskModel.updateOne(
+            { _id: taskRaw._id },
+            { $set: { completedAt: null } },
+            session ? { session } : undefined,
+          );
+        }
+      }
+
       await AuditLogModel.create(
         [
           {
@@ -180,9 +267,9 @@ export async function saveSubmission(
         submissionId: existing._id.toString(),
         completionCount: 0,
         isFirstSubmission: false,
-        xpAwarded: 0,
-        newLevel: null,
-        leveledUp: false,
+        xpAwarded: -expReward,
+        newLevel,
+        leveledUp,
         taskJustCompleted: false,
       };
     }

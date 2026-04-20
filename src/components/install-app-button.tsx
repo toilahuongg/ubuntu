@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Download, Share } from "lucide-react";
 
 type BeforeInstallPromptEvent = Event & {
@@ -11,22 +11,35 @@ type BeforeInstallPromptEvent = Event & {
 export function InstallAppButton() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
   const [showIOSHint, setShowIOSHint] = useState(false);
+
+  const isStandalone = useSyncExternalStore(
+    () => () => {},
+    () => {
+      if (typeof window === "undefined") return false;
+
+      return (
+        window.matchMedia("(display-mode: standalone)").matches ||
+        // @ts-expect-error iOS Safari-specific
+        window.navigator.standalone === true
+      );
+    },
+    () => false,
+  );
+
+  const isIOS = useSyncExternalStore(
+    () => () => {},
+    () => {
+      if (typeof window === "undefined") return false;
+
+      const ua = window.navigator.userAgent.toLowerCase();
+      return /iphone|ipad|ipod/.test(ua) && !/crios|fxios/.test(ua);
+    },
+    () => false,
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      // @ts-expect-error iOS Safari-specific
-      window.navigator.standalone === true;
-    setIsStandalone(standalone);
-
-    const ua = window.navigator.userAgent.toLowerCase();
-    const ios = /iphone|ipad|ipod/.test(ua) && !/crios|fxios/.test(ua);
-    setIsIOS(ios);
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
@@ -55,7 +68,6 @@ export function InstallAppButton() {
 
   // Hide inside Telegram WebApp — install is irrelevant there.
   if (typeof window !== "undefined" && "Telegram" in window) {
-    // @ts-expect-error telegram global
     if (window.Telegram?.WebApp?.initData) return null;
   }
 

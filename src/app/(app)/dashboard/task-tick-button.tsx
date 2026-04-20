@@ -25,8 +25,10 @@ export function TaskTickButton({
   const [error, setError] = useState<string | null>(null);
 
   const isLocked = status === "LOCKED";
-  const isDone = myCompletionCount > 0 || status === "COMPLETED";
-  const disabled = isPending || isLocked || isDone || isGoalComplete;
+  const isDone = myCompletionCount > 0;
+  const isTaskCompleted = status === "COMPLETED";
+  const disabled =
+    isPending || isLocked || isGoalComplete || (isTaskCompleted && !isDone);
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -34,7 +36,9 @@ export function TaskTickButton({
     if (disabled) return;
     setError(null);
     startTransition(async () => {
-      const result = await submitTaskAction(taskId, subjectUserId);
+      const result = isDone
+        ? await submitTaskAction(taskId, subjectUserId, undefined, 0, "set")
+        : await submitTaskAction(taskId, subjectUserId);
       if (result.ok) {
         router.refresh();
       } else {
@@ -44,12 +48,12 @@ export function TaskTickButton({
   }
 
   const label = isDone
-    ? "Đã hoàn thành"
+    ? "Bỏ hoàn thành"
     : isGoalComplete
       ? "Đã đạt mục tiêu"
-    : isLocked
-      ? "Đã khoá"
-      : "Đánh dấu hoàn thành";
+      : isLocked || isTaskCompleted
+        ? "Đã khoá"
+        : "Đánh dấu hoàn thành";
 
   if (isGoalComplete) {
     return <div className="h-9 w-9 shrink-0" aria-hidden />;
@@ -66,7 +70,7 @@ export function TaskTickButton({
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
           isDone
             ? "border-primary bg-primary text-background"
-            : isLocked
+            : isLocked || isTaskCompleted
               ? "border-border bg-muted text-muted-foreground"
               : "border-border bg-background hover:border-primary hover:bg-primary/10"
         } ${isPending ? "opacity-70" : ""} disabled:cursor-not-allowed`}

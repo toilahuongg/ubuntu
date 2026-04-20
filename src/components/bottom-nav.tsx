@@ -45,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: "/analytics",
-    label: "Phân tích",
+    label: "Điều hành",
     icon: BarChart3,
     roles: ["TEAM_LEAD", "ZONE_LEAD", "REGIONAL_LEAD"],
   },
