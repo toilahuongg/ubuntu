@@ -6,7 +6,7 @@ import { Plus, X } from "lucide-react";
 import { saveUserAction } from "@/app/(app)/actions";
 import { ROLE_LABELS, ROLES } from "@/lib/domain";
 import type { Role } from "@/lib/domain";
-import { FormError } from "./_shared";
+import { FormError, FormSuccess } from "./_shared";
 
 type Team = { id: string; name: string };
 type Zone = { id: string; name: string; teamId: string; teamName?: string };
@@ -30,6 +30,7 @@ export function CreateUserForm({
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [role, setRole] = useState<Role>("MEMBER");
   const [teamId, setTeamId] = useState("");
   const [zoneId, setZoneId] = useState("");
@@ -61,6 +62,8 @@ export function CreateUserForm({
   }
 
   function handleSubmit(formData: FormData) {
+    setError(null);
+    setSuccess(null);
     startTransition(async () => {
       const result = await saveUserAction(formData);
       if (!result.ok) {
@@ -68,6 +71,7 @@ export function CreateUserForm({
         return;
       }
       setError(null);
+      setSuccess("Đã tạo người dùng thành công.");
       setIsOpen(false);
       setRole("MEMBER");
       setTeamId("");
@@ -78,18 +82,26 @@ export function CreateUserForm({
 
   if (!isOpen) {
     return (
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        Thêm người dùng
-      </button>
+      <div className="space-y-2">
+        {success && (
+          <FormSuccess message={success} onDismiss={() => setSuccess(null)} />
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setSuccess(null);
+            setIsOpen(true);
+          }}
+          className="flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Thêm người dùng
+        </button>
+      </div>
     );
   }
 
-  const needsTeam = role === "TEAM_LEAD";
+  const needsTeam = role === "TEAM_LEAD" || role === "ZONE_LEAD" || role === "REGIONAL_LEAD" || role === "NGV" || role === "MEMBER";
   const needsZone = role === "ZONE_LEAD";
   const needsRegion =
     role === "REGIONAL_LEAD" || role === "NGV" || role === "MEMBER";
@@ -144,10 +156,10 @@ export function CreateUserForm({
           Nhóm
         </label>
         <select
-          name={needsTeam ? "teamId" : undefined}
+          name={needsTeam || role === "ADMIN" ? "teamId" : undefined}
           value={teamId}
           onChange={(e) => onTeamChange(e.target.value)}
-          required
+          required={needsTeam || needsZone || needsRegion}
           className="form-select"
         >
           <option value="">Chọn nhóm</option>

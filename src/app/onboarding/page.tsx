@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 
@@ -46,9 +47,18 @@ export default async function OnboardingPendingPage() {
           </div>
         </div>
 
-        <div className="glass-card p-5">
+        <div className="glass-card space-y-3 p-5">
           <p className="text-center text-sm text-muted-foreground">
             Bạn sẽ có thể truy cập ứng dụng ngay khi được phê duyệt.
+          </p>
+          <Link
+            href="/api/session/refresh?next=/dashboard"
+            className="btn-gradient flex h-10 w-full items-center justify-center text-sm"
+          >
+            Kiểm tra lại trạng thái
+          </Link>
+          <p className="text-center text-xs text-muted-foreground">
+            Nếu vừa được duyệt, bấm nút trên để vào ứng dụng ngay.
           </p>
         </div>
 

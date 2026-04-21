@@ -229,10 +229,21 @@ export function ShopClient({
       ) : null}
 
       {filtered.length === 0 ? (
-        <div className="glass-card py-10 text-center text-sm text-muted-foreground">
-          {tab === "inventory"
-            ? "Bạn chưa sở hữu trang bị nào."
-            : "Chưa có trang bị nào trong danh mục này."}
+        <div className="glass-card space-y-3 py-8 text-center text-sm text-muted-foreground">
+          <p>
+            {tab === "inventory"
+              ? "Bạn chưa sở hữu trang bị nào."
+              : "Chưa có trang bị nào trong danh mục này."}
+          </p>
+          {slotFilter !== "ALL" ? (
+            <button
+              type="button"
+              onClick={() => setSlotFilter("ALL")}
+              className="mx-auto inline-flex h-9 items-center justify-center rounded-lg border border-border bg-overlay-subtle px-3 text-xs font-medium text-foreground transition-colors hover:bg-overlay-medium"
+            >
+              Xem tất cả danh mục
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

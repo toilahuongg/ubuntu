@@ -20,13 +20,16 @@ export function MonthlyGoalForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [value, setValue] = useState(currentGoal?.toString() ?? "");
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    setSuccess(null);
     startTransition(async () => {
       const result = await setMonthlyGoalAction(formData);
       if (result.ok) {
+        setSuccess(currentGoal ? "Đã cập nhật mục tiêu tháng." : "Đã đặt mục tiêu tháng.");
         router.refresh();
       } else {
         setError(result.error);
@@ -70,6 +73,7 @@ export function MonthlyGoalForm({
           {error}
         </p>
       )}
+      {success && !error && <p className="text-xs text-primary">{success}</p>}
     </form>
   );
 }

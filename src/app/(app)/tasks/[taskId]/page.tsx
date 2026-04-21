@@ -203,12 +203,17 @@ function ProgressBar({
 }) {
   const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0;
   return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-overlay-subtle">
+    <div
+      className="h-2 w-full overflow-hidden rounded-full bg-overlay-subtle"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={pct}
+      aria-label={`Tiến độ ${pct}%`}
+    >
       <div
         className="h-full rounded-full bg-primary transition-all"
         style={{ width: `${pct}%` }}
-        aria-valuenow={pct}
-        role="progressbar"
       />
     </div>
   );

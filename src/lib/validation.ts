@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import { ROLES } from "@/lib/domain";
+import { TASK_TARGET_ROLES } from "@/lib/domain";
 import { DEFAULT_TASK_TYPE, TASK_TYPES } from "@/lib/tasks/constants";
 
 const targetRolesSchema = z
-  .array(z.enum(ROLES))
+  .array(z.enum(TASK_TARGET_ROLES))
   .min(1, "Vui lòng chọn ít nhất một vai trò nhận nhiệm vụ.");
 
 export const taskInputSchema = z

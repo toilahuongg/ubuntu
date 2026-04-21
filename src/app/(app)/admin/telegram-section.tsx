@@ -42,6 +42,15 @@ function toEntity(doc: HasTelegram) {
 async function loadScope(session: SessionUser) {
   await connectToDatabase();
 
+  if (session.role === "ADMIN") {
+    const [teams, zones, regions] = await Promise.all([
+      TeamModel.find().sort({ name: 1 }).lean() as Promise<TeamRecord[]>,
+      ZoneModel.find().sort({ name: 1 }).lean() as Promise<ZoneRecord[]>,
+      RegionModel.find().sort({ name: 1 }).lean() as Promise<RegionRecord[]>,
+    ]);
+    return { teams, zones, regions };
+  }
+
   if (session.role === "TEAM_LEAD" && session.teamId) {
     const teamObjectId = toObjectId(session.teamId);
     const [teams, zones, regions] = await Promise.all([

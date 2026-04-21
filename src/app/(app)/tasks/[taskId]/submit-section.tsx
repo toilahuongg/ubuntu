@@ -24,15 +24,22 @@ export function SubmitSection({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   function handleSubmit() {
     setError(null);
+    setSuccess(null);
     if (submitDisabled) return;
     startTransition(async () => {
       const result = alreadySubmittedToday
         ? await submitTaskAction(taskId, subjectUserId, undefined, 0, "set")
         : await submitTaskAction(taskId, subjectUserId);
       if (result.ok) {
+        setSuccess(
+          alreadySubmittedToday
+            ? "Đã bỏ hoàn thành hôm nay."
+            : "Đã nộp hoàn thành hôm nay.",
+        );
         router.refresh();
       } else {
         setError(result.error);
@@ -80,6 +87,8 @@ export function SubmitSection({
           {error}
         </p>
       )}
+
+      {success && !error && <p className="text-xs text-primary">{success}</p>}
 
       <button
         type="button"

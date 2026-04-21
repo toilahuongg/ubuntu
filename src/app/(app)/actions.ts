@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
-import type { SessionUser } from "@/lib/domain";
-import { canAccessManagement } from "@/lib/permissions";
+import type { Role, SessionUser } from "@/lib/domain";
+import { canAccessManagement, isAdmin } from "@/lib/permissions";
 import {
   approveUser,
   bulkApproveUsers,
@@ -27,10 +27,8 @@ import {
 
 export type { ActionResult } from "@/lib/actions/result";
 
-// A TEAM_LEAD is scoped to a single team (see permissions.ts). Any mutation
-// that references a team/zone/region MUST verify ownership so one lead
-// cannot create or rename structures in another lead's team by guessing IDs.
 async function assertOwnsTeam(session: SessionUser, teamId: string) {
+  if (isAdmin(session)) return;
   if (!session.teamId || session.teamId !== teamId) {
     throw new Error("Bạn chỉ có quyền thao tác trên Nhóm của mình.");
   }
@@ -87,7 +85,10 @@ export async function bulkApproveUsersAction(
 
 export async function createTeamAction(formData: FormData): Promise<ActionResult> {
   return runAction(async () => {
-    await requireManagementUser();
+    const session = await requireManagementUser();
+    if (!isAdmin(session)) {
+      throw new Error("Chỉ ADMIN mới được tạo Nhóm mới.");
+    }
     const name = formData.get("name") as string;
     const code = formData.get("code") as string;
     await createTeam(name, code);
@@ -189,9 +190,17 @@ export async function saveUserAction(formData: FormData): Promise<ActionResult> 
     // Restrict writes to the actor's own team. Zone/region resolution inside
     // saveUser() will cross-check the hierarchy, but we block the request
     // before any DB write so an attacker can't probe foreign IDs.
-    const targetTeamId = (formData.get("teamId") as string) || "";
+    const userId = (formData.get("userId") as string) || undefined;
+    const role = formData.get("role") as Role;
+
+    let targetTeamId = (formData.get("teamId") as string) || "";
     const targetZoneId = (formData.get("zoneId") as string) || "";
     const targetRegionId = (formData.get("regionId") as string) || "";
+
+    if (role === "ADMIN" && userId === session.id && !targetTeamId && session.teamId) {
+      targetTeamId = session.teamId;
+    }
+
     if (targetTeamId) await assertOwnsTeam(session, targetTeamId);
     if (targetZoneId) await assertOwnsZone(session, targetZoneId);
     if (targetRegionId) await assertOwnsRegion(session, targetRegionId);
@@ -200,16 +209,11 @@ export async function saveUserAction(formData: FormData): Promise<ActionResult> 
       fullName: formData.get("fullName") as string,
       gender: (formData.get("gender") as string) || undefined,
       regionId: (formData.get("regionId") as string) || undefined,
-      role: formData.get("role") as
-        | "TEAM_LEAD"
-        | "ZONE_LEAD"
-        | "REGIONAL_LEAD"
-        | "NGV"
-        | "MEMBER",
+      role,
       status: formData.get("status") as "ACTIVE" | "INACTIVE" | "PENDING",
-      teamId: (formData.get("teamId") as string) || undefined,
-      userId: (formData.get("userId") as string) || undefined,
-      zoneId: (formData.get("zoneId") as string) || undefined,
+      teamId: targetTeamId || undefined,
+      userId,
+      zoneId: targetZoneId || undefined,
     });
 
     revalidatePath("/admin");

@@ -23,6 +23,7 @@ export function TaskTickButton({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const isLocked = status === "LOCKED";
   const isDone = myCompletionCount > 0;
@@ -35,11 +36,13 @@ export function TaskTickButton({
     e.stopPropagation();
     if (disabled) return;
     setError(null);
+    setSuccess(null);
     startTransition(async () => {
       const result = isDone
         ? await submitTaskAction(taskId, subjectUserId, undefined, 0, "set")
         : await submitTaskAction(taskId, subjectUserId);
       if (result.ok) {
+        setSuccess(isDone ? "Đã bỏ hoàn thành." : "Đã đánh dấu hoàn thành.");
         router.refresh();
       } else {
         setError(result.error);
@@ -84,9 +87,12 @@ export function TaskTickButton({
         )}
       </button>
       {error && (
-        <span role="alert" className="sr-only">
+        <p role="alert" className="mt-1 text-center text-[11px] text-destructive">
           {error}
-        </span>
+        </p>
+      )}
+      {success && !error && (
+        <p className="mt-1 text-center text-[11px] text-primary">{success}</p>
       )}
     </div>
   );

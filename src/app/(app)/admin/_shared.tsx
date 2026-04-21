@@ -101,3 +101,31 @@ export function FormError({
     </div>
   );
 }
+
+export function FormSuccess({
+  message,
+  onDismiss,
+}: {
+  message: string;
+  onDismiss?: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-[12px] text-primary"
+    >
+      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+      <span className="flex-1">{message}</span>
+      {onDismiss && (
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Đóng"
+          className="shrink-0 cursor-pointer rounded p-0.5 hover:bg-primary/20"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+}

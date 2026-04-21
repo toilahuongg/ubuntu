@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
+  Ellipsis,
   Layers,
   LayoutDashboard,
   MapPin,
+  Settings,
   Trophy,
   User,
-  Settings,
 } from "lucide-react";
 import type { Role } from "@/lib/domain";
 
@@ -47,7 +49,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/analytics",
     label: "Điều hành",
     icon: BarChart3,
-    roles: ["TEAM_LEAD", "ZONE_LEAD", "REGIONAL_LEAD"],
+    roles: ["ZONE_LEAD", "REGIONAL_LEAD"],
   },
   {
     href: "/profile",
@@ -58,16 +60,74 @@ const NAV_ITEMS: NavItem[] = [
     href: "/admin",
     label: "Quản lý",
     icon: Settings,
-    roles: ["TEAM_LEAD", "ZONE_LEAD", "REGIONAL_LEAD"],
+    roles: ["ADMIN", "TEAM_LEAD", "ZONE_LEAD", "REGIONAL_LEAD"],
   },
 ];
 
+const CORE_HREFS = ["/dashboard", "/leaderboard", "/profile"];
+const EXTRA_PRIORITIES = ["/zone", "/region", "/analytics", "/admin"];
+
 export function BottomNav({ role }: { role: Role }) {
   const pathname = usePathname();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   const visibleItems = NAV_ITEMS.filter(
     (item) => !item.roles || item.roles.includes(role),
   );
+
+  const { primaryItems, overflowItems } = useMemo(() => {
+    if (visibleItems.length <= 5) {
+      return { primaryItems: visibleItems, overflowItems: [] as NavItem[] };
+    }
+
+    const primary: NavItem[] = [];
+
+    for (const href of CORE_HREFS) {
+      const item = visibleItems.find((entry) => entry.href === href);
+      if (item) primary.push(item);
+    }
+
+    for (const href of EXTRA_PRIORITIES) {
+      if (primary.length >= 4) break;
+      const item = visibleItems.find((entry) => entry.href === href);
+      if (item && !primary.some((entry) => entry.href === item.href)) {
+        primary.push(item);
+      }
+    }
+
+    const overflow = visibleItems.filter(
+      (item) => !primary.some((entry) => entry.href === item.href),
+    );
+
+    return { primaryItems: primary, overflowItems: overflow };
+  }, [visibleItems]);
+
+  const isMoreActive = overflowItems.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/"),
+  );
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (!moreRef.current) return;
+      if (!moreRef.current.contains(event.target as Node)) {
+        setIsMoreOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsMoreOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   return (
     <nav
@@ -78,8 +138,8 @@ export function BottomNav({ role }: { role: Role }) {
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-gradient-to-t from-overlay-subtle via-transparent to-transparent"
       />
-      <div className="relative mx-auto flex max-w-2xl items-center justify-around py-1">
-        {visibleItems.map((item) => {
+      <div className="relative mx-auto flex max-w-2xl items-center justify-between px-1 py-1">
+        {primaryItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
@@ -88,9 +148,10 @@ export function BottomNav({ role }: { role: Role }) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setIsMoreOpen(false)}
               aria-label={item.label}
               aria-current={isActive ? "page" : undefined}
-              className={`flex min-h-[44px] min-w-[56px] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+              className={`flex min-h-[44px] min-w-[48px] flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                 isActive
                   ? "text-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -99,10 +160,59 @@ export function BottomNav({ role }: { role: Role }) {
               <Icon
                 className={`h-5 w-5 ${isActive ? "text-foreground" : ""}`}
               />
-              {item.label}
+              <span className="max-w-[52px] truncate">{item.label}</span>
             </Link>
           );
         })}
+
+        {overflowItems.length > 0 && (
+          <div className="relative flex-1" ref={moreRef}>
+            <button
+              type="button"
+              onClick={() => setIsMoreOpen((prev) => !prev)}
+              aria-expanded={isMoreOpen}
+              aria-haspopup="menu"
+              aria-label="Mở mục khác"
+              className={`flex min-h-[44px] min-w-[48px] w-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+                isMoreActive || isMoreOpen
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Ellipsis className="h-5 w-5" />
+              <span className="max-w-[52px] truncate">Thêm</span>
+            </button>
+
+            {isMoreOpen && (
+              <div
+                role="menu"
+                className="glass-card absolute bottom-14 right-2 z-50 min-w-40 p-1"
+              >
+                {overflowItems.map((item) => {
+                  const isActive =
+                    pathname === item.href || pathname.startsWith(item.href + "/");
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsMoreOpen(false)}
+                      role="menuitem"
+                      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs transition-colors ${
+                        isActive
+                          ? "bg-overlay-medium text-foreground"
+                          : "text-muted-foreground hover:bg-overlay-subtle hover:text-foreground"
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </nav>
   );

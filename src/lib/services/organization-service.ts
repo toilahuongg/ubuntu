@@ -124,19 +124,30 @@ async function syncLeadAssignments(user: SerializedUser) {
 }
 
 export async function getAdminSnapshot(actor: SessionUser): Promise<AdminSnapshot> {
-  // Defense-in-depth: enforce auth at the service boundary so this cannot
-  // leak the full org graph if a future route forgets to gate the caller.
   if (!canAccessManagement(actor)) {
     throw new Error("Bạn không có quyền xem dữ liệu quản trị.");
   }
 
   await connectToDatabase();
 
+  const teamFilter = actor.role === "TEAM_LEAD" && actor.teamId
+    ? { _id: toObjectId(actor.teamId) }
+    : {};
+  const zoneFilter = actor.role === "TEAM_LEAD" && actor.teamId
+    ? { teamId: toObjectId(actor.teamId) }
+    : {};
+  const regionFilter = actor.role === "TEAM_LEAD" && actor.teamId
+    ? { teamId: toObjectId(actor.teamId) }
+    : {};
+  const userFilter = actor.role === "TEAM_LEAD" && actor.teamId
+    ? { teamId: toObjectId(actor.teamId) }
+    : {};
+
   const [teams, zones, regions, users] = await Promise.all([
-    TeamModel.find().sort({ name: 1 }).lean() as Promise<TeamRecord[]>,
-    ZoneModel.find().sort({ name: 1 }).lean() as Promise<ZoneRecord[]>,
-    RegionModel.find().sort({ name: 1 }).lean() as Promise<RegionRecord[]>,
-    UserModel.find().sort({ createdAt: -1 }).lean() as Promise<UserRecord[]>,
+    TeamModel.find(teamFilter).sort({ name: 1 }).lean() as Promise<TeamRecord[]>,
+    ZoneModel.find(zoneFilter).sort({ name: 1 }).lean() as Promise<ZoneRecord[]>,
+    RegionModel.find(regionFilter).sort({ name: 1 }).lean() as Promise<RegionRecord[]>,
+    UserModel.find(userFilter).sort({ createdAt: -1 }).lean() as Promise<UserRecord[]>,
   ]);
 
   const teamCounts = new Map<string, number>();
@@ -317,6 +328,19 @@ export async function listTeamMembersForViewing(
 export async function listVisibleUsersForActor(actor: SessionUser) {
   await connectToDatabase();
 
+  if (actor.role === "ADMIN") {
+    const users = (await UserModel.find({ status: "ACTIVE" })
+      .sort({ role: 1, fullName: 1 })
+      .lean()) as UserRecord[];
+
+    const result = users.map(serializeUser);
+    if (!result.some((u) => u.id === actor.id)) {
+      const self = await getUserById(actor.id);
+      if (self) result.unshift(self);
+    }
+    return result;
+  }
+
   if (actor.role === "TEAM_LEAD") {
     if (!actor.teamId) {
       // Fail-closed: a TEAM_LEAD with no team scope should not be able to
@@ -481,6 +505,23 @@ async function resolveUserHierarchy(input: {
   zoneId?: string;
   regionId?: string;
 }) {
+  if (input.role === "ADMIN") {
+    if (!input.teamId) {
+      return {
+        regionId: null,
+        teamId: null,
+        zoneId: null,
+      };
+    }
+    const team = (await TeamModel.findById(input.teamId).lean()) as TeamRecord | null;
+    if (!team) throw new Error("Nhóm không tồn tại.");
+    return {
+      regionId: null,
+      teamId: team._id.toString(),
+      zoneId: null,
+    };
+  }
+
   if (
     input.role === "MEMBER" ||
     input.role === "NGV" ||

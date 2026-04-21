@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Minus, Plus, Send, X } from "lucide-react";
+import { CalendarRange, Check, Minus, Plus, Send, X } from "lucide-react";
 
 import type { SessionUser } from "@/lib/domain";
 import { submitTaskAction } from "@/app/(app)/tasks/actions";
@@ -93,6 +93,7 @@ export function ProxySubmitSection({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [count, setCount] = useState<number>(1);
 
@@ -105,12 +106,14 @@ export function ProxySubmitSection({
 
   function handleSubjectChange(subjectId: string) {
     setError(null);
+    setSuccess(null);
     setActiveDate(null);
     router.replace(`/tasks/${taskId}/proxy?subject=${subjectId}`);
   }
 
   function handleSelectDate(dateKey: string) {
     setError(null);
+    setSuccess(null);
     setActiveDate(dateKey);
     setCount(Math.min(maxCount, monthSubmissions[dateKey] ?? 0));
   }
@@ -119,6 +122,7 @@ export function ProxySubmitSection({
     setActiveDate(null);
     setCount(0);
     setError(null);
+    setSuccess(null);
   }
 
   function handleConfirm() {
@@ -126,6 +130,7 @@ export function ProxySubmitSection({
     const dateKey = activeDate;
     const amount = Math.max(0, Math.min(maxCount, Math.floor(count) || 0));
     setError(null);
+    setSuccess(null);
     startTransition(async () => {
       const result = await submitTaskAction(
         taskId,
@@ -135,6 +140,7 @@ export function ProxySubmitSection({
         "set",
       );
       if (result.ok) {
+        setSuccess(amount === 0 ? "Đã đánh dấu chưa nộp." : "Đã lưu dữ liệu nộp.");
         setActiveDate(null);
         setCount(0);
         router.refresh();
@@ -193,6 +199,22 @@ export function ProxySubmitSection({
             </button>
           )}
         </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-overlay-subtle/60 p-3 text-xs text-muted-foreground">
+        <p className="flex items-center gap-1.5 font-medium text-foreground">
+          <CalendarRange className="h-3.5 w-3.5" aria-hidden />
+          Cách nhập bù nhanh
+        </p>
+        <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+          <li>Chọn người cần nộp.</li>
+          <li>Chạm vào ngày trong lịch.</li>
+          <li>
+            {isDaily
+              ? "Đặt 0 hoặc 1, rồi bấm Lưu."
+              : "Nhập số lần, rồi bấm Lưu."}
+          </li>
+        </ol>
       </div>
 
       <p className="text-center text-sm font-semibold">{monthLabel}</p>
@@ -390,6 +412,7 @@ export function ProxySubmitSection({
           {error}
         </p>
       )}
+      {success && !error && <p className="text-xs text-primary">{success}</p>}
 
       {isCompleted && (
         <p className="text-xs text-muted-foreground">

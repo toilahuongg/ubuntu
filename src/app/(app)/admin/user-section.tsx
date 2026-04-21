@@ -314,7 +314,7 @@ function EditUserRow({
     });
   }
 
-  const needsTeam = role === "TEAM_LEAD";
+  const needsTeam = role === "TEAM_LEAD" || role === "ZONE_LEAD" || role === "REGIONAL_LEAD" || role === "NGV" || role === "MEMBER";
   const needsZone = role === "ZONE_LEAD";
   const needsRegion =
     role === "REGIONAL_LEAD" || role === "NGV" || role === "MEMBER";
@@ -388,7 +388,7 @@ function EditUserRow({
           Nhóm
         </label>
         <select
-          name={needsTeam ? "teamId" : undefined}
+          name={needsTeam || role === "ADMIN" ? "teamId" : undefined}
           value={teamId}
           onChange={(e) => onTeamChange(e.target.value)}
           required={needsTeam || needsZone || needsRegion}

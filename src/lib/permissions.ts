@@ -4,6 +4,10 @@ function isMemberLike(user: SessionUser) {
   return user.role === "MEMBER" || user.role === "NGV";
 }
 
+export function isAdmin(user: SessionUser) {
+  return user.role === "ADMIN";
+}
+
 export function isTeamLead(user: SessionUser) {
   return user.role === "TEAM_LEAD";
 }
@@ -17,11 +21,11 @@ export function isRegionalLead(user: SessionUser) {
 }
 
 export function canManageTasks(user: SessionUser) {
-  return user.role === "TEAM_LEAD";
+  return isAdmin(user);
 }
 
 export function canAccessManagement(user: SessionUser) {
-  return isTeamLead(user);
+  return isAdmin(user) || isTeamLead(user);
 }
 
 export function canAccessZoneManagement(user: SessionUser) {
@@ -33,7 +37,6 @@ export function canAccessRegionManagement(user: SessionUser) {
 }
 
 export function canAccessAnalytics(user: SessionUser) {
-  if (user.role === "TEAM_LEAD") return !!user.teamId;
   if (user.role === "ZONE_LEAD") return !!user.zoneId;
   if (user.role === "REGIONAL_LEAD") return !!user.regionId;
   return false;
@@ -44,8 +47,12 @@ export function canViewTeamDashboard(user: SessionUser) {
 }
 
 export function canManageUser(actor: SessionUser, subject: SessionUser) {
-  if (isTeamLead(actor)) {
+  if (isAdmin(actor)) {
     return true;
+  }
+
+  if (isTeamLead(actor)) {
+    return !!actor.teamId && actor.teamId === subject.teamId;
   }
 
   return actor.id === subject.id;
@@ -92,6 +99,7 @@ export function assertCanProxySubmit(actor: SessionUser, subject: SessionUser) {
 }
 
 export function canManageTeamTelegram(actor: SessionUser, teamId: string) {
+  if (isAdmin(actor)) return true;
   return isTeamLead(actor) && !!actor.teamId && actor.teamId === teamId;
 }
 
@@ -99,6 +107,7 @@ export function canManageZoneTelegram(
   actor: SessionUser,
   zone: { id: string; teamId: string },
 ) {
+  if (isAdmin(actor)) return true;
   if (isTeamLead(actor)) {
     return !!actor.teamId && actor.teamId === zone.teamId;
   }
@@ -112,6 +121,7 @@ export function canManageRegionTelegram(
   actor: SessionUser,
   region: { id: string; teamId: string; zoneId: string },
 ) {
+  if (isAdmin(actor)) return true;
   if (isTeamLead(actor)) {
     return !!actor.teamId && actor.teamId === region.teamId;
   }

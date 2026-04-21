@@ -2,6 +2,15 @@ export const APP_NAME = "Ubuntu";
 export const DEFAULT_TIMEZONE = "Asia/Ho_Chi_Minh";
 
 export const ROLES = [
+  "ADMIN",
+  "TEAM_LEAD",
+  "ZONE_LEAD",
+  "REGIONAL_LEAD",
+  "NGV",
+  "MEMBER",
+] as const;
+
+export const TASK_TARGET_ROLES = [
   "TEAM_LEAD",
   "ZONE_LEAD",
   "REGIONAL_LEAD",
@@ -17,16 +26,27 @@ export function isRole(value: unknown): value is Role {
   return typeof value === "string" && (ROLES as readonly string[]).includes(value);
 }
 
-export function normalizeTargetRoles(
-  targetRoles?: readonly string[] | null,
-): Role[] {
-  const roles = (targetRoles ?? []).filter(isRole);
-  if (roles.length === 0) return [...ROLES];
-  return ROLES.filter((role) => roles.includes(role));
+export type TaskTargetRole = (typeof TASK_TARGET_ROLES)[number];
+
+function isTaskTargetRole(value: unknown): value is TaskTargetRole {
+  return (
+    typeof value === "string" &&
+    (TASK_TARGET_ROLES as readonly string[]).includes(value)
+  );
 }
 
-export function targetsAllRoles(targetRoles: readonly Role[]): boolean {
-  return ROLES.every((role) => targetRoles.includes(role));
+export function normalizeTargetRoles(
+  targetRoles?: readonly string[] | null,
+): TaskTargetRole[] {
+  const roles = (targetRoles ?? []).filter(isTaskTargetRole);
+  if (roles.length === 0) return [...TASK_TARGET_ROLES];
+  return TASK_TARGET_ROLES.filter((role) => roles.includes(role));
+}
+
+export function targetsAllRoles(
+  targetRoles: readonly TaskTargetRole[],
+): boolean {
+  return TASK_TARGET_ROLES.every((role) => targetRoles.includes(role));
 }
 
 export const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING"] as const;
@@ -60,6 +80,7 @@ export type SerializedUser = SessionUser & {
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
+  ADMIN: "Admin",
   TEAM_LEAD: "NT",
   ZONE_LEAD: "ĐV",
   REGIONAL_LEAD: "KVT",

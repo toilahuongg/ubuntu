@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
 import { createZoneAction } from "@/app/(app)/actions";
-import { FormError } from "./_shared";
+import { FormError, FormSuccess } from "./_shared";
 
 export function CreateZoneForm({
   teams,
@@ -13,8 +13,11 @@ export function CreateZoneForm({
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   function handleSubmit(formData: FormData) {
+    setError(null);
+    setSuccess(null);
     startTransition(async () => {
       const result = await createZoneAction(formData);
       if (!result.ok) {
@@ -22,20 +25,29 @@ export function CreateZoneForm({
         return;
       }
       setError(null);
+      setSuccess("Đã tạo địa vực thành công.");
       setIsOpen(false);
     });
   }
 
   if (!isOpen) {
     return (
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        Thêm địa vực
-      </button>
+      <div className="space-y-2">
+        {success && (
+          <FormSuccess message={success} onDismiss={() => setSuccess(null)} />
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setSuccess(null);
+            setIsOpen(true);
+          }}
+          className="flex h-9 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Thêm địa vực
+        </button>
+      </div>
     );
   }
 

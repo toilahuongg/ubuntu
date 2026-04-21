@@ -2,9 +2,9 @@ import "server-only";
 
 import {
   normalizeTargetRoles,
-  type Role,
   type SessionUser,
   type SerializedUser,
+  type TaskTargetRole,
 } from "@/lib/domain";
 import {
   createDeadlineAt,
@@ -397,7 +397,7 @@ export type CreateTaskInput = {
   isActive?: boolean;
   taskType?: TaskType;
   targetCount?: number | null;
-  targetRoles: Role[];
+  targetRoles: TaskTargetRole[];
   submissionMessage?: string;
   completionMessage?: string;
 };
@@ -467,7 +467,7 @@ export type UpdateTaskInput = {
   pointReward?: number;
   lateWindowDays?: number;
   targetCount?: number | null;
-  targetRoles: Role[];
+  targetRoles: TaskTargetRole[];
   submissionMessage?: string;
   completionMessage?: string;
 };

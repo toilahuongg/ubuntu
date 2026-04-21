@@ -216,17 +216,7 @@ describe("canProxySubmit", () => {
 });
 
 describe("canAccessAnalytics", () => {
-  it("allows scoped lead roles", () => {
-    expect(
-      canAccessAnalytics({
-        fullName: "Team",
-        id: "team-lead",
-        role: "TEAM_LEAD",
-        status: "ACTIVE",
-        teamId: "team-a",
-      }),
-    ).toBe(true);
-
+  it("allows scoped zone/regional lead roles", () => {
     expect(
       canAccessAnalytics({
         fullName: "Zone",
@@ -251,7 +241,7 @@ describe("canAccessAnalytics", () => {
     ).toBe(true);
   });
 
-  it("rejects members and unscoped leads", () => {
+  it("rejects members and team leads", () => {
     expect(
       canAccessAnalytics({
         fullName: "Member",

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Pencil, X } from "lucide-react";
 
 import { updateProfileAction } from "@/app/(app)/profile/actions";
+import { FormSuccess } from "@/app/(app)/admin/_shared";
 
 type Props = {
   initialFullName: string;
@@ -29,12 +30,15 @@ export function EditProfileForm({
   const [bio, setBio] = useState(initialBio);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   function handleSubmit(formData: FormData) {
     setError(null);
+    setSuccess(null);
     startTransition(async () => {
       const result = await updateProfileAction(formData);
       if (result.ok) {
+        setSuccess("Đã lưu thay đổi hồ sơ.");
         setIsOpen(false);
       } else {
         setError(result.error);
@@ -44,14 +48,22 @@ export function EditProfileForm({
 
   if (!isOpen) {
     return (
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-foreground transition-colors hover:bg-overlay-medium"
-      >
-        <Pencil className="h-4 w-4" />
-        Chỉnh sửa hồ sơ
-      </button>
+      <div className="space-y-2">
+        {success && (
+          <FormSuccess message={success} onDismiss={() => setSuccess(null)} />
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setSuccess(null);
+            setIsOpen(true);
+          }}
+          className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-foreground transition-colors hover:bg-overlay-medium"
+        >
+          <Pencil className="h-4 w-4" />
+          Chỉnh sửa hồ sơ
+        </button>
+      </div>
     );
   }
 
@@ -62,6 +74,7 @@ export function EditProfileForm({
         <button
           type="button"
           onClick={() => setIsOpen(false)}
+          aria-label="Đóng biểu mẫu chỉnh sửa hồ sơ"
           className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground"
         >
           <X className="h-4 w-4" />

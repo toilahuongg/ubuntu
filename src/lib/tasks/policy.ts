@@ -5,6 +5,7 @@ import {
   type Role,
   type SessionUser,
   type TaskScope,
+  type TaskTargetRole,
 } from "@/lib/domain";
 import { getAppTimezone, getTodayDateKey } from "@/lib/dates";
 import { canManageTasks } from "@/lib/permissions";
@@ -14,7 +15,7 @@ export type ScopeContext = {
   teamId: string;
   zoneId: string | null;
   regionId: string | null;
-  targetRoles?: Role[] | null;
+  targetRoles?: TaskTargetRole[] | null;
 };
 
 type UserScope = Pick<SessionUser, "teamId" | "zoneId" | "regionId"> & {
@@ -22,6 +23,9 @@ type UserScope = Pick<SessionUser, "teamId" | "zoneId" | "regionId"> & {
 };
 
 export function resolveActorScope(actor: SessionUser): ScopeContext {
+  if (actor.role === "ADMIN") {
+    throw new Error("Admin không có phạm vi mặc định để tạo nhiệm vụ.");
+  }
   if (actor.role === "REGIONAL_LEAD" && actor.regionId && actor.teamId) {
     return {
       scope: "REGION",

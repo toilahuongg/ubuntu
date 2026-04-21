@@ -1,4 +1,9 @@
-import type { Role, SessionUser, TaskScope } from "@/lib/domain";
+import type {
+  Role,
+  SessionUser,
+  TaskScope,
+  TaskTargetRole,
+} from "@/lib/domain";
 import type { TaskType } from "@/lib/tasks/constants";
 
 export type TaskStatus = "OPEN" | "LOCKED" | "COMPLETED";
@@ -36,7 +41,7 @@ export type TaskSummary = {
   scope: TaskScope;
   taskType: TaskType;
   targetCount: number | null;
-  targetRoles: Role[];
+  targetRoles: TaskTargetRole[];
   submissionMessage: string;
   completionMessage: string;
   completedAt: string | null;
@@ -91,7 +96,7 @@ export type TaskDetail = {
   lateWindowDays: number;
   status: TaskStatus;
   taskType: TaskType;
-  targetRoles: Role[];
+  targetRoles: TaskTargetRole[];
   targetCount: number | null;
   totalAcrossAll: number;
   monthlyGoal: number | null;

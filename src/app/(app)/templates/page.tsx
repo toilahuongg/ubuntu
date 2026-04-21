@@ -27,7 +27,13 @@ export default async function TemplatesPage() {
       ? "REGION"
       : session.role === "ZONE_LEAD"
         ? "ZONE"
-        : "TEAM";
+        : session.role === "TEAM_LEAD"
+          ? "TEAM"
+          : null;
+
+  if (!actorScope) {
+    redirect("/dashboard");
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
