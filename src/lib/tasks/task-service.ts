@@ -598,16 +598,22 @@ export async function toggleTask(
 export async function listTasksForActor(
   actor: SessionUser,
 ): Promise<TaskSummary[]> {
-  if (!actor.teamId) {
-    return [];
-  }
-
   await connectToDatabase();
-  const all = (await TaskModel.find({
-    teamId: toObjectId(actor.teamId),
-  })
-    .sort({ createdAt: -1 })
-    .lean()) as TaskRecord[];
+  const all = (
+    actor.role === "ADMIN"
+      ? await TaskModel.find({}).sort({ createdAt: -1 }).lean()
+      : actor.teamId
+        ? await TaskModel.find({
+            teamId: toObjectId(actor.teamId),
+          })
+            .sort({ createdAt: -1 })
+            .lean()
+        : []
+  ) as TaskRecord[];
+
+  if (actor.role === "ADMIN") {
+    return all.map(mapTask);
+  }
 
   const filtered = all.filter((record) => {
     if (record.scope === "TEAM") return true;

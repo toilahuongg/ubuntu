@@ -167,13 +167,13 @@ export function CosmeticForm({ initial }: { initial: Initial | null }) {
           Hình thức hiển thị
         </p>
         {(slot === "prefix" || slot === "suffix") && (
-          <Field label="Icon (emoji)">
+          <Field label="Icon hoặc file PNG trong public/cosmetics">
             <input
               name="icon"
               value={icon}
               onChange={(e) => setIcon(e.target.value)}
               className={INPUT_CLS}
-              placeholder="👑 ⚔️ 🔥 ✨ 💫…"
+              placeholder="🌟 hoặc /cosmetics/starburst-gold.png"
             />
           </Field>
         )}

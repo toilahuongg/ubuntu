@@ -29,15 +29,43 @@ export function LeaderDashboard({
 }) {
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+        <div className="inline-flex items-center gap-2 rounded-full bg-white/65 px-3 py-1 shadow-sm ring-1 ring-sky-100">
+          <Calendar className="h-4 w-4 text-sky-600" />
           <span>{formatDateLabel(data.date)}</span>
         </div>
-        <span className="rounded-md bg-overlay-subtle px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-foreground/70">
+        <span className="rounded-full bg-sky-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700 ring-1 ring-sky-200/70">
           {SCOPE_LABELS[data.scopeLabel]}
         </span>
       </div>
+
+      <section className="glass-card overflow-hidden">
+        <div
+          className="space-y-2 px-4 py-5 text-sky-950"
+          style={{ background: "var(--gradient-primary)" }}
+        >
+          <div className="flex items-center gap-2 text-sm font-semibold text-sky-900/80">
+            <TrendingUp className="h-4 w-4" />
+            Bảng điều phối hôm nay
+          </div>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-extrabold">Giữ nhịp cho cả đội</h1>
+              <p className="mt-1 text-sm text-sky-950/76">
+                Theo dõi tiến độ nhanh, thấy ngay khu vực nào đang cần kéo lên.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white/72 px-4 py-3 text-right shadow-lg shadow-sky-500/20 ring-1 ring-white/80">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+                Hoàn thành toàn đội
+              </p>
+              <p className="mt-1 text-2xl font-extrabold">
+                {data.highlights.completionPercent}%
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-2 gap-3">
         <StatCard
@@ -69,7 +97,7 @@ export function LeaderDashboard({
           <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             Nhiệm vụ hôm nay
           </h2>
-          <div className="space-y-2">
+          <div className="stagger-children space-y-2">
             {data.cards.map((card) => (
               <div
                 key={card.id}
@@ -92,7 +120,7 @@ export function LeaderDashboard({
                 )}
                 <Link
                   href={`/tasks/${card.id}`}
-                  className="card-hover -m-2 flex min-w-0 flex-1 items-center justify-between rounded-lg p-2 active:bg-overlay-medium active:scale-[0.99]"
+                  className="card-hover -m-2 flex min-w-0 flex-1 items-center justify-between rounded-xl p-2 active:bg-overlay-medium active:scale-[0.99]"
                 >
                   <div className="min-w-0 flex-1">
                     <h3
@@ -120,7 +148,13 @@ export function LeaderDashboard({
                         })}
                       </span>
                       {card.expReward > 0 && (
-                        <span className="font-medium text-foreground/70">
+                        <span
+                          className="rounded-full px-2 py-0.5 font-semibold"
+                          style={{
+                            background: "var(--reward-soft)",
+                            color: "color-mix(in srgb, var(--reward) 72%, black 28%)",
+                          }}
+                        >
                           +{card.expReward} XP
                         </span>
                       )}
@@ -166,11 +200,17 @@ function StatCard({
 }) {
   return (
     <div className="glass-card flex items-center gap-3 p-4">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+      <div
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
+        style={{
+          background: "color-mix(in srgb, var(--accent) 82%, white 18%)",
+          color: "color-mix(in srgb, var(--primary) 72%, black 28%)",
+        }}
+      >
         {icon}
       </div>
       <div>
-        <p className="text-lg font-bold leading-none">{value}</p>
+        <p className="text-lg font-bold leading-none text-slate-900">{value}</p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">{label}</p>
       </div>
     </div>

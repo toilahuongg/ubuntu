@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canAccessAnalytics,
   canAccessManagedAnalyticsScope,
+  canManageTasks,
   canProxySubmit,
 } from "@/lib/permissions";
 
@@ -351,6 +352,83 @@ describe("canAccessManagedAnalyticsScope", () => {
         id: "lead",
         role: "TEAM_LEAD",
         status: "ACTIVE",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("canManageTasks", () => {
+  it("allows admin and scoped management roles", () => {
+    expect(
+      canManageTasks({
+        fullName: "Admin",
+        id: "admin",
+        role: "ADMIN",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canManageTasks({
+        fullName: "Team lead",
+        id: "team-lead",
+        role: "TEAM_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+      }),
+    ).toBe(true);
+
+    expect(
+      canManageTasks({
+        fullName: "Zone lead",
+        id: "zone-lead",
+        role: "ZONE_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+        zoneId: "zone-a",
+      }),
+    ).toBe(true);
+
+    expect(
+      canManageTasks({
+        fullName: "Regional lead",
+        id: "regional-lead",
+        role: "REGIONAL_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+        zoneId: "zone-a",
+        regionId: "region-a",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects unscoped leads and regular roles", () => {
+    expect(
+      canManageTasks({
+        fullName: "Unscoped team lead",
+        id: "team-lead",
+        role: "TEAM_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(false);
+
+    expect(
+      canManageTasks({
+        fullName: "Unscoped zone lead",
+        id: "zone-lead",
+        role: "ZONE_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+      }),
+    ).toBe(false);
+
+    expect(
+      canManageTasks({
+        fullName: "Member",
+        id: "member",
+        role: "MEMBER",
+        status: "ACTIVE",
+        teamId: "team-a",
       }),
     ).toBe(false);
   });

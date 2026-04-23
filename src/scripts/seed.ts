@@ -3,23 +3,28 @@ import mongoose from "mongoose";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   AuditLogModel,
+  PointTransactionModel,
   RegionModel,
   ReminderLogModel,
   SubmissionModel,
   TaskModel,
   TeamModel,
+  UserCosmeticModel,
   UserModel,
   ZoneModel,
 } from "@/lib/models";
+import { seedCosmetics } from "@/scripts/seed-cosmetics";
 
 async function main() {
   await connectToDatabase();
 
   await Promise.all([
     AuditLogModel.deleteMany({}),
+    PointTransactionModel.deleteMany({}),
     ReminderLogModel.deleteMany({}),
     SubmissionModel.deleteMany({}),
     TaskModel.deleteMany({}),
+    UserCosmeticModel.deleteMany({}),
     UserModel.deleteMany({}),
     RegionModel.deleteMany({}),
     ZoneModel.deleteMany({}),
@@ -83,7 +88,11 @@ async function main() {
     })),
   );
 
-  console.log("Seed completed.");
+  const cosmeticSeed = await seedCosmetics();
+
+  console.log(
+    `Seed completed. Cosmetics: ${cosmeticSeed.created} created, ${cosmeticSeed.updated} updated, ${cosmeticSeed.total} total.`,
+  );
   console.table(
     (members as Array<{ fullName: string; role: string; telegramId: number | null; username: string | null }>).map(
       (m) => ({

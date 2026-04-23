@@ -30,9 +30,18 @@ export function ActivityFeed({ activities }: { activities: ActivityEntry[] }) {
                 : "";
 
             return (
-              <li key={entry.id} className="flex items-start gap-3 px-4 py-3">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <CheckCircle2 className="h-4 w-4 text-foreground/80" />
+              <li
+                key={entry.id}
+                className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-white/30"
+              >
+                <div
+                  className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                  style={{
+                    background: "color-mix(in srgb, var(--success-soft) 78%, white 22%)",
+                    color: "color-mix(in srgb, var(--success) 78%, black 22%)",
+                  }}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm leading-snug">
@@ -59,7 +68,10 @@ export function ActivityFeed({ activities }: { activities: ActivityEntry[] }) {
                       {submittedLabel}
                     </span>
                     {entry.expReward > 0 && (
-                      <span className="font-medium text-foreground/70">
+                      <span
+                        className="font-medium"
+                        style={{ color: "color-mix(in srgb, var(--reward) 74%, black 26%)" }}
+                      >
                         +{entry.expReward} XP
                       </span>
                     )}

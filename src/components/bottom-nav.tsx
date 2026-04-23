@@ -152,12 +152,12 @@ export function BottomNav({ role }: { role: Role }) {
               aria-current={isActive ? "page" : undefined}
               className={`flex min-h-[44px] min-w-[48px] flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                 isActive
-                  ? "text-foreground"
+                  ? "bg-sky-50 text-sky-700 shadow-sm ring-1 ring-sky-200/80"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon
-                className={`h-5 w-5 ${isActive ? "text-foreground" : ""}`}
+                className={`h-5 w-5 ${isActive ? "text-sky-600" : ""}`}
               />
               <span className="max-w-[52px] truncate">{item.label}</span>
             </Link>
@@ -174,11 +174,15 @@ export function BottomNav({ role }: { role: Role }) {
               aria-label="Mở mục khác"
               className={`flex min-h-[44px] min-w-[48px] w-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                 isMoreActive || isMoreOpen
-                  ? "text-foreground"
+                  ? "bg-sky-50 text-sky-700 shadow-sm ring-1 ring-sky-200/80"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Ellipsis className="h-5 w-5" />
+              <Ellipsis
+                className={`h-5 w-5 ${
+                  isMoreActive || isMoreOpen ? "text-sky-600" : ""
+                }`}
+              />
               <span className="max-w-[52px] truncate">Thêm</span>
             </button>
 

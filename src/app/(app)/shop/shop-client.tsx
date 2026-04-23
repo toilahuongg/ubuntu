@@ -175,7 +175,7 @@ export function ShopClient({
             Trang bị cho tên của bạn — màu sắc, biểu tượng, hiệu ứng.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full bg-overlay-medium px-3 py-1.5">
+      <div className="flex items-center gap-1.5 rounded-full bg-overlay-medium px-3 py-1.5">
           <Coins className="h-4 w-4 text-amber-300" />
           <span className="text-sm font-bold tabular-nums">
             {balance.toLocaleString("vi-VN")}
@@ -279,7 +279,7 @@ function TabButton({
       onClick={onClick}
       className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
         active
-          ? "bg-foreground text-background"
+          ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
           : "bg-overlay-subtle text-muted-foreground hover:text-foreground"
       }`}
     >
@@ -303,7 +303,7 @@ function FilterChip({
       onClick={onClick}
       className={`rounded-full border px-3 py-1 text-xs transition-colors ${
         active
-          ? "border-foreground bg-overlay-medium text-foreground"
+          ? "border-sky-300 bg-sky-50 text-sky-700"
           : "border-border bg-overlay-subtle text-muted-foreground hover:text-foreground"
       }`}
     >
@@ -392,7 +392,7 @@ function ItemCard({
               type="button"
               disabled={pending}
               onClick={() => onEquip(item.slot, item.id)}
-              className="flex-1 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+              className="btn-gradient flex-1 px-3 py-2 text-xs font-semibold disabled:opacity-50"
             >
               Trang bị
             </button>
@@ -418,7 +418,7 @@ function ItemCard({
             type="button"
             disabled={pending || !item.canAfford}
             onClick={() => onPurchase(item)}
-            className="flex-1 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="btn-gradient flex-1 px-3 py-2 text-xs font-semibold disabled:opacity-50"
           >
             {item.canAfford ? "Mua" : "Không đủ điểm"}
           </button>

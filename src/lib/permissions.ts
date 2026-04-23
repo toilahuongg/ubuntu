@@ -21,7 +21,11 @@ export function isRegionalLead(user: SessionUser) {
 }
 
 export function canManageTasks(user: SessionUser) {
-  return isAdmin(user);
+  if (isAdmin(user)) return true;
+  if (isTeamLead(user)) return !!user.teamId;
+  if (isZoneLead(user)) return !!user.zoneId;
+  if (isRegionalLead(user)) return !!user.regionId;
+  return false;
 }
 
 export function canAccessManagement(user: SessionUser) {

@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  allowedDevOrigins: ["dev2.misoapps.com"],
+  allowedDevOrigins: ["dev2.misoapps.com", "dev.misoapps.com"],
   async headers() {
     return [
       {

@@ -1,7 +1,11 @@
 import "server-only";
 
+import { stat } from "node:fs/promises";
+import path from "node:path";
+
 import { Types } from "mongoose";
 
+import { isCosmeticImageIcon } from "@/lib/cosmetics/icon";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   COSMETIC_RARITIES,
@@ -43,6 +47,29 @@ function validate(input: CosmeticInput): void {
   if (input.unlockLevel !== null && input.unlockLevel < 1) {
     throw new Error("Mốc level không hợp lệ.");
   }
+  const normalizedIcon = input.icon?.trim() || null;
+  if (
+    normalizedIcon &&
+    (input.slot === "prefix" || input.slot === "suffix") &&
+    isCosmeticImageIcon(normalizedIcon) &&
+    !normalizedIcon.startsWith("/cosmetics/")
+  ) {
+    throw new Error("Icon ảnh phải dùng file trong public/cosmetics.");
+  }
+}
+
+async function assertPublicCosmeticIconExists(icon: string | null): Promise<void> {
+  if (!icon || !isCosmeticImageIcon(icon)) return;
+  const relative = icon.startsWith("/") ? icon.slice(1) : icon;
+  const filePath = path.join(process.cwd(), "public", relative);
+  try {
+    const file = await stat(filePath);
+    if (!file.isFile()) {
+      throw new Error("Đường dẫn icon không trỏ tới file.");
+    }
+  } catch {
+    throw new Error("Không tìm thấy file icon trong public.");
+  }
 }
 
 function toPayload(input: CosmeticInput) {
@@ -65,6 +92,7 @@ export async function createCosmetic(
   input: CosmeticInput,
 ): Promise<CosmeticRecord> {
   validate(input);
+  await assertPublicCosmeticIconExists(input.icon?.trim() || null);
   await connectToDatabase();
   const existing = await CosmeticModel.findOne({ code: input.code.trim() });
   if (existing) throw new Error("Mã trang bị đã tồn tại.");
@@ -87,6 +115,7 @@ export async function updateCosmetic(
   input: CosmeticInput,
 ): Promise<CosmeticRecord> {
   validate(input);
+  await assertPublicCosmeticIconExists(input.icon?.trim() || null);
   if (!Types.ObjectId.isValid(id)) throw new Error("ID không hợp lệ.");
   await connectToDatabase();
   const updated = (await CosmeticModel.findByIdAndUpdate(

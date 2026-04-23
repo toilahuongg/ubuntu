@@ -3,6 +3,7 @@ import "server-only";
 import mongoose from "mongoose";
 import { Types } from "mongoose";
 
+import { getCosmeticTextIcon } from "@/lib/cosmetics/icon";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   type CosmeticRecord,
@@ -315,8 +316,8 @@ export async function getDecoratedFullName(
   const map = await getEquippedPayloadsForUsers([userId.toString()]);
   const eq = map.get(userId.toString());
   if (!eq) return fullName;
-  const prefix = eq.prefix?.payload?.icon ?? "";
-  const suffix = eq.suffix?.payload?.icon ?? "";
+  const prefix = getCosmeticTextIcon(eq.prefix?.payload?.icon) ?? "";
+  const suffix = getCosmeticTextIcon(eq.suffix?.payload?.icon) ?? "";
   const left = prefix ? `${prefix} ` : "";
   const right = suffix ? ` ${suffix}` : "";
   return `${left}${fullName}${right}`;

@@ -23,7 +23,9 @@ export default async function TemplatesPage() {
   ]);
 
   const actorScope =
-    session.role === "REGIONAL_LEAD"
+    session.role === "ADMIN"
+      ? null
+      : session.role === "REGIONAL_LEAD"
       ? "REGION"
       : session.role === "ZONE_LEAD"
         ? "ZONE"
@@ -31,17 +33,20 @@ export default async function TemplatesPage() {
           ? "TEAM"
           : null;
 
-  if (!actorScope) {
-    redirect("/dashboard");
-  }
-
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-xl font-bold">Nhiệm Vụ</h1>
       </div>
 
-      <CreateTemplateForm scopeLabel={SCOPE_LABELS[actorScope]} />
+      {actorScope ? (
+        <CreateTemplateForm scopeLabel={SCOPE_LABELS[actorScope]} />
+      ) : (
+        <div className="glass-card p-4 text-sm text-muted-foreground">
+          Admin có thể xem và chỉnh sửa toàn bộ nhiệm vụ. Để tạo mới, hãy dùng
+          tài khoản quản lý đúng phạm vi nhóm, địa vực hoặc khu vực.
+        </div>
+      )}
 
       <section>
         <h2 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">

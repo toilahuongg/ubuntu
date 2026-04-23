@@ -81,6 +81,7 @@ export function canManageTask(
   task: ScopeContext,
 ): boolean {
   if (!canManageTasks(actor)) return false;
+  if (actor.role === "ADMIN") return true;
   if (actor.role === "TEAM_LEAD") {
     return !!actor.teamId && task.teamId === actor.teamId;
   }

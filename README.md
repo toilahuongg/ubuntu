@@ -17,7 +17,7 @@ Web app vận hành nội bộ theo phân cấp `KVT > ĐV > NT > Thành viên`.
 - `src/app/api` — `auth/{telegram,dev-login,logout}`, `telegram/webhook`, `jobs/{daily-occurrences,reminders}`
 - `src/lib/models` — `user`, `region`, `zone`, `team`, `task-template`, `task-occurrence`, `submission`, `xp-transaction`, `audit-log`
 - `src/lib/services` — `auth-service`, `organization-service`, `task-service`, `gamification-service`
-- `src/scripts` — `seed`, `telegram-webhook`, `fix-telegram-index`
+- `src/scripts` — `seed`, `seed-cosmetics`, `telegram-webhook`, `fix-telegram-index`
 
 ## Setup
 
@@ -32,6 +32,12 @@ npm install
 
 ```bash
 npm run seed
+```
+
+Lệnh này sẽ seed cả dữ liệu người dùng mẫu và bộ `cosmetics` mặc định. Nếu chỉ muốn seed lại cosmetics:
+
+```bash
+npm run seed:cosmetics
 ```
 
 4. Chạy app:
@@ -81,7 +87,8 @@ x-cron-secret: <CRON_SECRET>
 | `npm run cron:reminders` | Worker `node-cron` quét reminder mỗi phút theo `APP_TIMEZONE` |
 | `npm run lint` | ESLint |
 | `npm run test` / `test:watch` | Vitest |
-| `npm run seed` | Seed dữ liệu mẫu |
+| `npm run seed` | Seed dữ liệu mẫu + cosmetics mặc định |
+| `npm run seed:cosmetics` | Seed hoặc cập nhật riêng bộ cosmetics |
 | `npm run fix-indexes` | Fix partial index `telegramId` |
 | `npm run tg:webhook:set\|delete\|info` | Quản lý webhook Telegram |
 

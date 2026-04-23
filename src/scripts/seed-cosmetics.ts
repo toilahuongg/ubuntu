@@ -1,3 +1,5 @@
+import { pathToFileURL } from "node:url";
+
 import mongoose from "mongoose";
 
 import { connectToDatabase } from "@/lib/mongoose";
@@ -41,12 +43,12 @@ const ITEMS: SeedItem[] = [
     unlockLevel: null,
   },
   {
-    code: "prefix_dragon",
-    name: "Rồng thiêng",
-    description: "Cấp cao độc quyền.",
+    code: "prefix_galaxy",
+    name: "Ngân hà",
+    description: "Dành cho người chơi chạm tới tầng sao cao hơn.",
     slot: "prefix",
     rarity: "legendary",
-    payload: { icon: "🐉" },
+    payload: { icon: "/cosmetics/galaxy-core.png" },
     cost: null,
     unlockLevel: 20,
   },
@@ -56,7 +58,7 @@ const ITEMS: SeedItem[] = [
     description: "Ngôi sao sáng.",
     slot: "prefix",
     rarity: "common",
-    payload: { icon: "🌟" },
+    payload: { icon: "/cosmetics/starburst-gold.png" },
     cost: 100,
     unlockLevel: null,
   },
@@ -69,6 +71,56 @@ const ITEMS: SeedItem[] = [
     payload: { icon: "🔥" },
     cost: 300,
     unlockLevel: null,
+  },
+  {
+    code: "prefix_shield",
+    name: "Khiên bạc",
+    description: "Vững vàng và bền bỉ.",
+    slot: "prefix",
+    rarity: "common",
+    payload: { icon: "🛡️" },
+    cost: 120,
+    unlockLevel: null,
+  },
+  {
+    code: "prefix_moon",
+    name: "Trăng non",
+    description: "Điềm tĩnh và bí ẩn.",
+    slot: "prefix",
+    rarity: "rare",
+    payload: { icon: "🌙" },
+    cost: 260,
+    unlockLevel: null,
+  },
+  {
+    code: "prefix_lotus",
+    name: "Liên hoa",
+    description: "Thanh nhã nhưng khó bỏ qua.",
+    slot: "prefix",
+    rarity: "epic",
+    payload: { icon: "🪷" },
+    cost: 650,
+    unlockLevel: null,
+  },
+  {
+    code: "prefix_diamond",
+    name: "Sao băng",
+    description: "Một vệt sáng lướt qua là đủ gây chú ý.",
+    slot: "prefix",
+    rarity: "epic",
+    payload: { icon: "/cosmetics/comet-trail.png" },
+    cost: 900,
+    unlockLevel: null,
+  },
+  {
+    code: "prefix_thunder",
+    name: "Tinh vân",
+    description: "Vệt sáng dữ dội giữa khoảng tối của vũ trụ.",
+    slot: "prefix",
+    rarity: "legendary",
+    payload: { icon: "/cosmetics/nebula-violet.png" },
+    cost: null,
+    unlockLevel: 12,
   },
 
   // Suffix
@@ -85,10 +137,10 @@ const ITEMS: SeedItem[] = [
   {
     code: "suffix_comet",
     name: "Sao chổi",
-    description: "Đuôi sao lướt nhanh.",
+    description: "Đuôi sáng kéo dài phía sau tên.",
     slot: "suffix",
     rarity: "rare",
-    payload: { icon: "💫" },
+    payload: { icon: "/cosmetics/comet-orbit.png" },
     cost: 200,
     unlockLevel: null,
   },
@@ -101,6 +153,66 @@ const ITEMS: SeedItem[] = [
     payload: { icon: "🏆" },
     cost: null,
     unlockLevel: 10,
+  },
+  {
+    code: "suffix_leaf",
+    name: "Lá ngọc",
+    description: "Nhẹ mà vẫn nổi bật.",
+    slot: "suffix",
+    rarity: "common",
+    payload: { icon: "🍃" },
+    cost: 120,
+    unlockLevel: null,
+  },
+  {
+    code: "suffix_wave",
+    name: "Thủy triều",
+    description: "Dịu mà có lực.",
+    slot: "suffix",
+    rarity: "rare",
+    payload: { icon: "🌊" },
+    cost: 260,
+    unlockLevel: null,
+  },
+  {
+    code: "suffix_snow",
+    name: "Băng tuyết",
+    description: "Mát lạnh và sắc nét.",
+    slot: "suffix",
+    rarity: "rare",
+    payload: { icon: "❄️" },
+    cost: 280,
+    unlockLevel: null,
+  },
+  {
+    code: "suffix_wings",
+    name: "Quỹ đạo",
+    description: "Một vòng quỹ đạo nhỏ ôm theo tên hiển thị.",
+    slot: "suffix",
+    rarity: "epic",
+    payload: { icon: "/cosmetics/orbit-ring.png" },
+    cost: 750,
+    unlockLevel: null,
+  },
+  {
+    code: "suffix_heart",
+    name: "Tim sao",
+    description: "Nhỏ xinh nhưng đủ làm người khác nhớ.",
+    slot: "suffix",
+    rarity: "epic",
+    payload: { icon: "💖" },
+    cost: 820,
+    unlockLevel: null,
+  },
+  {
+    code: "suffix_medal",
+    name: "Siêu tân tinh",
+    description: "Dấu ấn bùng nổ dành cho hành trình rất dài.",
+    slot: "suffix",
+    rarity: "legendary",
+    payload: { icon: "/cosmetics/supernova-burst.png" },
+    cost: null,
+    unlockLevel: 18,
   },
 
   // Color
@@ -153,6 +265,90 @@ const ITEMS: SeedItem[] = [
     cost: 600,
     unlockLevel: null,
   },
+  {
+    code: "color_emerald",
+    name: "Lục bảo",
+    description: "Xanh ngọc sạch và sang.",
+    slot: "color",
+    rarity: "common",
+    payload: {
+      gradient: ["#00b894", "#55efc4"],
+    },
+    cost: 220,
+    unlockLevel: null,
+  },
+  {
+    code: "color_sakura",
+    name: "Hồng đào",
+    description: "Tone mềm nhưng không nhạt.",
+    slot: "color",
+    rarity: "common",
+    payload: {
+      gradient: ["#ff7eb3", "#ff758c"],
+    },
+    cost: 240,
+    unlockLevel: null,
+  },
+  {
+    code: "color_ocean",
+    name: "Thiên hà lam",
+    description: "Xanh chuyển tầng như dải sáng ngoài không gian.",
+    slot: "color",
+    rarity: "rare",
+    payload: {
+      gradient: ["#36d1dc", "#5b86e5"],
+    },
+    cost: 480,
+    unlockLevel: null,
+  },
+  {
+    code: "color_sunset",
+    name: "Hoàng hôn",
+    description: "Cam đỏ ấm và giàu năng lượng.",
+    slot: "color",
+    rarity: "rare",
+    payload: {
+      gradient: ["#fa709a", "#fee140"],
+    },
+    cost: 520,
+    unlockLevel: null,
+  },
+  {
+    code: "color_amethyst",
+    name: "Tinh vân tím",
+    description: "Màu tím hồng gợi cảm giác của một đám mây sao.",
+    slot: "color",
+    rarity: "epic",
+    payload: {
+      gradient: ["#7f00ff", "#e100ff"],
+    },
+    cost: 880,
+    unlockLevel: null,
+  },
+  {
+    code: "color_aurora",
+    name: "Cực quang sao",
+    description: "Dải màu chuyển mượt như bầu trời xuyên ngân hà.",
+    slot: "color",
+    rarity: "epic",
+    payload: {
+      gradient: ["#43e97b", "#38f9d7", "#667eea"],
+    },
+    cost: 1100,
+    unlockLevel: null,
+  },
+  {
+    code: "color_void",
+    name: "Vũ trụ sâu",
+    description: "Bảng màu tối cho cảm giác nhìn thẳng vào khoảng không sao trời.",
+    slot: "color",
+    rarity: "legendary",
+    payload: {
+      gradient: ["#0f172a", "#312e81", "#9333ea"],
+    },
+    cost: null,
+    unlockLevel: 14,
+  },
 
   // Effect
   {
@@ -195,11 +391,49 @@ const ITEMS: SeedItem[] = [
     cost: null,
     unlockLevel: 15,
   },
+  {
+    code: "effect_soft_glow",
+    name: "Hào quang mềm",
+    description: "Một lớp sáng nhẹ, dễ phối với mọi màu.",
+    slot: "effect",
+    rarity: "common",
+    payload: { cssClass: "cn-glow" },
+    cost: 250,
+    unlockLevel: null,
+  },
+  {
+    code: "effect_heartbeat",
+    name: "Nhịp tim",
+    description: "Hiệu ứng co giãn rõ hơn cho tên hiển thị.",
+    slot: "effect",
+    rarity: "rare",
+    payload: { cssClass: "cn-pulse" },
+    cost: 950,
+    unlockLevel: null,
+  },
+  {
+    code: "effect_starlight",
+    name: "Ánh sao quét",
+    description: "Một đường sáng lướt qua đều đặn.",
+    slot: "effect",
+    rarity: "epic",
+    payload: { cssClass: "cn-shimmer" },
+    cost: 1450,
+    unlockLevel: null,
+  },
+  {
+    code: "effect_prism",
+    name: "Ngân hà xoay",
+    description: "Tên đổi màu liên tục như một dải ngân hà đang chuyển động.",
+    slot: "effect",
+    rarity: "legendary",
+    payload: { cssClass: "cn-rainbow" },
+    cost: null,
+    unlockLevel: 22,
+  },
 ];
 
-async function main() {
-  await connectToDatabase();
-
+export async function seedCosmetics() {
   let created = 0;
   let updated = 0;
 
@@ -228,11 +462,25 @@ async function main() {
     }
   }
 
-  console.log(`Seeded cosmetics: ${created} created, ${updated} updated.`);
+  return { created, updated, total: ITEMS.length };
+}
+
+async function main() {
+  await connectToDatabase();
+  const result = await seedCosmetics();
+  console.log(
+    `Seeded cosmetics: ${result.created} created, ${result.updated} updated, ${result.total} total.`,
+  );
   await mongoose.disconnect();
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+const isMain =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isMain) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
