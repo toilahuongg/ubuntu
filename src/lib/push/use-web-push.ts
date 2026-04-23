@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type PushStatus =
+  | "checking"
   | "unsupported"
   | "unconfigured"
   | "denied"
@@ -36,7 +37,7 @@ async function getOrRegisterSW() {
 }
 
 export function useWebPush() {
-  const [status, setStatus] = useState<PushStatus>("default");
+  const [status, setStatus] = useState<PushStatus>("checking");
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {

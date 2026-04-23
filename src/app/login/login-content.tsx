@@ -6,7 +6,6 @@ import { signIn } from "next-auth/react";
 import Image from "next/image";
 
 import { InstallAppButton } from "@/components/install-app-button";
-import { promptWebPushOnce } from "@/lib/push/prompt-once";
 
 type TelegramWidgetUser = {
   id: number;
@@ -39,9 +38,7 @@ export function LoginContent() {
       // Use a hard navigation so the just-set session cookie is picked up
       // reliably by the destination route (soft RSC navigation can race with
       // Set-Cookie processing in some WebViews, leaving the user stuck).
-      promptWebPushOnce().finally(() => {
-        window.location.assign(target);
-      });
+      window.location.assign(target);
     },
     [],
   );
@@ -259,4 +256,3 @@ function TelegramLoginButton({
     </div>
   );
 }
-

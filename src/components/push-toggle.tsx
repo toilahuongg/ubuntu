@@ -7,6 +7,10 @@ import { useWebPush } from "@/lib/push/use-web-push";
 export function PushToggle() {
   const { status, loading, subscribe, unsubscribe } = useWebPush();
 
+  if (status === "checking") {
+    return null;
+  }
+
   if (status === "unsupported") {
     return (
       <div className="glass-card flex items-start gap-3 p-4 text-sm text-muted-foreground">

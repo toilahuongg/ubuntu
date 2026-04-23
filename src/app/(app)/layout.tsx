@@ -4,6 +4,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { refreshSessionUser } from "@/lib/services/auth-service";
 import { BottomNav } from "@/components/bottom-nav";
 import { AppHeader } from "@/components/app-header";
+import { PushPermissionPopup } from "@/components/push-permission-popup";
 import { getEquippedPayloadsForUsers } from "@/lib/services/cosmetics-service";
 import { serializeEquipped } from "@/lib/cosmetics/serialize";
 
@@ -78,6 +79,7 @@ export default async function AppLayout({
         {children}
       </main>
       <BottomNav role={session.role} />
+      <PushPermissionPopup />
     </div>
   );
 }
