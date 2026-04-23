@@ -218,8 +218,8 @@ describe("canProxySubmit", () => {
   });
 });
 
-  it("allows all roles", () => {
-    expect(
+describe("canManageTasks", () => {
+  it("allows admin and scoped management roles", () => {
     expect(
       canManageTasks({
         fullName: "Admin",

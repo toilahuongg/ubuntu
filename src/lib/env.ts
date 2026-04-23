@@ -10,6 +10,8 @@ export function getOptionalEnv() {
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN?.trim() || "",
     telegramBotUsername:
       process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME?.trim() || "",
+    telegramNotificationsEnabled:
+      process.env.ENABLE_TELEGRAM_NOTIFICATIONS === "true",
     telegramWebhookSecret:
       process.env.TELEGRAM_WEBHOOK_SECRET?.trim() || "",
     googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() || "",

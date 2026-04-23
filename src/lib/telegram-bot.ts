@@ -181,6 +181,10 @@ export async function safeSendTelegramMessage(input: {
   parseMode?: "HTML" | "MarkdownV2";
   disableWebPagePreview?: boolean;
 }): Promise<{ ok: boolean; error?: string }> {
+  if (!getOptionalEnv().telegramNotificationsEnabled) {
+    return { ok: false, error: "Telegram notifications disabled." };
+  }
+
   try {
     await sendTelegramMessage(input);
     return { ok: true };

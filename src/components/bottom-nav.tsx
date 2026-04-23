@@ -4,11 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  BarChart3,
   Ellipsis,
-  Layers,
   LayoutDashboard,
-  MapPin,
   Settings,
   Trophy,
   User,
@@ -29,18 +26,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
-    href: "/zone",
-    label: "Địa vực",
-    icon: Layers,
-    roles: ["ZONE_LEAD"],
-  },
-  {
-    href: "/region",
-    label: "Khu vực",
-    icon: MapPin,
-    roles: ["REGIONAL_LEAD"],
-  },
-  {
     href: "/leaderboard",
     label: "Xếp hạng",
     icon: Trophy,
@@ -59,7 +44,7 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const CORE_HREFS = ["/dashboard", "/leaderboard", "/profile"];
-const EXTRA_PRIORITIES = ["/zone", "/region", "/admin"];
+const EXTRA_PRIORITIES = ["/admin"];
 
 export function BottomNav({ role }: { role: Role }) {
   const pathname = usePathname();

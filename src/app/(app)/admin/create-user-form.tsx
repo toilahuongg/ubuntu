@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
 
 import { saveUserAction } from "@/app/(app)/actions";
-import { ROLE_LABELS, ROLES } from "@/lib/domain";
+import { ROLE_LABELS } from "@/lib/domain";
 import type { Role } from "@/lib/domain";
 import { FormError, FormSuccess } from "./_shared";
 
@@ -22,16 +22,21 @@ export function CreateUserForm({
   teams,
   zones,
   regions,
+  roleOptions,
 }: {
   teams: Team[];
   zones: Zone[];
   regions: Region[];
+  roleOptions: Role[];
 }) {
+  const defaultRole: Role = roleOptions.includes("MEMBER")
+    ? "MEMBER"
+    : (roleOptions[0] ?? "MEMBER");
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [role, setRole] = useState<Role>("MEMBER");
+  const [role, setRole] = useState<Role>(defaultRole);
   const [teamId, setTeamId] = useState("");
   const [zoneId, setZoneId] = useState("");
   const [regionId, setRegionId] = useState("");
@@ -73,12 +78,14 @@ export function CreateUserForm({
       setError(null);
       setSuccess("Đã tạo người dùng thành công.");
       setIsOpen(false);
-      setRole("MEMBER");
+      setRole(defaultRole);
       setTeamId("");
       setZoneId("");
       setRegionId("");
     });
   }
+
+  if (roleOptions.length === 0) return null;
 
   if (!isOpen) {
     return (
@@ -133,7 +140,7 @@ export function CreateUserForm({
           onChange={(e) => setRole(e.target.value as Role)}
           className="form-select"
         >
-          {ROLES.map((r) => (
+          {roleOptions.map((r) => (
             <option key={r} value={r}>
               {ROLE_LABELS[r]}
             </option>

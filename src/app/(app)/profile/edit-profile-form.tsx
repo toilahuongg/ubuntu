@@ -8,6 +8,7 @@ import { updateProfileAction } from "@/app/(app)/profile/actions";
 import { FormSuccess } from "@/app/(app)/admin/_shared";
 
 type Props = {
+  compact?: boolean;
   initialFullName: string;
   initialGender: "male" | "female";
   initialBio: string;
@@ -20,6 +21,7 @@ function badgeSrc(level: number, gender: "male" | "female") {
 }
 
 export function EditProfileForm({
+  compact = false,
   initialFullName,
   initialGender,
   initialBio,
@@ -58,7 +60,9 @@ export function EditProfileForm({
             setSuccess(null);
             setIsOpen(true);
           }}
-          className="flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-foreground transition-colors hover:bg-overlay-medium"
+          className={`flex h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border text-sm font-medium text-foreground transition-colors hover:bg-overlay-medium ${
+            compact ? "bg-overlay-subtle" : ""
+          }`}
         >
           <Pencil className="h-4 w-4" />
           Chỉnh sửa hồ sơ
@@ -68,7 +72,14 @@ export function EditProfileForm({
   }
 
   return (
-    <form action={handleSubmit} className="glass-card space-y-4 p-4">
+    <form
+      action={handleSubmit}
+      className={`space-y-4 p-4 ${
+        compact
+          ? "rounded-xl border border-border bg-overlay-subtle"
+          : "glass-card"
+      }`}
+    >
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Chỉnh sửa hồ sơ</h3>
         <button

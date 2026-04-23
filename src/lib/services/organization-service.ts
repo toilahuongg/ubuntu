@@ -1,7 +1,11 @@
 import "server-only";
 
 import type { Role, SerializedUser, SessionUser, UserStatus } from "@/lib/domain";
-import { canAccessManagement } from "@/lib/permissions";
+import {
+  canAccessManagement,
+  canAccessRegionStructure,
+  canAccessUserManagement,
+} from "@/lib/permissions";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   RegionModel,
@@ -66,6 +70,13 @@ export type AdminSnapshot = {
   zones: ZoneSummary[];
 };
 
+type SnapshotFilters = {
+  regionFilter: Record<string, unknown>;
+  teamFilter: Record<string, unknown>;
+  userFilter: Record<string, unknown>;
+  zoneFilter: Record<string, unknown>;
+};
+
 function serializeUser(record: UserRecord): SerializedUser {
   return {
     bio: (record as UserRecord & { bio?: string }).bio ?? "",
@@ -123,31 +134,12 @@ async function syncLeadAssignments(user: SerializedUser) {
   }
 }
 
-export async function getAdminSnapshot(actor: SessionUser): Promise<AdminSnapshot> {
-  if (!canAccessManagement(actor)) {
-    throw new Error("Bạn không có quyền xem dữ liệu quản trị.");
-  }
-
-  await connectToDatabase();
-
-  const teamFilter = actor.role === "TEAM_LEAD" && actor.teamId
-    ? { _id: toObjectId(actor.teamId) }
-    : {};
-  const zoneFilter = actor.role === "TEAM_LEAD" && actor.teamId
-    ? { teamId: toObjectId(actor.teamId) }
-    : {};
-  const regionFilter = actor.role === "TEAM_LEAD" && actor.teamId
-    ? { teamId: toObjectId(actor.teamId) }
-    : {};
-  const userFilter = actor.role === "TEAM_LEAD" && actor.teamId
-    ? { teamId: toObjectId(actor.teamId) }
-    : {};
-
+async function buildSnapshot(filters: SnapshotFilters): Promise<AdminSnapshot> {
   const [teams, zones, regions, users] = await Promise.all([
-    TeamModel.find(teamFilter).sort({ name: 1 }).lean() as Promise<TeamRecord[]>,
-    ZoneModel.find(zoneFilter).sort({ name: 1 }).lean() as Promise<ZoneRecord[]>,
-    RegionModel.find(regionFilter).sort({ name: 1 }).lean() as Promise<RegionRecord[]>,
-    UserModel.find(userFilter).sort({ createdAt: -1 }).lean() as Promise<UserRecord[]>,
+    TeamModel.find(filters.teamFilter).sort({ name: 1 }).lean() as Promise<TeamRecord[]>,
+    ZoneModel.find(filters.zoneFilter).sort({ name: 1 }).lean() as Promise<ZoneRecord[]>,
+    RegionModel.find(filters.regionFilter).sort({ name: 1 }).lean() as Promise<RegionRecord[]>,
+    UserModel.find(filters.userFilter).sort({ createdAt: -1 }).lean() as Promise<UserRecord[]>,
   ]);
 
   const teamCounts = new Map<string, number>();
@@ -216,6 +208,88 @@ export async function getAdminSnapshot(actor: SessionUser): Promise<AdminSnapsho
       teamName: teamMap.get(zone.teamId.toString())?.name,
     })),
   };
+}
+
+function getManagementSnapshotFilters(actor: SessionUser): SnapshotFilters {
+  if (actor.role === "TEAM_LEAD" && actor.teamId) {
+    const teamId = toObjectId(actor.teamId);
+    return {
+      regionFilter: { teamId },
+      teamFilter: { _id: teamId },
+      userFilter: { teamId },
+      zoneFilter: { teamId },
+    };
+  }
+
+  return {
+    regionFilter: {},
+    teamFilter: {},
+    userFilter: {},
+    zoneFilter: {},
+  };
+}
+
+function getScopedSnapshotFilters(actor: SessionUser): SnapshotFilters {
+  if (actor.role === "TEAM_LEAD" && actor.teamId) {
+    return getManagementSnapshotFilters(actor);
+  }
+
+  if (actor.role === "ZONE_LEAD" && actor.zoneId) {
+    const zoneId = toObjectId(actor.zoneId);
+    return {
+      regionFilter: { zoneId },
+      teamFilter: actor.teamId ? { _id: toObjectId(actor.teamId) } : { _id: null },
+      userFilter: { zoneId },
+      zoneFilter: { _id: zoneId },
+    };
+  }
+
+  if (actor.role === "REGIONAL_LEAD" && actor.regionId) {
+    const regionId = toObjectId(actor.regionId);
+    return {
+      regionFilter: { _id: regionId },
+      teamFilter: actor.teamId ? { _id: toObjectId(actor.teamId) } : { _id: null },
+      userFilter: { regionId },
+      zoneFilter: actor.zoneId ? { _id: toObjectId(actor.zoneId) } : { _id: null },
+    };
+  }
+
+  return getManagementSnapshotFilters(actor);
+}
+
+function getUserManagementSnapshotFilters(actor: SessionUser): SnapshotFilters {
+  return getScopedSnapshotFilters(actor);
+}
+
+export async function getAdminSnapshot(actor: SessionUser): Promise<AdminSnapshot> {
+  if (!canAccessManagement(actor)) {
+    throw new Error("Bạn không có quyền xem dữ liệu quản trị.");
+  }
+
+  await connectToDatabase();
+  return buildSnapshot(getManagementSnapshotFilters(actor));
+}
+
+export async function getUserManagementSnapshot(
+  actor: SessionUser,
+): Promise<AdminSnapshot> {
+  if (!canAccessUserManagement(actor)) {
+    throw new Error("Bạn không có quyền xem danh sách người dùng.");
+  }
+
+  await connectToDatabase();
+  return buildSnapshot(getUserManagementSnapshotFilters(actor));
+}
+
+export async function getStructureSnapshot(
+  actor: SessionUser,
+): Promise<AdminSnapshot> {
+  if (!canAccessRegionStructure(actor)) {
+    throw new Error("Bạn không có quyền xem cấu trúc tổ chức.");
+  }
+
+  await connectToDatabase();
+  return buildSnapshot(getScopedSnapshotFilters(actor));
 }
 
 export async function getUserById(userId: string) {

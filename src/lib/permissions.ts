@@ -1,4 +1,4 @@
-import type { SessionUser } from "@/lib/domain";
+import type { Role, SessionUser } from "@/lib/domain";
 
 function isMemberLike(user: SessionUser) {
   return user.role === "MEMBER" || user.role === "NGV";
@@ -29,7 +29,15 @@ export function canManageTasks(user: SessionUser) {
 }
 
 export function canAccessManagement(user: SessionUser) {
-  return isAdmin(user) || isTeamLead(user);
+  return isAdmin(user) || (isTeamLead(user) && !!user.teamId);
+}
+
+export function canAccessUserManagement(user: SessionUser) {
+  if (isAdmin(user)) return true;
+  if (isTeamLead(user)) return !!user.teamId;
+  if (isZoneLead(user)) return !!user.teamId && !!user.zoneId;
+  if (isRegionalLead(user)) return !!user.teamId && !!user.zoneId && !!user.regionId;
+  return false;
 }
 
 export function canAccessZoneManagement(user: SessionUser) {
@@ -38,6 +46,35 @@ export function canAccessZoneManagement(user: SessionUser) {
 
 export function canAccessRegionManagement(user: SessionUser) {
   return user.role === "REGIONAL_LEAD" && !!user.regionId;
+}
+
+export function canAccessTeamStructure(user: SessionUser) {
+  return isAdmin(user) || (isTeamLead(user) && !!user.teamId);
+}
+
+export function canAccessZoneStructure(user: SessionUser) {
+  if (isAdmin(user)) return true;
+  if (isTeamLead(user)) return !!user.teamId;
+  if (isZoneLead(user)) return !!user.zoneId;
+  return false;
+}
+
+export function canAccessRegionStructure(user: SessionUser) {
+  if (canAccessZoneStructure(user)) return true;
+  return isRegionalLead(user) && !!user.regionId;
+}
+
+export function canCreateTeamStructure(user: SessionUser) {
+  return isAdmin(user);
+}
+
+export function canCreateZoneStructure(user: SessionUser) {
+  return isAdmin(user) || (isTeamLead(user) && !!user.teamId);
+}
+
+export function canCreateRegionStructure(user: SessionUser) {
+  if (canCreateZoneStructure(user)) return true;
+  return isZoneLead(user) && !!user.zoneId;
 }
 
 export function canViewTeamDashboard(user: SessionUser) {
@@ -50,10 +87,50 @@ export function canManageUser(actor: SessionUser, subject: SessionUser) {
   }
 
   if (isTeamLead(actor)) {
-    return !!actor.teamId && actor.teamId === subject.teamId;
+    return (
+      isMemberLike(subject) &&
+      !!actor.teamId &&
+      actor.teamId === subject.teamId
+    );
   }
 
-  return actor.id === subject.id;
+  if (isZoneLead(actor)) {
+    return (
+      isMemberLike(subject) &&
+      !!actor.zoneId &&
+      actor.zoneId === subject.zoneId
+    );
+  }
+
+  if (isRegionalLead(actor)) {
+    return (
+      isMemberLike(subject) &&
+      !!actor.regionId &&
+      actor.regionId === subject.regionId
+    );
+  }
+
+  return false;
+}
+
+export function canAssignUserRole(actor: SessionUser, role: Role) {
+  if (isAdmin(actor)) return true;
+  if (isTeamLead(actor) || isZoneLead(actor) || isRegionalLead(actor)) {
+    return role === "NGV" || role === "MEMBER";
+  }
+  return false;
+}
+
+export function getAssignableUserRoles(actor: SessionUser): Role[] {
+  const roles: Role[] = [
+    "ADMIN",
+    "TEAM_LEAD",
+    "ZONE_LEAD",
+    "REGIONAL_LEAD",
+    "NGV",
+    "MEMBER",
+  ];
+  return roles.filter((role) => canAssignUserRole(actor, role));
 }
 
 export function canProxySubmit(actor: SessionUser, subject: SessionUser) {

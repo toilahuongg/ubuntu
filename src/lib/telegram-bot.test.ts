@@ -8,6 +8,7 @@ import {
 
 describe("telegram-bot", () => {
   beforeEach(() => {
+    vi.stubEnv("ENABLE_TELEGRAM_NOTIFICATIONS", "true");
     vi.stubEnv("TELEGRAM_BOT_TOKEN", "123:test");
     vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://example.test");
   });
@@ -52,6 +53,19 @@ describe("telegram-bot", () => {
 
     const result = await safeSendTelegramMessage({ chatId: 1, text: "x" });
     expect(result.ok).toBe(false);
+  });
+
+  it("safeSendTelegramMessage no-ops when Telegram notifications are disabled", async () => {
+    vi.stubEnv("ENABLE_TELEGRAM_NOTIFICATIONS", "false");
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+
+    const result = await safeSendTelegramMessage({ chatId: 1, text: "x" });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "Telegram notifications disabled.",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("buildReminderMarkup includes both WebApp and callback buttons", () => {

@@ -5,7 +5,8 @@ import { AlertTriangle, Filter, Pencil, Search, X } from "lucide-react";
 
 import { deleteUserAction, saveUserAction } from "@/app/(app)/actions";
 import { ROLE_LABELS, ROLES, USER_STATUSES } from "@/lib/domain";
-import type { Role, SerializedUser, UserStatus } from "@/lib/domain";
+import type { Role, SerializedUser, SessionUser, UserStatus } from "@/lib/domain";
+import { canManageUser } from "@/lib/permissions";
 import { ConfirmDeleteButton, FormError } from "./_shared";
 
 type Zone = { id: string; name: string; teamId: string; teamName?: string };
@@ -27,17 +28,19 @@ const STATUS_LABELS: Record<UserStatus, string> = {
 };
 
 export function UserSection({
-  currentUserId,
+  currentUser,
   users,
   teams,
   zones,
   regions,
+  roleOptions,
 }: {
-  currentUserId: string;
+  currentUser: SessionUser;
   users: SerializedUser[];
   teams: Team[];
   zones: Zone[];
   regions: Region[];
+  roleOptions: Role[];
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -69,6 +72,7 @@ export function UserSection({
 
   const hasActiveFilter =
     query.length > 0 || roleFilter !== "ALL" || statusFilter !== "ALL";
+  const filterRoles = ROLES.filter((role) => users.some((u) => u.role === role));
 
   return (
     <div className="space-y-3">
@@ -102,7 +106,7 @@ export function UserSection({
             aria-label="Lọc theo vai trò"
           >
             <option value="ALL">Tất cả vai trò</option>
-            {ROLES.map((r) => (
+            {filterRoles.map((r) => (
               <option key={r} value={r}>
                 {ROLE_LABELS[r]}
               </option>
@@ -172,13 +176,18 @@ export function UserSection({
                 teams={teams}
                 zones={zones}
                 regions={regions}
+                roleOptions={roleOptions}
                 onClose={() => setEditingId(null)}
               />
             ) : (
               <UserRow
                 key={user.id}
                 user={user}
-                isSelf={user.id === currentUserId}
+                canEdit={canManageUser(currentUser, user)}
+                canDelete={
+                  user.id !== currentUser.id && canManageUser(currentUser, user)
+                }
+                isSelf={user.id === currentUser.id}
                 onEdit={() => setEditingId(user.id)}
               />
             ),
@@ -191,10 +200,14 @@ export function UserSection({
 
 function UserRow({
   user,
+  canEdit,
+  canDelete,
   isSelf,
   onEdit,
 }: {
   user: SerializedUser;
+  canEdit: boolean;
+  canDelete: boolean;
   isSelf: boolean;
   onEdit: () => void;
 }) {
@@ -216,15 +229,17 @@ function UserRow({
       </div>
       <div className="flex items-center gap-2">
         <StatusBadge status={user.status} />
-        <button
-          type="button"
-          onClick={onEdit}
-          className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-          aria-label={`Sửa ${user.fullName}`}
-        >
-          <Pencil className="h-4 w-4" aria-hidden />
-        </button>
-        {!isSelf && (
+        {canEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            aria-label={`Sửa ${user.fullName}`}
+          >
+            <Pencil className="h-4 w-4" aria-hidden />
+          </button>
+        )}
+        {canDelete && (
           <ConfirmDeleteButton
             ariaLabel={`Xóa ${user.fullName}`}
             onConfirm={() => deleteUserAction(user.id)}
@@ -263,12 +278,14 @@ function EditUserRow({
   teams,
   zones,
   regions,
+  roleOptions,
   onClose,
 }: {
   user: SerializedUser;
   teams: Team[];
   zones: Zone[];
   regions: Region[];
+  roleOptions: Role[];
   onClose: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -355,7 +372,7 @@ function EditUserRow({
           onChange={(e) => setRole(e.target.value as Role)}
           className="form-select"
         >
-          {ROLES.map((r) => (
+          {roleOptions.map((r) => (
             <option key={r} value={r}>
               {ROLE_LABELS[r]}
             </option>

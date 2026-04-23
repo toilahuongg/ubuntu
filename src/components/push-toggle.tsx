@@ -4,7 +4,7 @@ import { Bell, BellOff, Loader2 } from "lucide-react";
 
 import { useWebPush } from "@/lib/push/use-web-push";
 
-export function PushToggle() {
+export function PushToggle({ compact = false }: { compact?: boolean }) {
   const { status, loading, subscribe, unsubscribe } = useWebPush();
 
   if (status === "checking") {
@@ -13,7 +13,13 @@ export function PushToggle() {
 
   if (status === "unsupported") {
     return (
-      <div className="glass-card flex items-start gap-3 p-4 text-sm text-muted-foreground">
+      <div
+        className={`flex items-start gap-3 p-4 text-sm text-muted-foreground ${
+          compact
+            ? "rounded-xl border border-border bg-overlay-subtle"
+            : "glass-card"
+        }`}
+      >
         <BellOff className="mt-0.5 h-4 w-4" />
         <div>
           <p className="font-medium text-foreground">Thông báo đẩy</p>
@@ -30,7 +36,13 @@ export function PushToggle() {
   const isOn = status === "subscribed";
 
   return (
-    <div className="glass-card flex items-center justify-between gap-3 p-4">
+    <div
+      className={`flex items-center justify-between gap-3 p-4 ${
+        compact
+          ? "rounded-xl border border-border bg-overlay-subtle"
+          : "glass-card"
+      }`}
+    >
       <div className="flex items-start gap-3">
         {isOn ? (
           <Bell className="mt-0.5 h-4 w-4 text-primary" />

@@ -61,7 +61,7 @@ npm run dev
 
 ## Vai trò & trạng thái
 
-- Roles: `REGIONAL_LEAD`, `ZONE_LEAD`, `TEAM_LEAD`, `NGV`, `MEMBER`
+- Roles: `ADMIN`, `TEAM_LEAD`, `ZONE_LEAD`, `REGIONAL_LEAD`, `NGV`, `MEMBER`
 - Trạng thái user: `ACTIVE`, `INACTIVE`, `PENDING`
 - Scope template: `REGION`, `ZONE`, `TEAM`
 
@@ -96,6 +96,10 @@ x-cron-secret: <CRON_SECRET>
 
 Sau khi chạy `npm run seed`, có sẵn các tài khoản (đã map `telegramId` để test):
 
+- `Admin Ubuntu` — `ADMIN`
 - `Tran Nhom Truong` — `TEAM_LEAD`
-- `Le Khu Vuc A` / `Pham Khu Vuc B` — `REGIONAL_LEAD`
-- `Nguyen Thanh Vien A1`, `Nguyen Thanh Vien A2`, `Vo Thanh Vien B1` — `MEMBER`
+- `Ho Dia Vuc Sai Gon` / `Mai Dia Vuc Mien Tay` — `ZONE_LEAD`
+- `Le Khu Vuc Quan 1` / `Pham Khu Vuc Quan 7` / `Dang Khu Vuc Can Tho` — `REGIONAL_LEAD`
+- `Nguyen NGV Quan 1` — `NGV`
+- `Nguyen Thanh Vien A1`, `Nguyen Thanh Vien A2`, `Vo Thanh Vien B1`, `Tran Thanh Vien C1` — `MEMBER`
+- `Tai Khoan Cho Duyet` — `PENDING`

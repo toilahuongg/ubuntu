@@ -82,7 +82,7 @@ export type SerializedUser = SessionUser & {
 export const ROLE_LABELS: Record<Role, string> = {
   ADMIN: "Admin",
   TEAM_LEAD: "NT",
-  ZONE_LEAD: "ĐV",
+  ZONE_LEAD: "ĐVT",
   REGIONAL_LEAD: "KVT",
   NGV: "NGV",
   MEMBER: "Thành viên",

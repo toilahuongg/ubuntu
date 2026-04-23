@@ -48,10 +48,9 @@ export async function submitTaskAction(
       },
     );
     revalidatePath("/dashboard");
+    revalidatePath("/admin");
     revalidatePath(`/tasks/${parsed.taskId}`);
     revalidatePath(`/tasks/${parsed.taskId}/proxy`);
-    revalidatePath("/region");
-    revalidatePath("/zone");
     return result;
   });
 }

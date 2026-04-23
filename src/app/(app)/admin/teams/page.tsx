@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
-import { canAccessManagement } from "@/lib/permissions";
-import { getAdminSnapshot } from "@/lib/services/organization-service";
+import {
+  canAccessTeamStructure,
+  canCreateTeamStructure,
+} from "@/lib/permissions";
+import { getStructureSnapshot } from "@/lib/services/organization-service";
 
 import { CreateTeamForm } from "../create-team-form";
 import { AdminSubHeader } from "../sub-header";
@@ -11,9 +14,10 @@ import { TeamSection } from "../team-section";
 export default async function AdminTeamsPage() {
   const session = await getSessionUser();
   if (!session) redirect("/login");
-  if (!canAccessManagement(session)) redirect("/admin");
+  if (!canAccessTeamStructure(session)) redirect("/admin");
 
-  const snapshot = await getAdminSnapshot(session);
+  const snapshot = await getStructureSnapshot(session);
+  const canCreateTeam = canCreateTeamStructure(session);
 
   return (
     <>
@@ -23,7 +27,7 @@ export default async function AdminTeamsPage() {
       />
       <div className="space-y-3">
         <TeamSection teams={snapshot.teams} />
-        <CreateTeamForm />
+        {canCreateTeam && <CreateTeamForm />}
       </div>
     </>
   );

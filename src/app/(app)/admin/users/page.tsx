@@ -1,9 +1,13 @@
 import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
-import { canAccessManagement } from "@/lib/permissions";
 import {
-  getAdminSnapshot,
+  canAccessUserManagement,
+  getAssignableUserRoles,
+  isAdmin,
+} from "@/lib/permissions";
+import {
+  getUserManagementSnapshot,
   listPendingUsers,
 } from "@/lib/services/organization-service";
 
@@ -16,12 +20,14 @@ import { UserSection } from "../user-section";
 export default async function AdminUsersPage() {
   const session = await getSessionUser();
   if (!session) redirect("/login");
-  if (!canAccessManagement(session)) redirect("/admin");
+  if (!canAccessUserManagement(session)) redirect("/admin");
 
+  const canReviewPendingUsers = isAdmin(session);
   const [snapshot, pendingUsers] = await Promise.all([
-    getAdminSnapshot(session),
-    listPendingUsers(),
+    getUserManagementSnapshot(session),
+    canReviewPendingUsers ? listPendingUsers() : Promise.resolve([]),
   ]);
+  const roleOptions = getAssignableUserRoles(session);
 
   const teamOptions = snapshot.teams.map((t) => ({ id: t.id, name: t.name }));
   const zoneOptions = snapshot.zones.map((z) => ({
@@ -43,7 +49,7 @@ export default async function AdminUsersPage() {
       <div className="flex items-start justify-between gap-3">
         <AdminSubHeader
           title={`Người dùng (${snapshot.users.length})`}
-          description="Quản lý tài khoản người dùng"
+          description="Quản lý tài khoản người dùng trong phạm vi quyền của bạn"
         />
         <ExportUsersCsv
           users={snapshot.users}
@@ -55,16 +61,18 @@ export default async function AdminUsersPage() {
       {pendingUsers.length > 0 && <PendingUsers users={pendingUsers} />}
       <div className="space-y-3">
         <UserSection
-          currentUserId={session.id}
+          currentUser={session}
           users={snapshot.users}
           teams={teamOptions}
           zones={zoneOptions}
           regions={regionOptions}
+          roleOptions={roleOptions}
         />
         <CreateUserForm
           teams={teamOptions}
           zones={zoneOptions}
           regions={regionOptions}
+          roleOptions={roleOptions}
         />
       </div>
     </>
