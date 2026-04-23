@@ -29,6 +29,7 @@ import {
   normalizeTaskType,
 } from "@/lib/tasks/constants";
 import { appliesToUser, isWithinLateWindow } from "@/lib/tasks/policy";
+import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
 import { sumTaskCompletions, taskToScope } from "@/lib/tasks/task-service";
 import {
   notifySubmissionToGroups,
@@ -107,6 +108,9 @@ export async function saveSubmission(
   }
 
   const lateWindowDays = taskRaw.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS;
+  if (!isTaskScheduledForDate(taskRaw, dateKey)) {
+    throw new Error("Nhiệm vụ này không được lên lịch cho ngày đã chọn.");
+  }
   if (!isWithinLateWindow(dateKey, lateWindowDays)) {
     throw new Error("Đã qua cửa sổ nhập bù cho nhiệm vụ này.");
   }
@@ -464,16 +468,16 @@ export async function saveSubmission(
     result = await runBody();
   }
 
-  const decoratedSubjectName = await getDecoratedFullName(
-    subjectRaw._id,
-    subjectRaw.fullName,
-  ).catch(() => subjectRaw.fullName);
-
   const shouldSendNotification =
     shouldNotify &&
     !(isDailyTask && !result.isFirstSubmission && mode === "increment");
 
   if (shouldSendNotification) {
+    const decoratedSubjectName = await getDecoratedFullName(
+      subjectRaw._id,
+      subjectRaw.fullName,
+    ).catch(() => subjectRaw.fullName);
+
     void notifySubmissionToGroups({
       subject: {
         id: subjectSession.id,

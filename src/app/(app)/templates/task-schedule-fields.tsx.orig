@@ -1,0 +1,113 @@
+import {
+  TASK_SCHEDULE_TYPE_DESCRIPTIONS,
+  TASK_SCHEDULE_TYPE_LABELS,
+  TASK_SCHEDULE_WEEKDAY_OPTIONS,
+  type TaskScheduleType,
+} from "@/lib/tasks/schedule";
+import type { TaskType } from "@/lib/tasks/constants";
+
+const MONTH_DAY_OPTIONS = Array.from({ length: 31 }, (_, index) => index + 1);
+
+type Props = {
+  taskType: TaskType;
+  scheduleType: TaskScheduleType;
+  onScheduleTypeChange: (value: TaskScheduleType) => void;
+  defaultMonthDays?: number[];
+  defaultWeekdays?: number[];
+  idPrefix: string;
+};
+
+export function TaskScheduleFields({
+  taskType,
+  scheduleType,
+  onScheduleTypeChange,
+  defaultMonthDays = [],
+  defaultWeekdays = [],
+  idPrefix,
+}: Props) {
+  if (taskType !== "DAILY_PER_MEMBER") return null;
+
+  return (
+    <div className="space-y-3 rounded-2xl border border-border/70 bg-overlay-subtle/60 p-3">
+      <div>
+        <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+          Lịch thực hiện
+        </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {(
+            Object.keys(TASK_SCHEDULE_TYPE_LABELS) as TaskScheduleType[]
+          ).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onScheduleTypeChange(value)}
+              className={`min-h-10 rounded-xl border px-3 py-2 text-xs font-medium transition-colors ${
+                scheduleType === value
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border bg-background/70 text-muted-foreground"
+              }`}
+            >
+              {TASK_SCHEDULE_TYPE_LABELS[value]}
+            </button>
+          ))}
+        </div>
+        <input type="hidden" name="scheduleType" value={scheduleType} />
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {TASK_SCHEDULE_TYPE_DESCRIPTIONS[scheduleType]}
+        </p>
+      </div>
+
+      {scheduleType === "WEEKLY" && (
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+            Chọn thứ trong tuần
+          </p>
+          <div className="grid grid-cols-7 gap-2">
+            {TASK_SCHEDULE_WEEKDAY_OPTIONS.map((option) => (
+              <label
+                key={option.value}
+                className="group flex aspect-square cursor-pointer items-center justify-center rounded-xl border border-border bg-background/70 text-xs font-semibold text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-background"
+              >
+                <input
+                  type="checkbox"
+                  name="scheduledWeekdays"
+                  value={option.value}
+                  defaultChecked={defaultWeekdays.includes(option.value)}
+                  className="sr-only"
+                />
+                <span id={`${idPrefix}-weekday-${option.value}`}>
+                  {option.label}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {scheduleType === "MONTHLY" && (
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+            Chọn ngày trong tháng
+          </p>
+          <div className="grid grid-cols-7 gap-1 sm:gap-2">
+            {MONTH_DAY_OPTIONS.map((day) => (
+              <label
+                key={day}
+                className="group flex aspect-square cursor-pointer items-center justify-center rounded-xl border border-border bg-background/70 text-xs font-semibold text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-background"
+              >
+                <input
+                  type="checkbox"
+                  name="scheduledMonthDays"
+                  value={day}
+                  defaultChecked={defaultMonthDays.includes(day)}
+                  className="sr-only"
+                />
+                <span id={`${idPrefix}-monthday-${day}`}>{day}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

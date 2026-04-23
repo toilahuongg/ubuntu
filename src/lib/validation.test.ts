@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  moveTaskInputSchema,
   taskInputSchema,
   taskReminderPreferenceInputSchema,
 } from "@/lib/validation";
@@ -118,5 +119,32 @@ describe("taskReminderPreferenceInputSchema", () => {
         taskId: "",
       }),
     ).toThrow("Thiếu mã nhiệm vụ.");
+  });
+});
+
+describe("moveTaskInputSchema", () => {
+  it("accepts valid move directions", () => {
+    expect(
+      moveTaskInputSchema.parse({
+        direction: "up",
+        taskId: "task-1",
+      }),
+    ).toMatchObject({ direction: "up", taskId: "task-1" });
+
+    expect(
+      moveTaskInputSchema.parse({
+        direction: "down",
+        taskId: "task-1",
+      }),
+    ).toMatchObject({ direction: "down", taskId: "task-1" });
+  });
+
+  it("rejects invalid move directions", () => {
+    expect(() =>
+      moveTaskInputSchema.parse({
+        direction: "left",
+        taskId: "task-1",
+      }),
+    ).toThrow("Hướng sắp xếp không hợp lệ.");
   });
 });

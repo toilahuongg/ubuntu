@@ -14,9 +14,8 @@ import {
   TASK_TYPE_LABELS,
 } from "@/lib/tasks/constants";
 import { SubmitSection } from "./submit-section";
-import { MonthlyGoalForm } from "./monthly-goal-form";
 import { MonthActivity } from "./month-activity";
-import { ReminderSettingsForm } from "./reminder-settings-form";
+import { TaskDetailActions } from "./task-detail-actions";
 
 export default async function TaskDetailPage({
   params,
@@ -60,17 +59,47 @@ export default async function TaskDetailPage({
     proxyCandidates.length > 0
       ? `Bạn + ${proxyCandidates.length} thành viên khác`
       : "Nhập bù cho các ngày trong tháng";
+  const canOpenTaskActions =
+    detail.isApplicableToActor && (hasMonthlyGoal || Boolean(reminderSettings));
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
       <div>
-        <Link
-          href="/dashboard"
-          className="mb-3 -ml-2 inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-overlay-subtle hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Quay lại
-        </Link>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/dashboard"
+            className="-ml-2 inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-overlay-subtle hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Quay lại
+          </Link>
+          {canOpenTaskActions && (
+            <TaskDetailActions
+              monthlyGoal={
+                hasMonthlyGoal
+                  ? {
+                      taskId: detail.id,
+                      yearMonth: detail.yearMonth,
+                      currentGoal: detail.monthlyGoal,
+                      unitLabel: progressUnit,
+                    }
+                  : undefined
+              }
+              reminder={
+                reminderSettings
+                  ? {
+                      defaultReminderTime: reminderSettings.defaultReminderTime,
+                      effectiveReminderTime: reminderSettings.effectiveReminderTime,
+                      initialEnabled: reminderSettings.enabled,
+                      initialReminderTime: reminderSettings.reminderTime,
+                      isCappedBeforeDeadline: reminderSettings.isCappedBeforeDeadline,
+                      taskId: detail.id,
+                    }
+                  : undefined
+              }
+            />
+          )}
+        </div>
         <h1 className="font-display text-xl font-bold">{detail.title}</h1>
         {detail.description && (
           <p className="mt-1 text-sm text-muted-foreground">
@@ -155,27 +184,11 @@ export default async function TaskDetailPage({
               </p>
             )}
           </div>
-          <MonthlyGoalForm
-            taskId={detail.id}
-            yearMonth={detail.yearMonth}
-            currentGoal={detail.monthlyGoal}
-            unitLabel={progressUnit}
-          />
         </section>
       )}
 
       {detail.isApplicableToActor ? (
         <>
-          {reminderSettings && (
-            <ReminderSettingsForm
-              defaultReminderTime={reminderSettings.defaultReminderTime}
-              effectiveReminderTime={reminderSettings.effectiveReminderTime}
-              initialEnabled={reminderSettings.enabled}
-              initialReminderTime={reminderSettings.reminderTime}
-              isCappedBeforeDeadline={reminderSettings.isCappedBeforeDeadline}
-              taskId={detail.id}
-            />
-          )}
           <SubmitSection
             taskId={detail.id}
             subjectUserId={session.id}

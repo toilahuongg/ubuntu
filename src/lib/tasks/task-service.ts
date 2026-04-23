@@ -41,10 +41,16 @@ import {
   resolveActorScope,
   type ScopeContext,
 } from "@/lib/tasks/policy";
+import {
+  isTaskScheduledForDate,
+  normalizeTaskSchedule,
+  type TaskScheduleType,
+} from "@/lib/tasks/schedule";
 import type {
   BackfillDay,
   RosterEntry,
   TaskDetail,
+  TaskMoveDirection,
   TaskStatus,
   TaskSummary,
 } from "@/lib/tasks/types";
@@ -75,7 +81,45 @@ export function computeTaskStatus(
   return isWithinLateWindow(dateKey, windowDays, now) ? "OPEN" : "LOCKED";
 }
 
+type DisplaySortableTask = Pick<
+  TaskRecord,
+  "_id" | "title" | "deadlineTime" | "createdAt" | "sortOrder"
+>;
+
+function getSortOrderValue(sortOrder: number | null | undefined): number {
+  return typeof sortOrder === "number" && Number.isFinite(sortOrder)
+    ? sortOrder
+    : Number.MAX_SAFE_INTEGER;
+}
+
+export function compareTaskDisplayOrder(
+  a: DisplaySortableTask,
+  b: DisplaySortableTask,
+): number {
+  const sortOrderDiff =
+    getSortOrderValue(a.sortOrder) - getSortOrderValue(b.sortOrder);
+  if (sortOrderDiff !== 0) return sortOrderDiff;
+
+  const deadlineDiff = a.deadlineTime.localeCompare(b.deadlineTime);
+  if (deadlineDiff !== 0) return deadlineDiff;
+
+  const createdAtDiff = b.createdAt.getTime() - a.createdAt.getTime();
+  if (createdAtDiff !== 0) return createdAtDiff;
+
+  const titleDiff = a.title.localeCompare(b.title, "vi");
+  if (titleDiff !== 0) return titleDiff;
+
+  return a._id.toString().localeCompare(b._id.toString());
+}
+
+export function sortTasksForDisplay<T extends DisplaySortableTask>(
+  tasks: readonly T[],
+): T[] {
+  return [...tasks].sort(compareTaskDisplayOrder);
+}
+
 export function mapTask(record: TaskRecord): TaskSummary {
+  const schedule = normalizeTaskSchedule(record);
   return {
     id: record._id.toString(),
     title: record.title,
@@ -84,8 +128,12 @@ export function mapTask(record: TaskRecord): TaskSummary {
     expReward: record.expReward ?? DEFAULT_EXP_REWARD,
     pointReward: record.pointReward ?? DEFAULT_POINT_REWARD,
     lateWindowDays: record.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS,
+    sortOrder: record.sortOrder ?? null,
     scope: record.scope,
     taskType: normalizeTaskType(record.taskType),
+    scheduleType: schedule.scheduleType,
+    scheduledWeekdays: schedule.scheduledWeekdays,
+    scheduledMonthDays: schedule.scheduledMonthDays,
     targetCount: record.targetCount ?? null,
     targetRoles: normalizeTargetRoles(record.targetRoles),
     submissionMessage: record.submissionMessage ?? "",
@@ -215,6 +263,7 @@ export async function getTaskDetail(
   }
 
   const taskType = normalizeTaskType(task.taskType);
+  const isScheduledForDate = isTaskScheduledForDate(task, dateKey);
   const yearMonth = getYearMonthFromDateKey(dateKey);
   const scope = taskToScope(task);
   const isApplicableToActor = appliesToUser(scope, userShape(actor));
@@ -338,9 +387,12 @@ export async function getTaskDetail(
     const pastDateKeys: string[] = [];
     const now = new Date();
     for (let i = 1; i <= lateWindowDays; i++) {
-      pastDateKeys.push(
-        getTodayDateKey(new Date(now.getTime() - i * 24 * 60 * 60 * 1000)),
+      const pastDateKey = getTodayDateKey(
+        new Date(now.getTime() - i * 24 * 60 * 60 * 1000),
       );
+      if (isTaskScheduledForDate(task, pastDateKey)) {
+        pastDateKeys.push(pastDateKey);
+      }
     }
     const backfillSubs =
       pastDateKeys.length > 0
@@ -369,7 +421,7 @@ export async function getTaskDetail(
     expReward: task.expReward ?? DEFAULT_EXP_REWARD,
     pointReward: task.pointReward ?? DEFAULT_POINT_REWARD,
     lateWindowDays,
-    status: computeTaskStatus(task, dateKey),
+    status: isScheduledForDate ? computeTaskStatus(task, dateKey) : "LOCKED",
     taskType,
     targetRoles: normalizeTargetRoles(task.targetRoles),
     targetCount: task.targetCount ?? null,
@@ -397,11 +449,63 @@ export type CreateTaskInput = {
   lateWindowDays?: number;
   isActive?: boolean;
   taskType?: TaskType;
+  scheduleType?: TaskScheduleType;
+  scheduledWeekdays?: number[];
+  scheduledMonthDays?: number[];
   targetCount?: number | null;
   targetRoles: TaskTargetRole[];
   submissionMessage?: string;
   completionMessage?: string;
 };
+
+const TASK_SORT_ORDER_STEP = 100;
+
+async function listVisibleTaskRecordsForActor(
+  actor: SessionUser,
+): Promise<TaskRecord[]> {
+  await connectToDatabase();
+
+  const all = (
+    actor.role === "ADMIN"
+      ? await TaskModel.find({}).lean()
+      : actor.teamId
+        ? await TaskModel.find({
+            teamId: toObjectId(actor.teamId),
+          }).lean()
+        : []
+  ) as TaskRecord[];
+
+  if (actor.role === "ADMIN") {
+    return sortTasksForDisplay(all);
+  }
+
+  const filtered = all.filter((record) => {
+    if (record.scope === "TEAM") return true;
+    if (record.scope === "ZONE") {
+      return !!actor.zoneId && record.zoneId?.toString() === actor.zoneId;
+    }
+    if (record.scope === "REGION") {
+      return !!actor.regionId && record.regionId?.toString() === actor.regionId;
+    }
+    return false;
+  });
+
+  return sortTasksForDisplay(filtered);
+}
+
+export function filterManageableTasksForActor(
+  actor: SessionUser,
+  tasks: readonly TaskRecord[],
+): TaskRecord[] {
+  return tasks.filter((task) => canManageTask(actor, taskToScope(task)));
+}
+
+async function listManageableTaskRecordsForActor(
+  actor: SessionUser,
+): Promise<TaskRecord[]> {
+  const visibleTasks = await listVisibleTaskRecordsForActor(actor);
+  return filterManageableTasksForActor(actor, visibleTasks);
+}
 
 export async function createTask(
   actor: SessionUser,
@@ -409,6 +513,12 @@ export async function createTask(
 ): Promise<string> {
   const actorScope = resolveActorScope(actor);
   const taskType: TaskType = normalizeTaskType(input.taskType);
+  const schedule = normalizeTaskSchedule({
+    scheduleType: input.scheduleType,
+    scheduledMonthDays: input.scheduledMonthDays,
+    scheduledWeekdays: input.scheduledWeekdays,
+    taskType,
+  });
 
   if (taskType === "COUNT_TOTAL") {
     if (
@@ -421,6 +531,15 @@ export async function createTask(
   }
 
   await connectToDatabase();
+  const manageableTasks = await listManageableTaskRecordsForActor(actor);
+  const maxSortOrder = manageableTasks.reduce(
+    (max, task, index) =>
+      Math.max(
+        max,
+        task.sortOrder ?? (index + 1) * TASK_SORT_ORDER_STEP,
+      ),
+    0,
+  );
 
   const created = await TaskModel.create({
     createdBy: toObjectId(actor.id),
@@ -432,11 +551,15 @@ export async function createTask(
     isActive: input.isActive ?? true,
     regionId: actorScope.regionId ? toObjectId(actorScope.regionId) : null,
     scope: actorScope.scope,
+    scheduleType: schedule.scheduleType,
+    scheduledWeekdays: schedule.scheduledWeekdays,
+    scheduledMonthDays: schedule.scheduledMonthDays,
     submissionMessage: input.submissionMessage?.trim() ?? "",
     completionMessage: input.completionMessage?.trim() ?? "",
     taskType,
     targetCount: taskType === "COUNT_TOTAL" ? input.targetCount : null,
     targetRoles: normalizeTargetRoles(input.targetRoles),
+    sortOrder: maxSortOrder + TASK_SORT_ORDER_STEP,
     teamId: toObjectId(actorScope.teamId),
     title: input.title,
     zoneId: actorScope.zoneId ? toObjectId(actorScope.zoneId) : null,
@@ -449,6 +572,9 @@ export async function createTask(
     entityType: "Task",
     metadata: {
       scope: actorScope.scope,
+      scheduleType: schedule.scheduleType,
+      scheduledMonthDays: schedule.scheduledMonthDays,
+      scheduledWeekdays: schedule.scheduledWeekdays,
       taskType,
       targetCount: taskType === "COUNT_TOTAL" ? input.targetCount : null,
       targetRoles: normalizeTargetRoles(input.targetRoles),
@@ -467,6 +593,10 @@ export type UpdateTaskInput = {
   expReward?: number;
   pointReward?: number;
   lateWindowDays?: number;
+  taskType?: TaskType;
+  scheduleType?: TaskScheduleType;
+  scheduledWeekdays?: number[];
+  scheduledMonthDays?: number[];
   targetCount?: number | null;
   targetRoles: TaskTargetRole[];
   submissionMessage?: string;
@@ -487,6 +617,12 @@ export async function updateTask(
   }
 
   const taskType = normalizeTaskType(record.taskType);
+  const schedule = normalizeTaskSchedule({
+    scheduleType: input.scheduleType,
+    scheduledMonthDays: input.scheduledMonthDays,
+    scheduledWeekdays: input.scheduledWeekdays,
+    taskType,
+  });
   let nextTargetCount: number | null = record.targetCount ?? null;
   if (taskType === "COUNT_TOTAL") {
     if (
@@ -511,6 +647,9 @@ export async function updateTask(
         expReward: input.expReward ?? DEFAULT_EXP_REWARD,
         pointReward: input.pointReward ?? DEFAULT_POINT_REWARD,
         lateWindowDays: input.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS,
+        scheduleType: schedule.scheduleType,
+        scheduledWeekdays: schedule.scheduledWeekdays,
+        scheduledMonthDays: schedule.scheduledMonthDays,
         targetCount: nextTargetCount,
         targetRoles: normalizeTargetRoles(input.targetRoles),
         submissionMessage: input.submissionMessage?.trim() ?? "",
@@ -527,6 +666,9 @@ export async function updateTask(
     metadata: {
       title: input.title,
       taskType,
+      scheduleType: schedule.scheduleType,
+      scheduledMonthDays: schedule.scheduledMonthDays,
+      scheduledWeekdays: schedule.scheduledWeekdays,
       targetCount: nextTargetCount,
       targetRoles: normalizeTargetRoles(input.targetRoles),
     },
@@ -595,36 +737,70 @@ export async function toggleTask(
   });
 }
 
+export async function moveTask(
+  actor: SessionUser,
+  taskId: string,
+  direction: TaskMoveDirection,
+): Promise<void> {
+  await connectToDatabase();
+
+  const record = (await TaskModel.findById(taskId).lean()) as TaskRecord | null;
+
+  if (!record || !canManageTask(actor, taskToScope(record))) {
+    throw new Error("Không tìm thấy nhiệm vụ phù hợp.");
+  }
+
+  const manageableTasks = await listManageableTaskRecordsForActor(actor);
+  const currentIndex = manageableTasks.findIndex((task) => task._id.toString() === taskId);
+
+  if (currentIndex === -1) {
+    throw new Error("Không tìm thấy nhiệm vụ trong danh sách sắp xếp.");
+  }
+
+  const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+  if (targetIndex < 0 || targetIndex >= manageableTasks.length) {
+    return;
+  }
+
+  const reordered = [...manageableTasks];
+  const currentTask = reordered[currentIndex];
+  if (!currentTask) {
+    return;
+  }
+  reordered.splice(currentIndex, 1);
+  reordered.splice(targetIndex, 0, currentTask);
+
+  await TaskModel.bulkWrite(
+    reordered.map((task, index) => ({
+      updateOne: {
+        filter: { _id: task._id },
+        update: {
+          $set: {
+            sortOrder: (index + 1) * TASK_SORT_ORDER_STEP,
+          },
+        },
+      },
+    })),
+    { ordered: false },
+  );
+
+  await AuditLogModel.create({
+    action: "task.reordered",
+    actorUserId: toObjectId(actor.id),
+    entityId: taskId,
+    entityType: "Task",
+    metadata: {
+      direction,
+      fromIndex: currentIndex,
+      toIndex: targetIndex,
+    },
+  });
+}
+
 export async function listTasksForActor(
   actor: SessionUser,
 ): Promise<TaskSummary[]> {
-  await connectToDatabase();
-  const all = (
-    actor.role === "ADMIN"
-      ? await TaskModel.find({}).sort({ createdAt: -1 }).lean()
-      : actor.teamId
-        ? await TaskModel.find({
-            teamId: toObjectId(actor.teamId),
-          })
-            .sort({ createdAt: -1 })
-            .lean()
-        : []
-  ) as TaskRecord[];
-
-  if (actor.role === "ADMIN") {
-    return all.map(mapTask);
-  }
-
-  const filtered = all.filter((record) => {
-    if (record.scope === "TEAM") return true;
-    if (record.scope === "ZONE") {
-      return !!actor.zoneId && record.zoneId?.toString() === actor.zoneId;
-    }
-    if (record.scope === "REGION") {
-      return !!actor.regionId && record.regionId?.toString() === actor.regionId;
-    }
-    return false;
-  });
-
-  return filtered.map(mapTask);
+  const tasks = await listManageableTaskRecordsForActor(actor);
+  return tasks.map(mapTask);
 }

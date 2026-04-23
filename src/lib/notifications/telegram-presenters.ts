@@ -14,7 +14,8 @@ import { getUserByTelegramId } from "@/lib/services/organization-service";
 import { getCosmeticTextIcon } from "@/lib/cosmetics/icon";
 import { getEquippedPayloadsForUsers } from "@/lib/services/cosmetics-service";
 import { appliesToUser } from "@/lib/tasks/policy";
-import { taskToScope } from "@/lib/tasks/task-service";
+import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
+import { sortTasksForDisplay, taskToScope } from "@/lib/tasks/task-service";
 import { getLevelInfo } from "@/lib/level-utils";
 import { getLevelFromXp } from "@/lib/xp";
 
@@ -51,11 +52,14 @@ export async function getTelegramTodayDigest(
   const allTasks = (await TaskModel.find({
     isActive: true,
   })
-    .sort({ deadlineTime: 1 })
     .lean()) as TaskRecord[];
 
-  const tasks = allTasks.filter((t) =>
-    appliesToUser(taskToScope(t), userShape),
+  const tasks = sortTasksForDisplay(
+    allTasks.filter(
+      (t) =>
+        isTaskScheduledForDate(t, dateKey) &&
+        appliesToUser(taskToScope(t), userShape),
+    ),
   );
 
   if (tasks.length === 0) {

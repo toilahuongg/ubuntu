@@ -4,8 +4,13 @@ import { useState, useTransition } from "react";
 import { Plus, X } from "lucide-react";
 
 import { createTaskAction } from "./actions";
+import { TaskScheduleFields } from "./task-schedule-fields";
 import { ROLE_LABELS, TASK_TARGET_ROLES } from "@/lib/domain";
 import { TASK_TYPE_LABELS, type TaskType } from "@/lib/tasks/constants";
+import {
+  DEFAULT_TASK_SCHEDULE_TYPE,
+  type TaskScheduleType,
+} from "@/lib/tasks/schedule";
 
 const TASK_TYPE_OPTIONS: Array<{
   value: TaskType;
@@ -30,6 +35,9 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [taskType, setTaskType] = useState<TaskType>("MONTHLY_PER_MEMBER");
+  const [scheduleType, setScheduleType] = useState<TaskScheduleType>(
+    DEFAULT_TASK_SCHEDULE_TYPE,
+  );
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -123,6 +131,13 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
           ))}
         </div>
       </div>
+
+      <TaskScheduleFields
+        taskType={taskType}
+        scheduleType={scheduleType}
+        onScheduleTypeChange={setScheduleType}
+        idPrefix="create-task"
+      />
 
       {taskType === "COUNT_TOTAL" && (
         <div>

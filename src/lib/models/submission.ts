@@ -17,6 +17,9 @@ submissionSchema.index(
   { taskId: 1, date: 1, subjectUserId: 1 },
   { unique: true },
 );
+submissionSchema.index({ subjectUserId: 1, submittedAt: -1 });
+submissionSchema.index({ taskId: 1, subjectUserId: 1, date: 1 });
+submissionSchema.index({ taskId: 1, date: 1 });
 
 export type SubmissionRecordModel = InferSchemaType<typeof submissionSchema> & {
   _id: Types.ObjectId;

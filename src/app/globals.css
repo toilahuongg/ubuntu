@@ -100,6 +100,8 @@
   --gradient-secondary: linear-gradient(135deg, #0ea5e9 0%, #7dd3fc 100%);
   --gradient-accent: linear-gradient(135deg, #34d399 0%, #22d3ee 100%);
   --gradient-dark: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  --gradient-foreground: #04203a;
+  --gradient-muted-foreground: rgba(4, 32, 58, 0.78);
 
   --overlay-subtle: rgba(255, 255, 255, 0.88);
   --overlay-medium: rgba(226, 232, 240, 0.76);
@@ -174,6 +176,8 @@
   --gradient-secondary: linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 100%);
   --gradient-accent: linear-gradient(135deg, #22d3ee 0%, #34d399 100%);
   --gradient-dark: linear-gradient(180deg, #061425 0%, #0b2447 100%);
+  --gradient-foreground: #04203a;
+  --gradient-muted-foreground: rgba(4, 32, 58, 0.78);
 
   --overlay-subtle: rgba(8, 22, 42, 0.54);
   --overlay-medium: rgba(14, 165, 233, 0.18);
@@ -245,6 +249,8 @@
     --gradient-secondary: linear-gradient(135deg, #0ea5e9 0%, #1d4ed8 100%);
     --gradient-accent: linear-gradient(135deg, #22d3ee 0%, #34d399 100%);
     --gradient-dark: linear-gradient(180deg, #061425 0%, #0b2447 100%);
+    --gradient-foreground: #04203a;
+    --gradient-muted-foreground: rgba(4, 32, 58, 0.78);
 
     --overlay-subtle: rgba(8, 22, 42, 0.54);
     --overlay-medium: rgba(14, 165, 233, 0.18);
@@ -366,7 +372,7 @@
   }
 
   .glass-strong {
-    background: color-mix(in srgb, var(--overlay-subtle) 78%, white 22%);
+    background: color-mix(in srgb, var(--overlay-subtle) 78%, var(--card) 22%);
     backdrop-filter: blur(24px) saturate(160%);
     -webkit-backdrop-filter: blur(24px) saturate(160%);
     border: 1px solid var(--overlay-strong);
@@ -375,12 +381,13 @@
 
   /* Glass card variants */
   .glass-card {
-    background: color-mix(in srgb, var(--overlay-subtle) 86%, white 14%);
+    background: color-mix(in srgb, var(--overlay-subtle) 86%, var(--card) 14%);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--overlay-medium);
     border-radius: 1rem;
     box-shadow: 0 16px 40px -28px rgba(14, 165, 233, 0.28);
+    color: var(--card-foreground);
   }
 
   .dashboard-task-goal-complete {
@@ -392,7 +399,7 @@
   }
 
   .glass-inset {
-    background: color-mix(in srgb, var(--overlay-medium) 70%, white 30%);
+    background: color-mix(in srgb, var(--overlay-medium) 70%, var(--card) 30%);
     border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
     border-radius: 0.75rem;
   }
@@ -448,6 +455,14 @@
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22), 0 8px 22px -14px rgba(14, 165, 233, 0.66);
   }
 
+  .scripture-preview {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    text-wrap: pretty;
+  }
+
   /* Gradient buttons */
   .btn-gradient {
     background: var(--gradient-primary);
@@ -464,7 +479,7 @@
   }
 
   .btn-secondary-gradient {
-    background: color-mix(in srgb, var(--overlay-subtle) 88%, white 12%);
+    background: color-mix(in srgb, var(--overlay-subtle) 88%, var(--card) 12%);
     color: var(--foreground);
     border: 1px solid var(--border);
     border-radius: 0.75rem;
@@ -473,7 +488,7 @@
     cursor: pointer;
   }
   .btn-secondary-gradient:hover {
-    background: color-mix(in srgb, var(--overlay-medium) 82%, white 18%);
+    background: color-mix(in srgb, var(--overlay-medium) 82%, var(--card) 18%);
     border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
     transform: translateY(-1px);
   }
@@ -484,7 +499,7 @@
     cursor: pointer;
   }
   .card-hover:hover {
-    background: color-mix(in srgb, var(--overlay-medium) 82%, white 18%);
+    background: color-mix(in srgb, var(--overlay-medium) 82%, var(--card) 18%);
     transform: translateY(-2px);
     box-shadow: 0 18px 38px -24px rgba(14, 165, 233, 0.34);
   }

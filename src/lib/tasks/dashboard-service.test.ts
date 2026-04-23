@@ -1,9 +1,12 @@
+import { Types } from "mongoose";
 import { describe, expect, it } from "vitest";
 
+import type { TaskRecord } from "@/lib/models";
 import {
   buildDashboardGoalNotice,
   buildTaskProgress,
 } from "@/lib/tasks/dashboard-service";
+import { sortTasksForDisplay } from "@/lib/tasks/task-service";
 import type { TaskCard, TaskProgress } from "@/lib/tasks/types";
 
 function makeCard(
@@ -31,6 +34,35 @@ function makeCard(
           : "COUNT_TOTAL",
     isApplicableToActor: true,
     progress,
+  };
+}
+
+function makeTask(
+  input: Partial<TaskRecord> & Pick<TaskRecord, "_id" | "title" | "deadlineTime">,
+): TaskRecord {
+  return {
+    _id: input._id,
+    completedAt: null,
+    completionMessage: "",
+    createdAt: input.createdAt ?? new Date("2026-04-01T00:00:00.000Z"),
+    createdBy: new Types.ObjectId(),
+    deadlineTime: input.deadlineTime,
+    description: "",
+    expReward: 10,
+    isActive: true,
+    lateWindowDays: 7,
+    pointReward: 10,
+    regionId: null,
+    scope: "TEAM",
+    sortOrder: input.sortOrder ?? null,
+    submissionMessage: "",
+    targetCount: null,
+    targetRoles: ["MEMBER"],
+    taskType: "MONTHLY_PER_MEMBER",
+    teamId: new Types.ObjectId(),
+    title: input.title,
+    updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+    zoneId: null,
   };
 }
 
@@ -115,6 +147,40 @@ describe("dashboard task progress", () => {
     expect(notice?.tasks.map((task) => task.id)).toEqual([
       "monthly",
       "daily",
+    ]);
+  });
+});
+
+describe("task display order", () => {
+  it("prioritizes saved sort order before fallback fields", () => {
+    const tasks = sortTasksForDisplay([
+      makeTask({
+        _id: new Types.ObjectId(),
+        createdAt: new Date("2026-04-03T00:00:00.000Z"),
+        deadlineTime: "19:00",
+        sortOrder: null,
+        title: "Fallback task",
+      }),
+      makeTask({
+        _id: new Types.ObjectId(),
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+        deadlineTime: "21:00",
+        sortOrder: 200,
+        title: "Second",
+      }),
+      makeTask({
+        _id: new Types.ObjectId(),
+        createdAt: new Date("2026-04-02T00:00:00.000Z"),
+        deadlineTime: "22:00",
+        sortOrder: 100,
+        title: "First",
+      }),
+    ]);
+
+    expect(tasks.map((task) => task.title)).toEqual([
+      "First",
+      "Second",
+      "Fallback task",
     ]);
   });
 });

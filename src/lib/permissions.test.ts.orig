@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canAccessAnalytics,
+  canAccessManagedAnalyticsScope,
   canManageTasks,
   canProxySubmit,
 } from "@/lib/permissions";
@@ -220,6 +222,128 @@ describe("canProxySubmit", () => {
 
   it("allows all roles", () => {
     expect(
+        fullName: "Admin",
+        id: "admin",
+        role: "ADMIN",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+        fullName: "Team lead",
+        id: "team-lead",
+        role: "TEAM_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+        fullName: "Zone",
+        id: "zone-lead",
+        role: "ZONE_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+        fullName: "Regional",
+        id: "regional-lead",
+        role: "REGIONAL_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+        fullName: "Member",
+        id: "member",
+        role: "MEMBER",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+        fullName: "NGV",
+        id: "ngv",
+        role: "NGV",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+  });
+});
+
+  it("allows admin and scoped lead roles", () => {
+    expect(
+        fullName: "Admin",
+        id: "admin",
+        role: "ADMIN",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+        fullName: "Team lead",
+        id: "team-lead",
+        role: "TEAM_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+      }),
+    ).toBe(true);
+
+    expect(
+        fullName: "Zone",
+        id: "zone-lead",
+        role: "ZONE_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+        zoneId: "zone-a",
+      }),
+    ).toBe(true);
+
+    expect(
+        fullName: "Regional",
+        id: "regional-lead",
+        regionId: "region-a",
+        role: "REGIONAL_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+        zoneId: "zone-a",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects members, ngv, and unscoped team lead", () => {
+    expect(
+        fullName: "Member",
+        id: "member",
+        role: "MEMBER",
+        status: "ACTIVE",
+        teamId: "team-a",
+      }),
+    ).toBe(false);
+
+    expect(
+        fullName: "NGV",
+        id: "ngv",
+        role: "NGV",
+        status: "ACTIVE",
+        teamId: "team-a",
+        zoneId: "zone-a",
+        regionId: "region-a",
+      }),
+    ).toBe(false);
+
+    expect(
+        fullName: "Unscoped",
+        id: "lead",
+        role: "TEAM_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("canManageTasks", () => {
+  it("allows admin and scoped management roles", () => {
     expect(
       canManageTasks({
         fullName: "Admin",

@@ -21,6 +21,7 @@ import {
   MONTHLY_GOAL_TASK_TYPES,
 } from "@/lib/tasks/constants";
 import { appliesToUser, isWithinLateWindow, type ScopeContext } from "@/lib/tasks/policy";
+import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
 import { toObjectId } from "@/lib/utils/ids";
 
 export const REMINDER_LEAD_MINUTES = 30;
@@ -191,7 +192,9 @@ export function buildDueTaskReminderCandidatesFromData(input: {
 }): ReminderCandidate[] {
   const openTasks = input.tasks.filter(
     (task) =>
-      task.isActive && computeTaskStatus(task, input.dateKey, input.sweepAt) === "OPEN",
+      task.isActive &&
+      isTaskScheduledForDate(task, input.dateKey) &&
+      computeTaskStatus(task, input.dateKey, input.sweepAt) === "OPEN",
   );
   const preferenceByPair = buildPreferenceMap(input.preferences);
   const sentPairs = buildSentPairs(input.sentLogs);

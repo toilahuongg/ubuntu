@@ -38,3 +38,18 @@ export function formatDateTimeLabel(date: Date) {
 export function formatTimeLabel(date: Date) {
   return formatInTimeZone(date, getAppTimezone(), "HH:mm");
 }
+
+export function getDayOfMonthFromDateKey(dateKey: string) {
+  return Number.parseInt(dateKey.slice(8, 10), 10);
+}
+
+export function getIsoWeekdayFromDateKey(dateKey: string) {
+  return Number.parseInt(
+    formatInTimeZone(
+      fromZonedTime(`${dateKey}T00:00:00`, getAppTimezone()),
+      getAppTimezone(),
+      "i",
+    ),
+    10,
+  );
+}

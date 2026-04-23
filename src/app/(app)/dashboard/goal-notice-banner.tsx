@@ -19,7 +19,7 @@ export function GoalNoticeBanner({
       className="glass-card space-y-3 p-4"
       style={{
         background:
-          "linear-gradient(180deg, color-mix(in srgb, var(--warning-soft) 46%, white 54%) 0%, color-mix(in srgb, var(--overlay-subtle) 92%, white 8%) 100%)",
+          "linear-gradient(180deg, color-mix(in srgb, var(--warning-soft) 56%, var(--card) 44%) 0%, color-mix(in srgb, var(--overlay-subtle) 92%, var(--card) 8%) 100%)",
       }}
     >
       <div className="flex items-start justify-between gap-3">
@@ -28,7 +28,7 @@ export function GoalNoticeBanner({
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
             style={{
               background: "var(--warning-soft)",
-              color: "color-mix(in srgb, var(--warning) 85%, black 15%)",
+              color: "color-mix(in srgb, var(--warning) 82%, var(--foreground) 18%)",
             }}
           >
             <Target className="h-4 w-4" aria-hidden />
@@ -58,7 +58,7 @@ export function GoalNoticeBanner({
             href={`/tasks/${task.id}`}
             className="max-w-full truncate rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors hover:text-foreground"
             style={{
-              background: "color-mix(in srgb, var(--overlay-subtle) 84%, white 16%)",
+              background: "color-mix(in srgb, var(--overlay-subtle) 84%, var(--card) 16%)",
               color: "var(--muted-foreground)",
             }}
           >
@@ -69,7 +69,7 @@ export function GoalNoticeBanner({
           <span
             className="rounded-full px-2.5 py-1 text-[11px] font-medium"
             style={{
-              background: "color-mix(in srgb, var(--overlay-subtle) 84%, white 16%)",
+              background: "color-mix(in srgb, var(--overlay-subtle) 84%, var(--card) 16%)",
               color: "var(--muted-foreground)",
             }}
           >

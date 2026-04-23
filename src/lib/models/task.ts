@@ -14,6 +14,10 @@ import {
   TASK_TYPES,
   type TaskType,
 } from "@/lib/tasks/constants";
+import {
+  TASK_SCHEDULE_TYPES,
+  type TaskScheduleType,
+} from "@/lib/tasks/schedule";
 
 const taskSchema = new Schema(
   {
@@ -28,6 +32,7 @@ const taskSchema = new Schema(
       min: 1,
       type: Number,
     },
+    sortOrder: { default: null, type: Number },
     isActive: { default: true, type: Boolean },
     regionId: { default: null, ref: "Region", type: Schema.Types.ObjectId },
     scope: { default: "TEAM", enum: TASK_SCOPES, type: String },
@@ -36,6 +41,19 @@ const taskSchema = new Schema(
       enum: TASK_TYPES,
       required: true,
       type: String,
+    },
+    scheduleType: {
+      default: null,
+      enum: TASK_SCHEDULE_TYPES,
+      type: String,
+    },
+    scheduledWeekdays: {
+      default: undefined,
+      type: [Number],
+    },
+    scheduledMonthDays: {
+      default: undefined,
+      type: [Number],
     },
     targetCount: { default: null, min: 1, type: Number },
     targetRoles: {
@@ -53,6 +71,10 @@ const taskSchema = new Schema(
   { timestamps: true },
 );
 
+taskSchema.index({ isActive: 1, scope: 1, teamId: 1, createdAt: -1 });
+taskSchema.index({ isActive: 1, scope: 1, zoneId: 1, createdAt: -1 });
+taskSchema.index({ isActive: 1, scope: 1, regionId: 1, createdAt: -1 });
+
 export type TaskRecord = {
   _id: Types.ObjectId;
   createdBy: Types.ObjectId;
@@ -61,9 +83,13 @@ export type TaskRecord = {
   expReward: number;
   pointReward: number;
   lateWindowDays: number;
+  sortOrder: number | null;
   isActive: boolean;
   regionId: Types.ObjectId | null;
   scope: TaskScope;
+  scheduleType?: TaskScheduleType | null;
+  scheduledWeekdays?: number[] | null;
+  scheduledMonthDays?: number[] | null;
   submissionMessage: string;
   completionMessage: string;
   taskType: TaskType;

@@ -56,6 +56,11 @@ const userSchema = new Schema(
 );
 
 userSchema.index({ totalXp: -1, level: -1 });
+userSchema.index({ status: 1, role: 1, fullName: 1 });
+userSchema.index({ status: 1, teamId: 1, role: 1, fullName: 1 });
+userSchema.index({ status: 1, zoneId: 1, role: 1, fullName: 1 });
+userSchema.index({ status: 1, regionId: 1, role: 1, fullName: 1 });
+userSchema.index({ status: 1, createdAt: -1 });
 
 // Unique only for users that actually have a telegramId (not null).
 // Plain sparse:true won't work because we explicitly store `null`.

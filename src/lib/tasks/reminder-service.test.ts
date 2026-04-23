@@ -34,6 +34,7 @@ function task(input: Partial<TaskRecord> = {}): TaskRecord {
     pointReward: 10,
     regionId: null,
     scope: "TEAM",
+    sortOrder: input.sortOrder ?? null,
     submissionMessage: "",
     targetCount: null,
     targetRoles: ["MEMBER"],

@@ -8,17 +8,21 @@ import { runAction, type ActionResult } from "@/lib/actions/result";
 import type { SessionUser } from "@/lib/domain";
 import { canManageTasks } from "@/lib/permissions";
 import { DEFAULT_TASK_TYPE } from "@/lib/tasks/constants";
+import { DEFAULT_TASK_SCHEDULE_TYPE } from "@/lib/tasks/schedule";
 import {
   createTask,
   deleteTask,
+  moveTask,
   toggleTask,
   updateTask,
 } from "@/lib/tasks/task-service";
 import {
+  moveTaskInputSchema,
   taskInputSchema,
   toggleTaskInputSchema,
   updateTaskInputSchema,
 } from "@/lib/validation";
+import type { TaskMoveDirection } from "@/lib/tasks/types";
 
 async function requireManager(): Promise<SessionUser> {
   const session = await getSessionUser();
@@ -45,6 +49,15 @@ export async function createTaskAction(
       isActive: formData.get("isActive") === "true",
       taskType:
         (formData.get("taskType") as string | null) ?? DEFAULT_TASK_TYPE,
+      scheduleType:
+        (formData.get("scheduleType") as string | null) ??
+        DEFAULT_TASK_SCHEDULE_TYPE,
+      scheduledWeekdays: formData
+        .getAll("scheduledWeekdays")
+        .map((value) => Number(value)),
+      scheduledMonthDays: formData
+        .getAll("scheduledMonthDays")
+        .map((value) => Number(value)),
       targetCount:
         rawTargetCount != null && rawTargetCount !== ""
           ? Number(rawTargetCount)
@@ -74,6 +87,17 @@ export async function updateTaskAction(
       expReward: Number(formData.get("expReward") ?? 10),
       pointReward: Number(formData.get("pointReward") ?? 10),
       lateWindowDays: Number(formData.get("lateWindowDays") ?? 7),
+      taskType:
+        (formData.get("taskType") as string | null) ?? DEFAULT_TASK_TYPE,
+      scheduleType:
+        (formData.get("scheduleType") as string | null) ??
+        DEFAULT_TASK_SCHEDULE_TYPE,
+      scheduledWeekdays: formData
+        .getAll("scheduledWeekdays")
+        .map((value) => Number(value)),
+      scheduledMonthDays: formData
+        .getAll("scheduledMonthDays")
+        .map((value) => Number(value)),
       targetCount:
         rawTargetCount != null && rawTargetCount !== ""
           ? Number(rawTargetCount)
@@ -110,6 +134,19 @@ export async function deleteTaskAction(
     const session = await requireManager();
     const parsed = toggleTaskInputSchema.parse({ taskId });
     await deleteTask(session, parsed.taskId);
+    revalidatePath("/templates");
+    revalidatePath("/dashboard");
+  });
+}
+
+export async function moveTaskAction(
+  taskId: string,
+  direction: TaskMoveDirection,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireManager();
+    const parsed = moveTaskInputSchema.parse({ direction, taskId });
+    await moveTask(session, parsed.taskId, parsed.direction);
     revalidatePath("/templates");
     revalidatePath("/dashboard");
   });

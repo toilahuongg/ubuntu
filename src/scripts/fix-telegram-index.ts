@@ -1,7 +1,10 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import mongoose from "mongoose";
 
 import { connectToDatabase } from "@/lib/mongoose";
-import { UserModel } from "@/lib/models";
+import { SubmissionModel, TaskModel, UserModel } from "@/lib/models";
 
 async function main() {
   await connectToDatabase();
@@ -23,9 +26,17 @@ async function main() {
     }
   }
 
-  await UserModel.syncIndexes();
+  await Promise.all([
+    UserModel.syncIndexes(),
+    TaskModel.syncIndexes(),
+    SubmissionModel.syncIndexes(),
+  ]);
   console.log("Synced new indexes.");
-  console.table(await UserModel.collection.indexes());
+  console.table({
+    submissions: (await SubmissionModel.collection.indexes()).length,
+    tasks: (await TaskModel.collection.indexes()).length,
+    users: (await UserModel.collection.indexes()).length,
+  });
 }
 
 main()

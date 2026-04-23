@@ -1,7 +1,5 @@
 import { DEFAULT_TIMEZONE } from "@/lib/domain";
-import dotenv from "dotenv";
 
-dotenv.config();
 export function getOptionalEnv() {
   return {
     appUrl: process.env.NEXT_PUBLIC_APP_URL?.trim() || "",

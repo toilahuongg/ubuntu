@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { Check, Loader2 } from "lucide-react";
 
 import { submitTaskAction } from "@/app/(app)/tasks/actions";
@@ -20,12 +19,16 @@ export function TaskTickButton({
   status: TaskStatus;
   isGoalComplete?: boolean;
 }) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [optimisticCount, setOptimisticCount] = useState(myCompletionCount);
+
+  useEffect(() => {
+    setOptimisticCount(myCompletionCount);
+  }, [myCompletionCount]);
 
   const isLocked = status === "LOCKED";
-  const isDone = myCompletionCount > 0;
+  const isDone = optimisticCount > 0;
   const isTaskCompleted = status === "COMPLETED";
   const disabled =
     isPending || isLocked || isGoalComplete || (isTaskCompleted && !isDone);
@@ -35,13 +38,15 @@ export function TaskTickButton({
     e.stopPropagation();
     if (disabled) return;
     setError(null);
+    const previousCount = optimisticCount;
+    const nextCount = isDone ? 0 : Math.max(1, previousCount);
+    setOptimisticCount(nextCount);
     startTransition(async () => {
       const result = isDone
         ? await submitTaskAction(taskId, subjectUserId, undefined, 0, "set")
         : await submitTaskAction(taskId, subjectUserId);
-      if (result.ok) {
-        router.refresh();
-      } else {
+      if (!result.ok) {
+        setOptimisticCount(previousCount);
         setError(result.error);
       }
     });

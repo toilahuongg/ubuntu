@@ -46,6 +46,11 @@ const NAV_ITEMS: NavItem[] = [
     icon: Trophy,
   },
   {
+    href: ,
+    label: "Điều hành",
+    icon: BarChart3,
+  },
+  {
     href: "/profile",
     label: "Hồ sơ",
     icon: User,

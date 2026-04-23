@@ -96,7 +96,7 @@ export function LeaderDashboard({
 
 
       <CompletionTrendCard
-        data={data.trends} description="Tổng lượt hoàn thành của cá nhân bạn."
+        data={data.trends}
         todayCount={data.trends.at(-1)?.completed || 0}
       />
 

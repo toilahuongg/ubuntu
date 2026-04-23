@@ -1,0 +1,34 @@
+--- src/lib/permissions.test.ts
++++ src/lib/permissions.test.ts
+@@ -223,31 +223,6 @@
+ });
+ 
+-  it("allows all roles", () => {
+-    expect(
+-        fullName: "Admin",
+-        id: "admin",
+-        role: "ADMIN",
+-        status: "ACTIVE",
+-      }),
+-    ).toBe(true);
+-        fullName: "NGV",
+-        id: "ngv",
+-        role: "NGV",
+-        status: "ACTIVE",
+-        teamId: "team-a",
+-        zoneId: "zone-a",
+-        regionId: "region-a",
+-      }),
+-    ).toBe(false);
+-
+-    expect(
+-        fullName: "Unscoped",
+-        id: "lead",
+-        role: "TEAM_LEAD",
+-        status: "ACTIVE",
+-      }),
+-    ).toBe(false);
+-  });
+-});
+-
+ describe("canManageTasks", () => {

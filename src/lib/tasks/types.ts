@@ -1,3 +1,5 @@
+import type { DailyScripture } from "@/lib/daily-scripture";
+import type { TrendPoint } from "@/lib/services/analytics-service";
 import type {
   Role,
   SessionUser,
@@ -5,8 +7,10 @@ import type {
   TaskTargetRole,
 } from "@/lib/domain";
 import type { TaskType } from "@/lib/tasks/constants";
+import type { TaskScheduleType } from "@/lib/tasks/schedule";
 
 export type TaskStatus = "OPEN" | "LOCKED" | "COMPLETED";
+export type TaskMoveDirection = "up" | "down";
 
 export type TaskProgressKind = "TOTAL" | "MONTHLY_MEMBER" | "DAILY_MEMBER";
 
@@ -38,8 +42,12 @@ export type TaskSummary = {
   expReward: number;
   pointReward: number;
   lateWindowDays: number;
+  sortOrder: number | null;
   scope: TaskScope;
   taskType: TaskType;
+  scheduleType: TaskScheduleType;
+  scheduledWeekdays: number[];
+  scheduledMonthDays: number[];
   targetCount: number | null;
   targetRoles: TaskTargetRole[];
   submissionMessage: string;
@@ -143,10 +151,8 @@ export type DashboardView = {
 
 export type ScopeLabel = "TEAM" | "ZONE" | "REGION";
 
-export type MemberDashboardView = {
-  date: string;
-  cards: TaskCard[];
-  goalNotice: DashboardGoalNotice | null;
+type DashboardLevelSummary = {
+  dailyScripture: DailyScripture;
   totalXp: number;
   level: number;
   progressXp: number;
@@ -155,9 +161,16 @@ export type MemberDashboardView = {
   levelIcon: string;
 };
 
+export type MemberDashboardView = {
+  date: string;
+  cards: TaskCard[];
+  goalNotice: DashboardGoalNotice | null;
+} & DashboardLevelSummary;
+
 export type LeaderDashboardView = DashboardView & {
   scopeLabel: ScopeLabel;
-};
+  trends: TrendPoint[];
+} & DashboardLevelSummary;
 
 export type TemplateCoverageEntry = {
   completed: number;

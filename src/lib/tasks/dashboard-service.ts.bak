@@ -457,7 +457,7 @@ export async function buildLeaderDashboard(
   const [view, progress, trends] = await Promise.all([
     buildDashboardView(actor, dateKey),
     getUserProgress(actor.id),
-    getCompletionTrend(actor, 14, "SELF"),
+    getCompletionTrend(actor),
   ]);
 
   return {

@@ -4,9 +4,11 @@ import { useState, useTransition } from "react";
 import { Check, X } from "lucide-react";
 
 import { updateTaskAction } from "./actions";
+import { TaskScheduleFields } from "./task-schedule-fields";
 import { ROLE_LABELS, TASK_TARGET_ROLES } from "@/lib/domain";
 import { TASK_TYPE_LABELS } from "@/lib/tasks/constants";
 import type { TaskSummary } from "@/lib/tasks/types";
+import type { TaskScheduleType } from "@/lib/tasks/schedule";
 
 export function EditTemplateForm({
   task,
@@ -17,6 +19,9 @@ export function EditTemplateForm({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [scheduleType, setScheduleType] = useState<TaskScheduleType>(
+    task.scheduleType,
+  );
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -35,6 +40,7 @@ export function EditTemplateForm({
   return (
     <form action={handleSubmit} className="glass-card mt-2 space-y-4 p-4">
       <input type="hidden" name="taskId" value={task.id} />
+      <input type="hidden" name="taskType" value={task.taskType} />
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">Sửa nhiệm vụ</h3>
@@ -73,6 +79,15 @@ export function EditTemplateForm({
           ))}
         </div>
       </div>
+
+      <TaskScheduleFields
+        taskType={task.taskType}
+        scheduleType={scheduleType}
+        onScheduleTypeChange={setScheduleType}
+        defaultWeekdays={task.scheduledWeekdays}
+        defaultMonthDays={task.scheduledMonthDays}
+        idPrefix={`edit-task-${task.id}`}
+      />
 
       {isCountTotal && (
         <div>
