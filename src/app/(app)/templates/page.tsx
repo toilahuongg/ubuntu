@@ -5,7 +5,6 @@ import { canManageTasks } from "@/lib/permissions";
 import { listTasksForActor } from "@/lib/tasks/task-service";
 import { getTemplateCoverageForActor } from "@/lib/tasks/dashboard-service";
 import { getTodayDateKey } from "@/lib/dates";
-import { SCOPE_LABELS } from "@/lib/domain";
 import { TemplateList } from "./template-list";
 import { CreateTemplateForm } from "./create-template-form";
 
@@ -40,7 +39,7 @@ export default async function TemplatesPage() {
       </div>
 
       {actorScope ? (
-        <CreateTemplateForm scopeLabel={SCOPE_LABELS[actorScope]} />
+        <CreateTemplateForm scope={actorScope} />
       ) : (
         <div className="glass-card p-4 text-sm text-muted-foreground">
           Admin có thể xem và chỉnh sửa toàn bộ nhiệm vụ. Để tạo mới, hãy dùng

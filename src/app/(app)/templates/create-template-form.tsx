@@ -5,7 +5,12 @@ import { Plus, X } from "lucide-react";
 
 import { createTaskAction } from "./actions";
 import { TaskScheduleFields } from "./task-schedule-fields";
-import { ROLE_LABELS, TASK_TARGET_ROLES } from "@/lib/domain";
+import {
+  getTaskTargetRolesForScope,
+  ROLE_LABELS,
+  SCOPE_LABELS,
+  type TaskScope,
+} from "@/lib/domain";
 import { TASK_TYPE_LABELS, type TaskType } from "@/lib/tasks/constants";
 import {
   DEFAULT_TASK_SCHEDULE_TYPE,
@@ -30,7 +35,7 @@ const TASK_TYPE_OPTIONS: Array<{
   },
 ];
 
-export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
+export function CreateTemplateForm({ scope }: { scope: TaskScope }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +43,7 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
   const [scheduleType, setScheduleType] = useState<TaskScheduleType>(
     DEFAULT_TASK_SCHEDULE_TYPE,
   );
+  const targetRoleOptions = getTaskTargetRolesForScope(scope);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -70,7 +76,7 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
         <div>
           <h3 className="text-sm font-semibold">Tạo mẫu nhiệm vụ</h3>
           <p className="text-[11px] text-muted-foreground">
-            Phạm vi: {scopeLabel}
+            Phạm vi: {SCOPE_LABELS[scope]}
           </p>
         </div>
         <button
@@ -113,8 +119,8 @@ export function CreateTemplateForm({ scopeLabel }: { scopeLabel: string }) {
         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
           Hiển thị cho vai trò *
         </label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-          {TASK_TARGET_ROLES.map((role) => (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {targetRoleOptions.map((role) => (
             <label
               key={role}
               className="group flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-overlay-subtle px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-background has-[:checked]:shadow-[0_8px_22px_-14px_var(--primary)]"

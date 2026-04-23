@@ -120,7 +120,7 @@ function taskToScope(
   return {
     regionId: task.regionId?.toString() ?? null,
     scope: task.scope,
-    targetRoles: normalizeTargetRoles(task.targetRoles),
+    targetRoles: normalizeTargetRoles(task.targetRoles, task.scope),
     teamId: task.teamId.toString(),
     zoneId: task.zoneId?.toString() ?? null,
   };

@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  filterTaskTargetRolesForScope,
   normalizeTargetRoles,
   type SessionUser,
   type SerializedUser,
@@ -67,7 +68,7 @@ export function taskToScope(
     teamId: task.teamId.toString(),
     zoneId: task.zoneId?.toString() ?? null,
     regionId: task.regionId?.toString() ?? null,
-    targetRoles: normalizeTargetRoles(task.targetRoles),
+    targetRoles: normalizeTargetRoles(task.targetRoles, task.scope),
   };
 }
 
@@ -135,7 +136,7 @@ export function mapTask(record: TaskRecord): TaskSummary {
     scheduledWeekdays: schedule.scheduledWeekdays,
     scheduledMonthDays: schedule.scheduledMonthDays,
     targetCount: record.targetCount ?? null,
-    targetRoles: normalizeTargetRoles(record.targetRoles),
+    targetRoles: normalizeTargetRoles(record.targetRoles, record.scope),
     submissionMessage: record.submissionMessage ?? "",
     completionMessage: record.completionMessage ?? "",
     completedAt: record.completedAt ? record.completedAt.toISOString() : null,
@@ -423,7 +424,7 @@ export async function getTaskDetail(
     lateWindowDays,
     status: isScheduledForDate ? computeTaskStatus(task, dateKey) : "LOCKED",
     taskType,
-    targetRoles: normalizeTargetRoles(task.targetRoles),
+    targetRoles: normalizeTargetRoles(task.targetRoles, task.scope),
     targetCount: task.targetCount ?? null,
     totalAcrossAll,
     monthlyGoal,
@@ -512,6 +513,15 @@ export async function createTask(
   input: CreateTaskInput,
 ): Promise<string> {
   const actorScope = resolveActorScope(actor);
+  const targetRoles = filterTaskTargetRolesForScope(
+    input.targetRoles,
+    actorScope.scope,
+  );
+  if (targetRoles.length === 0) {
+    throw new Error(
+      "Vui lòng chọn ít nhất một vai trò phù hợp với phạm vi nhiệm vụ.",
+    );
+  }
   const taskType: TaskType = normalizeTaskType(input.taskType);
   const schedule = normalizeTaskSchedule({
     scheduleType: input.scheduleType,
@@ -558,7 +568,7 @@ export async function createTask(
     completionMessage: input.completionMessage?.trim() ?? "",
     taskType,
     targetCount: taskType === "COUNT_TOTAL" ? input.targetCount : null,
-    targetRoles: normalizeTargetRoles(input.targetRoles),
+    targetRoles,
     sortOrder: maxSortOrder + TASK_SORT_ORDER_STEP,
     teamId: toObjectId(actorScope.teamId),
     title: input.title,
@@ -577,7 +587,7 @@ export async function createTask(
       scheduledWeekdays: schedule.scheduledWeekdays,
       taskType,
       targetCount: taskType === "COUNT_TOTAL" ? input.targetCount : null,
-      targetRoles: normalizeTargetRoles(input.targetRoles),
+      targetRoles,
       teamId: actorScope.teamId,
       title: input.title,
     },
@@ -617,6 +627,15 @@ export async function updateTask(
   }
 
   const taskType = normalizeTaskType(record.taskType);
+  const targetRoles = filterTaskTargetRolesForScope(
+    input.targetRoles,
+    record.scope,
+  );
+  if (targetRoles.length === 0) {
+    throw new Error(
+      "Vui lòng chọn ít nhất một vai trò phù hợp với phạm vi nhiệm vụ.",
+    );
+  }
   const schedule = normalizeTaskSchedule({
     scheduleType: input.scheduleType,
     scheduledMonthDays: input.scheduledMonthDays,
@@ -651,7 +670,7 @@ export async function updateTask(
         scheduledWeekdays: schedule.scheduledWeekdays,
         scheduledMonthDays: schedule.scheduledMonthDays,
         targetCount: nextTargetCount,
-        targetRoles: normalizeTargetRoles(input.targetRoles),
+        targetRoles,
         submissionMessage: input.submissionMessage?.trim() ?? "",
         completionMessage: input.completionMessage?.trim() ?? "",
       },
@@ -670,7 +689,7 @@ export async function updateTask(
       scheduledMonthDays: schedule.scheduledMonthDays,
       scheduledWeekdays: schedule.scheduledWeekdays,
       targetCount: nextTargetCount,
-      targetRoles: normalizeTargetRoles(input.targetRoles),
+      targetRoles,
     },
   });
 }

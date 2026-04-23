@@ -16,6 +16,20 @@ const regionalLead = {
   zoneId: "zone-a",
 };
 
+const zoneLead = {
+  regionId: null,
+  role: "ZONE_LEAD" as const,
+  teamId: "team-a",
+  zoneId: "zone-a",
+};
+
+const teamLead = {
+  regionId: null,
+  role: "TEAM_LEAD" as const,
+  teamId: "team-a",
+  zoneId: null,
+};
+
 const ngv = {
   regionId: "region-a",
   role: "NGV" as const,
@@ -34,6 +48,8 @@ describe("task targeting policy", () => {
   it("treats missing and empty target roles as all roles", () => {
     expect(appliesToUser(regionTask, regionalLead)).toBe(true);
     expect(appliesToUser({ ...regionTask, targetRoles: [] }, ngv)).toBe(true);
+    expect(appliesToUser(regionTask, teamLead)).toBe(false);
+    expect(appliesToUser(regionTask, zoneLead)).toBe(false);
   });
 
   it("applies NGV-only tasks only to NGV in scope", () => {

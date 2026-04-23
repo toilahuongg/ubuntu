@@ -138,7 +138,7 @@ function TaskCard({
                 </span>
               )}
               <span className="rounded-md bg-overlay-subtle px-1.5 py-0.5">
-                {targetsAllRoles(task.targetRoles)
+                {targetsAllRoles(task.targetRoles, task.scope)
                   ? "Tất cả vai trò"
                   : task.targetRoles
                       .map((role) => ROLE_LABELS[role])

@@ -5,7 +5,7 @@ import { Check, X } from "lucide-react";
 
 import { updateTaskAction } from "./actions";
 import { TaskScheduleFields } from "./task-schedule-fields";
-import { ROLE_LABELS, TASK_TARGET_ROLES } from "@/lib/domain";
+import { getTaskTargetRolesForScope, ROLE_LABELS } from "@/lib/domain";
 import { TASK_TYPE_LABELS } from "@/lib/tasks/constants";
 import type { TaskSummary } from "@/lib/tasks/types";
 import type { TaskScheduleType } from "@/lib/tasks/schedule";
@@ -36,6 +36,7 @@ export function EditTemplateForm({
   }
 
   const isCountTotal = task.taskType === "COUNT_TOTAL";
+  const targetRoleOptions = getTaskTargetRolesForScope(task.scope);
 
   return (
     <form action={handleSubmit} className="glass-card mt-2 space-y-4 p-4">
@@ -61,8 +62,8 @@ export function EditTemplateForm({
         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
           Hiển thị cho vai trò *
         </label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-          {TASK_TARGET_ROLES.map((role) => (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {targetRoleOptions.map((role) => (
             <label
               key={role}
               className="group flex min-h-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-overlay-subtle px-3 text-xs font-semibold text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-background has-[:checked]:shadow-[0_8px_22px_-14px_var(--primary)]"

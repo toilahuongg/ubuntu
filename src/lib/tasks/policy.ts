@@ -58,7 +58,7 @@ export function appliesToUser(
   user: UserScope,
 ): boolean {
   if (!user.teamId) return false;
-  const targetRoles = normalizeTargetRoles(task.targetRoles);
+  const targetRoles = normalizeTargetRoles(task.targetRoles, task.scope);
   if (user.role === "ADMIN") return false;
   if (user.role && !targetRoles.includes(user.role)) return false;
   if (task.scope === "TEAM") return task.teamId === user.teamId;

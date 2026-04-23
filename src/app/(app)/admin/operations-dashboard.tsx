@@ -39,7 +39,7 @@ export function OperationsDashboard({ data }: OperationsDashboardProps) {
   return (
     <div className="space-y-5">
       <section className="glass-card overflow-hidden p-4">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary ring-1 ring-primary/15">
               <BarChart3 className="h-3.5 w-3.5" />
@@ -70,20 +70,22 @@ export function OperationsDashboard({ data }: OperationsDashboardProps) {
 }
 
 function ProgressRing({ value }: { value: number }) {
+  const normalizedValue = Math.min(100, Math.max(0, value));
+
   return (
     <div
-      className="grid h-20 w-20 shrink-0 place-items-center rounded-full"
+      className="flex aspect-square h-20 min-h-20 w-20 min-w-20 shrink-0 items-center justify-center rounded-full p-1.5 shadow-sm ring-1 ring-border"
       style={{
-        background: `conic-gradient(var(--primary) ${value}%, var(--overlay-subtle) 0)`,
+        background: `conic-gradient(var(--primary) ${normalizedValue}%, color-mix(in srgb, var(--border) 72%, var(--card)) 0)`,
       }}
-      aria-label={`Hoàn thành hôm nay ${value}%`}
+      aria-label={`Hoàn thành hôm nay ${normalizedValue}%`}
       role="img"
     >
-      <div className="grid h-16 w-16 place-items-center rounded-full bg-card shadow-sm">
-        <div className="text-center">
-          <p className="text-lg font-bold leading-none">{value}%</p>
-          <p className="text-[10px] text-muted-foreground">hôm nay</p>
-        </div>
+      <div className="flex h-full w-full flex-col items-center justify-center rounded-full bg-background text-center shadow-sm ring-1 ring-border">
+        <p className="m-0 text-lg font-bold leading-none">{normalizedValue}%</p>
+        <p className="m-0 mt-0.5 text-[10px] leading-none text-muted-foreground">
+          hôm nay
+        </p>
       </div>
     </div>
   );

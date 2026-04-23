@@ -28,25 +28,44 @@ export function isRole(value: unknown): value is Role {
 
 export type TaskTargetRole = (typeof TASK_TARGET_ROLES)[number];
 
-function isTaskTargetRole(value: unknown): value is TaskTargetRole {
-  return (
-    typeof value === "string" &&
-    (TASK_TARGET_ROLES as readonly string[]).includes(value)
-  );
-}
+export const TASK_TARGET_ROLES_BY_SCOPE = {
+  TEAM: TASK_TARGET_ROLES,
+  ZONE: ["ZONE_LEAD", "REGIONAL_LEAD", "NGV", "MEMBER"],
+  REGION: ["REGIONAL_LEAD", "NGV", "MEMBER"],
+} as const satisfies Record<TaskScope, readonly TaskTargetRole[]>;
 
 export function normalizeTargetRoles(
   targetRoles?: readonly string[] | null,
+  scope?: TaskScope,
 ): TaskTargetRole[] {
-  const roles = (targetRoles ?? []).filter(isTaskTargetRole);
-  if (roles.length === 0) return [...TASK_TARGET_ROLES];
-  return TASK_TARGET_ROLES.filter((role) => roles.includes(role));
+  const allowedRoles = scope
+    ? getTaskTargetRolesForScope(scope)
+    : TASK_TARGET_ROLES;
+  const roles = allowedRoles.filter((role) => (targetRoles ?? []).includes(role));
+  if (roles.length === 0) return [...allowedRoles];
+  return roles;
+}
+
+export function getTaskTargetRolesForScope(scope: TaskScope): TaskTargetRole[] {
+  return [...TASK_TARGET_ROLES_BY_SCOPE[scope]];
+}
+
+export function filterTaskTargetRolesForScope(
+  targetRoles: readonly TaskTargetRole[],
+  scope: TaskScope,
+): TaskTargetRole[] {
+  const allowedRoles = getTaskTargetRolesForScope(scope);
+  return allowedRoles.filter((role) => targetRoles.includes(role));
 }
 
 export function targetsAllRoles(
   targetRoles: readonly TaskTargetRole[],
+  scope?: TaskScope,
 ): boolean {
-  return TASK_TARGET_ROLES.every((role) => targetRoles.includes(role));
+  const allowedRoles = scope
+    ? getTaskTargetRolesForScope(scope)
+    : TASK_TARGET_ROLES;
+  return allowedRoles.every((role) => targetRoles.includes(role));
 }
 
 export const USER_STATUSES = ["ACTIVE", "INACTIVE", "PENDING"] as const;
