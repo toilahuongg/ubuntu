@@ -63,7 +63,8 @@ npm run dev
 
 - `POST /api/telegram/webhook` — webhook bot Telegram
 - `POST /api/jobs/daily-occurrences` — sinh occurrence cho ngày hiện tại
-- `POST /api/jobs/reminders` — gửi reminder cho user chưa nộp
+- `POST /api/jobs/reminders` — chạy một lượt reminder task đang đến giờ
+- `POST /api/jobs/monthly-reminders` — chạy một lượt reminder đặt mục tiêu tháng đang đến giờ
 
 Hai route jobs yêu cầu header:
 
@@ -77,6 +78,7 @@ x-cron-secret: <CRON_SECRET>
 | --- | --- |
 | `npm run dev` | Dev server |
 | `npm run build` / `npm start` | Build & chạy production |
+| `npm run cron:reminders` | Worker `node-cron` quét reminder mỗi phút theo `APP_TIMEZONE` |
 | `npm run lint` | ESLint |
 | `npm run test` / `test:watch` | Vitest |
 | `npm run seed` | Seed dữ liệu mẫu |

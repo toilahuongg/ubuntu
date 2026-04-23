@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { taskInputSchema } from "@/lib/validation";
+import {
+  taskInputSchema,
+  taskReminderPreferenceInputSchema,
+} from "@/lib/validation";
 
 describe("taskInputSchema", () => {
   it("accepts valid input", () => {
@@ -77,5 +80,43 @@ describe("taskInputSchema", () => {
         title: "Daily check-in",
       }),
     ).toThrow();
+  });
+});
+
+describe("taskReminderPreferenceInputSchema", () => {
+  it("accepts enabled and disabled reminder preferences", () => {
+    expect(
+      taskReminderPreferenceInputSchema.parse({
+        enabled: true,
+        reminderTime: "08:15",
+        taskId: "task-1",
+      }),
+    ).toMatchObject({ enabled: true, reminderTime: "08:15" });
+
+    expect(
+      taskReminderPreferenceInputSchema.parse({
+        enabled: false,
+        reminderTime: "21:00",
+        taskId: "task-1",
+      }),
+    ).toMatchObject({ enabled: false, reminderTime: "21:00" });
+  });
+
+  it("rejects invalid reminder preference input", () => {
+    expect(() =>
+      taskReminderPreferenceInputSchema.parse({
+        enabled: true,
+        reminderTime: "25:00",
+        taskId: "task-1",
+      }),
+    ).toThrow("Giờ nhắc phải theo HH:mm");
+
+    expect(() =>
+      taskReminderPreferenceInputSchema.parse({
+        enabled: true,
+        reminderTime: "08:15",
+        taskId: "",
+      }),
+    ).toThrow("Thiếu mã nhiệm vụ.");
   });
 });

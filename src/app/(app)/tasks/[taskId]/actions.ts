@@ -5,8 +5,12 @@ import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
+import { setTaskReminderPreference } from "@/lib/tasks/reminder-service";
 import { setMonthlyGoal } from "@/lib/tasks/task-service";
-import { monthlyGoalInputSchema } from "@/lib/validation";
+import {
+  monthlyGoalInputSchema,
+  taskReminderPreferenceInputSchema,
+} from "@/lib/validation";
 
 export async function setMonthlyGoalAction(
   formData: FormData,
@@ -26,6 +30,23 @@ export async function setMonthlyGoalAction(
       parsed.yearMonth,
       parsed.targetCount,
     );
+    revalidatePath(`/tasks/${parsed.taskId}`);
+    revalidatePath("/dashboard");
+  });
+}
+
+export async function setTaskReminderPreferenceAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await getSessionUser();
+    if (!session) redirect("/login");
+    const parsed = taskReminderPreferenceInputSchema.parse({
+      enabled: formData.get("enabled") === "true",
+      reminderTime: formData.get("reminderTime") ?? "",
+      taskId: formData.get("taskId") ?? "",
+    });
+    await setTaskReminderPreference(session, parsed);
     revalidatePath(`/tasks/${parsed.taskId}`);
     revalidatePath("/dashboard");
   });

@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { getTaskDetail } from "@/lib/tasks/task-service";
+import { getTaskReminderSettings } from "@/lib/tasks/reminder-service";
 import { getTodayDateKey } from "@/lib/dates";
 import { listTaskActivitiesThisMonth } from "@/lib/tasks/activity-service";
 import { canProxySubmit } from "@/lib/permissions";
@@ -15,6 +16,7 @@ import {
 import { SubmitSection } from "./submit-section";
 import { MonthlyGoalForm } from "./monthly-goal-form";
 import { MonthActivity } from "./month-activity";
+import { ReminderSettingsForm } from "./reminder-settings-form";
 
 export default async function TaskDetailPage({
   params,
@@ -27,9 +29,10 @@ export default async function TaskDetailPage({
   const { taskId } = await params;
   const dateKey = getTodayDateKey();
 
-  const [detail, activities] = await Promise.all([
+  const [detail, activities, reminderSettings] = await Promise.all([
     getTaskDetail(session, taskId, dateKey, session.id),
     listTaskActivitiesThisMonth(session, taskId),
+    getTaskReminderSettings(session, taskId),
   ]);
 
   const deadlineTime = new Date(detail.deadlineAt).toLocaleTimeString("vi-VN", {
@@ -162,13 +165,25 @@ export default async function TaskDetailPage({
       )}
 
       {detail.isApplicableToActor ? (
-        <SubmitSection
-          taskId={detail.id}
-          subjectUserId={session.id}
-          myCompletionCount={detail.myCompletionCount}
-          status={detail.status}
-          taskType={detail.taskType}
-        />
+        <>
+          {reminderSettings && (
+            <ReminderSettingsForm
+              defaultReminderTime={reminderSettings.defaultReminderTime}
+              effectiveReminderTime={reminderSettings.effectiveReminderTime}
+              initialEnabled={reminderSettings.enabled}
+              initialReminderTime={reminderSettings.reminderTime}
+              isCappedBeforeDeadline={reminderSettings.isCappedBeforeDeadline}
+              taskId={detail.id}
+            />
+          )}
+          <SubmitSection
+            taskId={detail.id}
+            subjectUserId={session.id}
+            myCompletionCount={detail.myCompletionCount}
+            status={detail.status}
+            taskType={detail.taskType}
+          />
+        </>
       ) : (
         <div className="glass-card p-4 text-sm text-muted-foreground">
           Nhiệm vụ này không áp dụng cho vai trò của bạn.

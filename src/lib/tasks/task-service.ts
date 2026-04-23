@@ -19,6 +19,7 @@ import {
   SubmissionModel,
   type SubmissionRecordModel,
   TaskModel,
+  TaskReminderPreferenceModel,
   type TaskRecord,
 } from "@/lib/models";
 import {
@@ -549,6 +550,7 @@ export async function deleteTask(
   await Promise.all([
     SubmissionModel.deleteMany({ taskId: taskObjectId }),
     MonthlyGoalModel.deleteMany({ taskId: taskObjectId }),
+    TaskReminderPreferenceModel.deleteMany({ taskId: taskObjectId }),
   ]);
 
   await TaskModel.deleteOne({ _id: record._id });

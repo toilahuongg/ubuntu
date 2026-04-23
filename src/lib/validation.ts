@@ -89,6 +89,14 @@ export const monthlyGoalInputSchema = z.object({
   targetCount: z.number().int().min(1, "Mục tiêu phải ≥ 1").max(100000),
 });
 
+export const taskReminderPreferenceInputSchema = z.object({
+  enabled: z.boolean(),
+  reminderTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Giờ nhắc phải theo HH:mm"),
+  taskId: z.string().min(1, "Thiếu mã nhiệm vụ."),
+});
+
 export const submitTaskInputSchema = z.object({
   taskId: z.string().min(1, "Thiếu mã nhiệm vụ."),
   subjectUserId: z.string().min(1, "Thiếu người nộp."),

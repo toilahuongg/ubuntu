@@ -7,6 +7,7 @@ export * from "@/lib/models/region";
 export * from "@/lib/models/reminder-log";
 export * from "@/lib/models/submission";
 export * from "@/lib/models/task";
+export * from "@/lib/models/task-reminder-preference";
 export * from "@/lib/models/team";
 export * from "@/lib/models/telegram-pending-group";
 export * from "@/lib/models/user";

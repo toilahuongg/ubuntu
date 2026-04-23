@@ -1,5 +1,3 @@
-import "server-only";
-
 import webpush, { type PushSubscription as WebPushSubscription } from "web-push";
 
 import { connectToDatabase } from "@/lib/mongoose";
