@@ -37,6 +37,12 @@ export function canAccessRegionManagement(user: SessionUser) {
 }
 
 export function canAccessAnalytics(user: SessionUser) {
+  return !!user.id;
+}
+
+export function canAccessManagedAnalyticsScope(user: SessionUser) {
+  if (user.role === "ADMIN") return true;
+  if (user.role === "TEAM_LEAD") return !!user.teamId;
   if (user.role === "ZONE_LEAD") return !!user.zoneId;
   if (user.role === "REGIONAL_LEAD") return !!user.regionId;
   return false;

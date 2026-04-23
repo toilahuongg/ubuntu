@@ -28,6 +28,7 @@ import {
   type TrendPoint,
 } from "@/lib/services/analytics-service";
 import {
+  getUserById,
   getUserOrgContext,
   listVisibleUsersForActor,
 } from "@/lib/services/organization-service";
@@ -40,7 +41,7 @@ import { taskToScope } from "@/lib/tasks/task-service";
 import { toObjectId } from "@/lib/utils/ids";
 
 export type ManagementScope = {
-  kind: TaskScope;
+  kind: TaskScope | "SELF";
   title: string;
   subtitle: string;
   subjectCount: number;
@@ -138,6 +139,8 @@ export type ManagementConsoleView = {
   date: string;
   yearMonth: string;
   scope: ManagementScope;
+  mode: "SELF" | "SCOPE";
+  canViewManagedScope: boolean;
   summary: ManagementSummary;
   members: ManagementMember[];
   tasks: ManagementTask[];
@@ -156,6 +159,8 @@ type OrgLookup = {
 type BuildInput = {
   actor: SessionUser;
   dateKey: string;
+  mode: "SELF" | "SCOPE";
+  canViewManagedScope: boolean;
   orgContext: Awaited<ReturnType<typeof getUserOrgContext>>;
   orgLookup: OrgLookup;
   visibleUsers: SerializedUser[];
@@ -168,13 +173,16 @@ type BuildInput = {
 };
 
 function visibleScopesForRole(role: Role): ReadonlySet<TaskScope> {
-  if (role === "TEAM_LEAD") return new Set(["TEAM"]);
+  if (role === "ADMIN" || role === "REGIONAL_LEAD") {
+    return new Set(["TEAM", "ZONE", "REGION"]);
+  }
   if (role === "ZONE_LEAD") return new Set(["TEAM", "ZONE"]);
-  if (role === "REGIONAL_LEAD") return new Set(["TEAM", "ZONE", "REGION"]);
+  if (role === "TEAM_LEAD") return new Set(["TEAM"]);
   return new Set();
 }
 
 function resolveScopeKind(actor: SessionUser): TaskScope | null {
+  if (actor.role === "ADMIN") return "REGION";
   if (actor.role === "TEAM_LEAD" && actor.teamId) return "TEAM";
   if (actor.role === "ZONE_LEAD" && actor.zoneId) return "ZONE";
   if (actor.role === "REGIONAL_LEAD" && actor.regionId) return "REGION";
@@ -189,7 +197,17 @@ function buildScope(input: {
   actor: SessionUser;
   orgContext: Awaited<ReturnType<typeof getUserOrgContext>>;
   subjectCount: number;
+  mode: "SELF" | "SCOPE";
 }): ManagementScope | null {
+  if (input.mode === "SELF") {
+    return {
+      kind: "SELF",
+      title: "Analytics cá nhân",
+      subtitle: input.actor.fullName,
+      subjectCount: input.subjectCount,
+    };
+  }
+
   const kind = resolveScopeKind(input.actor);
   if (!kind) return null;
 
@@ -200,15 +218,18 @@ function buildScope(input: {
         ? formatOrgName(input.orgContext.zone)
         : formatOrgName(input.orgContext.region);
 
+  const isAdmin = input.actor.role === "ADMIN";
+
   return {
     kind,
-    title:
-      kind === "TEAM"
+    title: isAdmin
+      ? "Điều hành toàn hệ thống"
+      : kind === "TEAM"
         ? "Điều hành nhóm"
         : kind === "ZONE"
           ? "Điều hành địa vực"
           : "Điều hành khu vực",
-    subtitle: orgName ?? SCOPE_LABELS[kind],
+    subtitle: isAdmin ? "Toàn bộ tổ chức" : orgName ?? SCOPE_LABELS[kind],
     subjectCount: input.subjectCount,
   };
 }
@@ -250,14 +271,19 @@ function sumSubmissionCounts(
 
 function buildGroups(input: {
   actor: SessionUser;
+  mode: "SELF" | "SCOPE";
   members: ManagementMember[];
 }): ManagementGroup[] {
   const groupKind =
-    input.actor.role === "TEAM_LEAD"
-      ? "ZONE"
-      : input.actor.role === "ZONE_LEAD"
-        ? "REGION"
-        : "MEMBER";
+    input.mode === "SELF"
+      ? "MEMBER"
+      : input.actor.role === "TEAM_LEAD"
+        ? "ZONE"
+        : input.actor.role === "ZONE_LEAD"
+          ? "REGION"
+          : input.actor.role === "REGIONAL_LEAD"
+            ? "MEMBER"
+            : "ZONE";
   const groups = new Map<string, ManagementGroup>();
 
   for (const member of input.members) {
@@ -318,6 +344,7 @@ function buildGroups(input: {
 function buildInsights(input: {
   summary: ManagementSummary;
   members: ManagementMember[];
+  mode: "SELF" | "SCOPE";
 }): ManagementInsight[] {
   const insights: ManagementInsight[] = [];
 
@@ -361,8 +388,11 @@ function buildInsights(input: {
   if (topMember) {
     insights.push({
       type: "TOP_PERFORMER",
-      title: "Đóng góp nổi bật",
-      detail: `${topMember.fullName} đang có ${topMember.monthlyCompletion.toLocaleString("vi-VN")} lượt trong tháng.`,
+      title: input.mode === "SELF" ? "Điểm nhấn tháng" : "Đóng góp nổi bật",
+      detail:
+        input.mode === "SELF"
+          ? `Bạn đã hoàn thành ${topMember.monthlyCompletion.toLocaleString("vi-VN")} lượt trong tháng.`
+          : `${topMember.fullName} đang có ${topMember.monthlyCompletion.toLocaleString("vi-VN")} lượt trong tháng.`,
       tone: "success",
     });
   }
@@ -377,6 +407,7 @@ export function buildManagementConsoleFromData(
     actor: input.actor,
     orgContext: input.orgContext,
     subjectCount: input.visibleUsers.length,
+    mode: input.mode,
   });
   if (!scope) return null;
 
@@ -577,6 +608,8 @@ export function buildManagementConsoleFromData(
     date: input.dateKey,
     yearMonth: getYearMonthFromDateKey(input.dateKey),
     scope,
+    mode: input.mode,
+    canViewManagedScope: input.canViewManagedScope,
     summary,
     members: members.sort((a, b) => {
       if (b.monthlyProgressPercent !== a.monthlyProgressPercent) {
@@ -590,10 +623,10 @@ export function buildManagementConsoleFromData(
       }
       return a.title.localeCompare(b.title, "vi");
     }),
-    groups: buildGroups({ actor: input.actor, members }),
+    groups: buildGroups({ actor: input.actor, mode: input.mode, members }),
     trends: input.trends,
     taskDistribution: input.taskDistribution,
-    insights: buildInsights({ summary, members }),
+    insights: buildInsights({ summary, members, mode: input.mode }),
   };
 }
 
@@ -668,28 +701,47 @@ async function loadTasksForUsers(users: SerializedUser[]) {
 export async function getManagementConsoleView(
   actor: SessionUser,
   dateKey = getTodayDateKey(),
+  mode: "SELF" | "SCOPE" = "SELF",
 ): Promise<ManagementConsoleView | null> {
-  const kind = resolveScopeKind(actor);
-  if (!kind) return null;
+  const canViewManagedScope = resolveScopeKind(actor) !== null;
+  const effectiveMode = mode === "SCOPE" && canViewManagedScope ? "SCOPE" : "SELF";
 
   await connectToDatabase();
 
   const yearMonth = getYearMonthFromDateKey(dateKey);
   const [visibleUsers, orgContext, trends, taskDistribution] = await Promise.all([
-    listVisibleUsersForActor(actor),
+    effectiveMode === "SELF"
+      ? Promise.resolve([actor as SerializedUser])
+      : listVisibleUsersForActor(actor),
     getUserOrgContext(actor),
-    getCompletionTrend(actor, 14),
-    getTaskDistribution(actor, 30, 10),
+    getCompletionTrend(actor, 14, effectiveMode === "SELF" ? "SELF" : "AUTO"),
+    getTaskDistribution(
+      actor,
+      30,
+      10,
+      effectiveMode === "SELF" ? "SELF" : "AUTO",
+    ),
   ]);
 
-  if (visibleUsers.length === 0) return null;
+  if (visibleUsers.length === 0) {
+    if (effectiveMode === "SELF") {
+      const self = await getUserById(actor.id);
+      if (!self) return null;
+      visibleUsers.push(self);
+    } else {
+      return null;
+    }
+  }
 
   const [orgLookup, allTasks] = await Promise.all([
     loadOrgLookup(visibleUsers),
     loadTasksForUsers(visibleUsers),
   ]);
 
-  const allowedScopes = visibleScopesForRole(actor.role);
+  const allowedScopes =
+    effectiveMode === "SELF"
+      ? new Set<TaskScope>(["TEAM", "ZONE", "REGION"])
+      : visibleScopesForRole(actor.role);
   const tasks = allTasks.filter((task) => allowedScopes.has(task.scope));
   const taskObjectIds = tasks.map((task) => task._id);
   const monthlyTasks = tasks.filter((task) => supportsMonthlyGoal(task.taskType));
@@ -722,6 +774,8 @@ export async function getManagementConsoleView(
   return buildManagementConsoleFromData({
     actor,
     dateKey,
+    mode: effectiveMode,
+    canViewManagedScope,
     orgContext,
     orgLookup,
     visibleUsers,

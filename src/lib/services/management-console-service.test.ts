@@ -113,6 +113,8 @@ function baseInput(actor: SessionUser) {
   return {
     actor,
     dateKey: "2026-04-20",
+    mode: "SCOPE" as const,
+    canViewManagedScope: true,
     orgContext: {
       region: { code: "R1", id: ids.region.toString(), name: "Khu vực 1" },
       team: { code: "T1", id: ids.team.toString(), name: "Nhóm 1" },
@@ -132,7 +134,7 @@ function baseInput(actor: SessionUser) {
 }
 
 describe("management console aggregation", () => {
-  it("rejects members and unscoped lead roles", () => {
+  it("returns self-mode view for members and unscoped team leads", () => {
     const memberView = buildManagementConsoleFromData({
       ...baseInput(
         user({
@@ -140,6 +142,8 @@ describe("management console aggregation", () => {
           role: "MEMBER",
         }),
       ),
+      mode: "SELF",
+      canViewManagedScope: false,
       monthSubmissions: [],
       monthlyGoals: [],
       tasks: [],
@@ -153,14 +157,18 @@ describe("management console aggregation", () => {
         role: "TEAM_LEAD",
         status: "ACTIVE",
       }),
+      mode: "SELF",
+      canViewManagedScope: false,
       monthSubmissions: [],
       monthlyGoals: [],
       tasks: [],
       todaySubmissions: [],
     });
 
-    expect(memberView).toBeNull();
-    expect(unscopedLeadView).toBeNull();
+    expect(memberView?.scope.kind).toBe("SELF");
+    expect(memberView?.mode).toBe("SELF");
+    expect(unscopedLeadView?.scope.kind).toBe("SELF");
+    expect(unscopedLeadView?.mode).toBe("SELF");
   });
 
   it("keeps team leads on team-scope tasks and excludes count-total from monthly goals", () => {
@@ -217,12 +225,29 @@ describe("management console aggregation", () => {
     ).toBe(false);
   });
 
-  it("lets zone and regional leads see their allowed parent scopes", () => {
+  it("lets admin, zone, and regional leads see their allowed parent scopes", () => {
     const tasks = [
       task({ _id: ids.teamTask, scope: "TEAM" }),
       task({ _id: ids.zoneTask, scope: "ZONE" }),
       task({ _id: ids.regionTask, scope: "REGION" }),
     ];
+
+    const adminView = buildManagementConsoleFromData({
+      ...baseInput(
+        user({
+          fullName: "Admin",
+          id: ids.teamLead.toString(),
+          role: "ADMIN",
+          teamId: null,
+          zoneId: null,
+          regionId: null,
+        }),
+      ),
+      monthSubmissions: [],
+      monthlyGoals: [],
+      tasks,
+      todaySubmissions: [],
+    });
 
     const zoneView = buildManagementConsoleFromData({
       ...baseInput(
@@ -252,6 +277,14 @@ describe("management console aggregation", () => {
       tasks,
       todaySubmissions: [],
     });
+
+    expect(new Set(adminView?.tasks.map((entry) => entry.scope))).toEqual(
+      new Set(["TEAM", "ZONE", "REGION"]),
+    );
+    expect(adminView?.scope.title).toBe("Điều hành toàn hệ thống");
+    expect(adminView?.scope.subtitle).toBe("Toàn bộ tổ chức");
+    expect(adminView?.mode).toBe("SCOPE");
+    expect(adminView?.canViewManagedScope).toBe(true);
 
     expect(zoneView?.tasks.map((entry) => entry.scope)).toEqual(["TEAM", "ZONE"]);
     expect(new Set(regionalView?.tasks.map((entry) => entry.scope))).toEqual(

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { canAccessAnalytics, canProxySubmit } from "@/lib/permissions";
+import {
+  canAccessAnalytics,
+  canAccessManagedAnalyticsScope,
+  canProxySubmit,
+} from "@/lib/permissions";
 
 describe("canProxySubmit", () => {
   it("lets team leads submit for all users in their team", () => {
@@ -216,9 +220,86 @@ describe("canProxySubmit", () => {
 });
 
 describe("canAccessAnalytics", () => {
-  it("allows scoped zone/regional lead roles", () => {
+  it("allows all roles", () => {
     expect(
       canAccessAnalytics({
+        fullName: "Admin",
+        id: "admin",
+        role: "ADMIN",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canAccessAnalytics({
+        fullName: "Team lead",
+        id: "team-lead",
+        role: "TEAM_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canAccessAnalytics({
+        fullName: "Zone",
+        id: "zone-lead",
+        role: "ZONE_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canAccessAnalytics({
+        fullName: "Regional",
+        id: "regional-lead",
+        role: "REGIONAL_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canAccessAnalytics({
+        fullName: "Member",
+        id: "member",
+        role: "MEMBER",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canAccessAnalytics({
+        fullName: "NGV",
+        id: "ngv",
+        role: "NGV",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("canAccessManagedAnalyticsScope", () => {
+  it("allows admin and scoped lead roles", () => {
+    expect(
+      canAccessManagedAnalyticsScope({
+        fullName: "Admin",
+        id: "admin",
+        role: "ADMIN",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canAccessManagedAnalyticsScope({
+        fullName: "Team lead",
+        id: "team-lead",
+        role: "TEAM_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+      }),
+    ).toBe(true);
+
+    expect(
+      canAccessManagedAnalyticsScope({
         fullName: "Zone",
         id: "zone-lead",
         role: "ZONE_LEAD",
@@ -229,7 +310,7 @@ describe("canAccessAnalytics", () => {
     ).toBe(true);
 
     expect(
-      canAccessAnalytics({
+      canAccessManagedAnalyticsScope({
         fullName: "Regional",
         id: "regional-lead",
         regionId: "region-a",
@@ -241,9 +322,9 @@ describe("canAccessAnalytics", () => {
     ).toBe(true);
   });
 
-  it("rejects members and team leads", () => {
+  it("rejects members, ngv, and unscoped team lead", () => {
     expect(
-      canAccessAnalytics({
+      canAccessManagedAnalyticsScope({
         fullName: "Member",
         id: "member",
         role: "MEMBER",
@@ -253,7 +334,7 @@ describe("canAccessAnalytics", () => {
     ).toBe(false);
 
     expect(
-      canAccessAnalytics({
+      canAccessManagedAnalyticsScope({
         fullName: "NGV",
         id: "ngv",
         role: "NGV",
@@ -265,7 +346,7 @@ describe("canAccessAnalytics", () => {
     ).toBe(false);
 
     expect(
-      canAccessAnalytics({
+      canAccessManagedAnalyticsScope({
         fullName: "Unscoped",
         id: "lead",
         role: "TEAM_LEAD",

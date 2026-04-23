@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -76,10 +77,35 @@ export function ManagementConsole({
           </div>
         </div>
 
+        {view.canViewManagedScope ? (
+          <div className="inline-flex rounded-lg bg-overlay-subtle p-1">
+            <Link
+              href="/analytics"
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                view.mode === "SELF"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Cá nhân
+            </Link>
+            <Link
+              href="/analytics?view=scope"
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                view.mode === "SCOPE"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Phạm vi quản lý
+            </Link>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             icon={<Users className="h-4 w-4" />}
-            label="Người trong phạm vi"
+            label={view.mode === "SELF" ? "Cá nhân" : "Người trong phạm vi"}
             value={view.scope.subjectCount}
           />
           <StatCard
@@ -180,18 +206,20 @@ function OverviewTab({ view }: { view: ManagementConsoleView }) {
         )}
       </section>
 
-      <section>
-        <SectionTitle icon={<Layers3 className="h-4 w-4" />} title="Cấp dưới" />
-        {view.groups.length > 0 ? (
-          <div className="space-y-2">
-            {view.groups.map((group) => (
-              <GroupRow key={group.id} group={group} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState text="Chưa có dữ liệu cấp dưới để tổng hợp." />
-        )}
-      </section>
+      {view.mode === "SCOPE" ? (
+        <section>
+          <SectionTitle icon={<Layers3 className="h-4 w-4" />} title="Cấp dưới" />
+          {view.groups.length > 0 ? (
+            <div className="space-y-2">
+              {view.groups.map((group) => (
+                <GroupRow key={group.id} group={group} />
+              ))}
+            </div>
+          ) : (
+            <EmptyState text="Chưa có dữ liệu cấp dưới để tổng hợp." />
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }

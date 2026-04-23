@@ -99,7 +99,13 @@ async function resolveSubjectUserIds(
   return users.map((u) => u._id);
 }
 
-async function buildSubjectFilter(user: SessionUser) {
+type SubjectMode = "AUTO" | "SELF";
+
+async function buildSubjectFilter(user: SessionUser, mode: SubjectMode = "AUTO") {
+  if (mode === "SELF") {
+    return { subjectUserId: toObjectId(user.id) };
+  }
+
   const subjects = await resolveSubjectUserIds(user);
   if (subjects === "self") {
     return { subjectUserId: toObjectId(user.id) };
@@ -126,12 +132,13 @@ export async function getAnalyticsScopeInfo(
 export async function getCompletionTrend(
   user: SessionUser,
   days = 14,
+  mode: SubjectMode = "AUTO",
 ): Promise<TrendPoint[]> {
   await connectToDatabase();
   const todayKey = getTodayDateKey();
   const startKey = shiftDateKey(todayKey, -(days - 1));
 
-  const subjectFilter = await buildSubjectFilter(user);
+  const subjectFilter = await buildSubjectFilter(user, mode);
 
   const pipeline: PipelineStage[] = [
     {
@@ -164,12 +171,13 @@ export async function getTaskDistribution(
   user: SessionUser,
   days = 30,
   limit = 10,
+  mode: SubjectMode = "AUTO",
 ): Promise<TaskDistributionEntry[]> {
   await connectToDatabase();
   const todayKey = getTodayDateKey();
   const startKey = shiftDateKey(todayKey, -(days - 1));
 
-  const subjectFilter = await buildSubjectFilter(user);
+  const subjectFilter = await buildSubjectFilter(user, mode);
 
   const pipeline: PipelineStage[] = [
     {

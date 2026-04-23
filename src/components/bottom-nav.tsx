@@ -49,7 +49,6 @@ const NAV_ITEMS: NavItem[] = [
     href: "/analytics",
     label: "Điều hành",
     icon: BarChart3,
-    roles: ["ZONE_LEAD", "REGIONAL_LEAD"],
   },
   {
     href: "/profile",
