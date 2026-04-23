@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
-  allowedDevOrigins: ['dev.misoapps.com']
+  allowedDevOrigins: ['dev2.misoapps.com']
 };
 
 export default nextConfig;
