@@ -14,3 +14,7 @@ export * from "@/lib/models/user";
 export * from "@/lib/models/user-cosmetic";
 export * from "@/lib/models/zone";
 export * from "@/lib/models/xp-transaction";
+export * from "@/lib/models/customer";
+export * from "@/lib/models/customer-heart-log";
+export * from "@/lib/models/customer-interaction";
+export * from "@/lib/models/customer-reminder-log";

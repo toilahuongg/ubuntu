@@ -1,0 +1,28 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - img "Ubuntu" [ref=e6]
+        - generic [ref=e7]:
+          - heading "Ubuntu" [level=1] [ref=e8]
+          - paragraph [ref=e9]: Quản lý nhiệm vụ hàng ngày
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - paragraph [ref=e13]: Đăng nhập bằng tài khoản Telegram
+          - iframe [ref=e15]:
+            - generic [active] [ref=f1e1]: Bot domain invalid
+        - generic [ref=e18]: hoặc
+        - button "Đăng nhập bằng Google" [ref=e20]:
+          - img [ref=e21]
+          - generic [ref=e23]: Đăng nhập bằng Google
+      - button "Tải app về máy" [ref=e26]:
+        - img [ref=e27]
+        - text: Tải app về máy
+  - button "Dev login" [ref=e32]:
+    - generic [ref=e33]:
+      - img [ref=e34]
+      - text: Dev login
+    - img [ref=e36]
+  - button "Open Next.js Dev Tools" [ref=e43] [cursor=pointer]:
+    - img [ref=e44]
+  - alert [ref=e47]

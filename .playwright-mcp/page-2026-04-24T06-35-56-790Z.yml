@@ -1,0 +1,93 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Bỏ qua đến nội dung chính" [ref=e3] [cursor=pointer]:
+      - /url: "#main-content"
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - img "Ubuntu" [ref=e8]
+        - generic [ref=e9]:
+          - paragraph [ref=e10]:
+            - generic [ref=e12]: Nguyen Thanh Vien A1
+          - paragraph [ref=e13]: Thành viên
+    - main [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - heading "Khách hàng" [level=1] [ref=e18]
+            - paragraph [ref=e19]: 1 khách hàng đang quản lý
+          - link "Tạo mới" [ref=e20] [cursor=pointer]:
+            - /url: /customers/new
+            - img [ref=e21]
+            - text: Tạo mới
+        - generic [ref=e22]:
+          - generic [ref=e23]:
+            - img [ref=e24]
+            - text: Bộ lọc khách hàng
+          - generic [ref=e25]:
+            - generic [ref=e26]:
+              - text: Người chăm sóc
+              - combobox "Người chăm sóc" [ref=e27]:
+                - option "Tất cả" [selected]
+                - option "Nguyen Thanh Vien A1 · Thành viên"
+                - option "Nguyen Thanh Vien A2 · Thành viên"
+                - option "Nguyen NGV Quan 1 · NGV"
+                - option "Le Khu Vuc Quan 1 · KVT"
+            - generic [ref=e28]:
+              - text: Tương tác cuối
+              - combobox "Tương tác cuối" [ref=e29]:
+                - option "Tất cả" [selected]
+                - option "Chưa từng tương tác"
+                - option "Có tương tác hôm nay"
+                - 'option "Cần chăm: từ 3 ngày"'
+                - 'option "Cần chăm: từ 7 ngày"'
+            - generic [ref=e30]:
+              - text: Sắp xếp
+              - combobox "Sắp xếp" [ref=e31]:
+                - option "Mới tạo trước" [selected]
+                - option "Cũ tạo trước"
+                - option "Tên A-Z"
+                - option "Tương tác mới nhất"
+                - option "Cần chăm trước"
+          - button "Lọc khách hàng" [ref=e33]:
+            - img [ref=e34]
+            - text: Lọc khách hàng
+        - 'link "Khách hàng A 20 - 25 · Nam · NV văn phòng Bình thường – học tiếp Người chăm sóc: Nguyen Thanh Vien A1 Hôm nay Tương tác cuối: 24/04/2026 Đơn thuần Tính cách: Hướng nội tích cực" [ref=e37] [cursor=pointer]':
+          - /url: /customers/69eb043efb2fe688dc1fee36
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - heading "Khách hàng A" [level=3] [ref=e40]
+              - paragraph [ref=e41]: 20 - 25 · Nam · NV văn phòng
+            - generic [ref=e42]: Bình thường – học tiếp
+          - generic [ref=e44]:
+            - img [ref=e45]
+            - paragraph [ref=e50]: "Người chăm sóc: Nguyen Thanh Vien A1"
+          - generic [ref=e51]:
+            - generic [ref=e52]:
+              - img [ref=e53]
+              - text: Hôm nay
+            - generic [ref=e55]:
+              - img [ref=e56]
+              - text: "Tương tác cuối: 24/04/2026"
+            - generic [ref=e58]: Đơn thuần
+          - paragraph [ref=e59]: "Tính cách: Hướng nội tích cực"
+    - navigation "Điều hướng chính" [ref=e60]:
+      - generic [ref=e61]:
+        - link "Tổng quan" [ref=e62] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e63]
+          - generic [ref=e68]: Tổng quan
+        - link "Khách hàng" [ref=e69] [cursor=pointer]:
+          - /url: /customers
+          - img [ref=e70]
+          - generic [ref=e72]: Khách hàng
+        - link "Xếp hạng" [ref=e73] [cursor=pointer]:
+          - /url: /leaderboard
+          - img [ref=e74]
+          - generic [ref=e80]: Xếp hạng
+        - link "Hồ sơ" [ref=e81] [cursor=pointer]:
+          - /url: /profile
+          - img [ref=e82]
+          - generic [ref=e85]: Hồ sơ
+  - button "Open Next.js Dev Tools" [ref=e91] [cursor=pointer]:
+    - img [ref=e92]
+  - alert [ref=e95]

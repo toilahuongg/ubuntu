@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Ellipsis,
+  Heart,
   LayoutDashboard,
   Settings,
   Trophy,
@@ -26,6 +27,11 @@ const NAV_ITEMS: NavItem[] = [
     icon: LayoutDashboard,
   },
   {
+    href: "/customers",
+    label: "Khách hàng",
+    icon: Heart,
+  },
+  {
     href: "/leaderboard",
     label: "Xếp hạng",
     icon: Trophy,
@@ -43,7 +49,7 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-const CORE_HREFS = ["/dashboard", "/leaderboard", "/profile"];
+const CORE_HREFS = ["/dashboard", "/customers", "/leaderboard", "/profile"];
 const EXTRA_PRIORITIES = ["/admin"];
 
 export function BottomNav({ role }: { role: Role }) {

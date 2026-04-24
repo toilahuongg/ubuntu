@@ -5,6 +5,9 @@ import cron from "node-cron";
 
 import { getAppTimezone } from "@/lib/dates";
 import {
+  runCustomerReminderSweep,
+} from "@/lib/customer/reminder-delivery";
+import {
   runDailyReminderSweep,
   runMonthlyGoalReminderSweep,
 } from "@/lib/tasks/reminder-delivery";
@@ -20,11 +23,13 @@ async function runSweep() {
   isRunning = true;
   const startedAt = new Date();
   try {
-    const [daily, monthlyGoals] = await Promise.all([
+    const [daily, monthlyGoals, customerReminders] = await Promise.all([
       runDailyReminderSweep({ sweepAt: startedAt }),
       runMonthlyGoalReminderSweep({ sweepAt: startedAt }),
+      runCustomerReminderSweep({ sweepAt: startedAt }),
     ]);
     console.log("[reminder-cron] sweep complete", {
+      customerReminders,
       daily,
       monthlyGoals,
       sweepAt: startedAt.toISOString(),

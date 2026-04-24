@@ -208,3 +208,41 @@ export function canManageRegionTelegram(
   }
   return false;
 }
+
+export type CustomerView = {
+  caregiverIds: string[];
+  regionId: string | null;
+  teamId: string | null;
+  zoneId: string | null;
+};
+
+export function canViewCustomer(actor: SessionUser, customer: CustomerView) {
+  if (isAdmin(actor)) return true;
+  if (isTeamLead(actor) && actor.teamId && actor.teamId === customer.teamId) return true;
+  if (isZoneLead(actor) && actor.zoneId && actor.zoneId === customer.zoneId) return true;
+  if (isRegionalLead(actor) && actor.regionId && actor.regionId === customer.regionId) return true;
+  if (customer.caregiverIds.includes(actor.id)) return true;
+  return false;
+}
+
+export function canManageCustomer(actor: SessionUser, customer?: CustomerView) {
+  if (isAdmin(actor)) return true;
+  if (customer) {
+    if (isTeamLead(actor) && actor.teamId && actor.teamId === customer.teamId) return true;
+    if (isZoneLead(actor) && actor.zoneId && actor.zoneId === customer.zoneId) return true;
+    if (isRegionalLead(actor) && actor.regionId && actor.regionId === customer.regionId) return true;
+    if (customer.caregiverIds.includes(actor.id)) return true;
+  } else {
+    return true;
+  }
+  return false;
+}
+
+export function canCreateInteraction(actor: SessionUser, customer: CustomerView) {
+  if (isAdmin(actor)) return true;
+  if (isTeamLead(actor) && actor.teamId && actor.teamId === customer.teamId) return true;
+  if (isZoneLead(actor) && actor.zoneId && actor.zoneId === customer.zoneId) return true;
+  if (isRegionalLead(actor) && actor.regionId && actor.regionId === customer.regionId) return true;
+  if (customer.caregiverIds.includes(actor.id)) return true;
+  return false;
+}

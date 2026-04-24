@@ -6,6 +6,16 @@ import {
   DEFAULT_TASK_SCHEDULE_TYPE,
   TASK_SCHEDULE_TYPES,
 } from "@/lib/tasks/schedule";
+import {
+  AGE_BRACKETS,
+  HEART_STATUSES,
+  INTERACTION_OUTCOMES,
+  INTERACTION_TYPES,
+  OCCUPATIONS,
+  PERSONALITIES,
+  SHARED_CONTENTS,
+} from "@/lib/customer/constants";
+import { GENDERS } from "@/lib/domain";
 
 const targetRolesSchema = z
   .array(z.enum(TASK_TARGET_ROLES))
@@ -173,3 +183,37 @@ export const updateProfileInputSchema = z.object({
   gender: z.enum(["male", "female"]).optional(),
   bio: z.string().max(280).optional().default(""),
 });
+
+// Customer validation schemas
+export const customerInputSchema = z.object({
+  name: z.string().min(1, "Tên không được để trống.").max(80),
+  ageBracket: z.enum(AGE_BRACKETS),
+  gender: z.enum(GENDERS),
+  occupation: z.enum(OCCUPATIONS),
+  personality: z.enum(PERSONALITIES),
+  heartStatus: z.enum(HEART_STATUSES).optional(),
+  notes: z.string().max(500).optional().default(""),
+  caregiverIds: z.array(z.string()).max(3, "Tối đa 3 ngườii chăm sóc.").optional().default([]),
+  teamId: z.string().optional().nullable(),
+  zoneId: z.string().optional().nullable(),
+  regionId: z.string().optional().nullable(),
+});
+
+export const updateCustomerInputSchema = customerInputSchema.extend({
+  customerId: z.string().min(1, "Thiếu mã khách hàng."),
+});
+
+export const customerInteractionInputSchema = z.object({
+  customerId: z.string().min(1, "Thiếu mã khách hàng."),
+  caregiverId: z.string().optional().nullable(),
+  type: z.enum(INTERACTION_TYPES),
+  sharedContent: z.enum(SHARED_CONTENTS).optional().nullable(),
+  outcome: z.enum(INTERACTION_OUTCOMES),
+  notes: z.string().max(500).optional().default(""),
+  date: z.string().optional(),
+});
+
+export const updateCustomerInteractionInputSchema =
+  customerInteractionInputSchema.extend({
+    interactionId: z.string().min(1, "Thiếu mã tương tác."),
+  });

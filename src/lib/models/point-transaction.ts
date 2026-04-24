@@ -1,9 +1,17 @@
-import { InferSchemaType, model, models, Schema, Types } from "mongoose";
+import {
+  deleteModel,
+  InferSchemaType,
+  model,
+  models,
+  Schema,
+  Types,
+} from "mongoose";
 
 export const POINT_SOURCES = [
   "task_reward",
   "cosmetic_purchase",
   "admin_adjust",
+  "customer_interaction_reward",
 ] as const;
 export type PointSource = (typeof POINT_SOURCES)[number];
 
@@ -19,6 +27,18 @@ const pointTransactionSchema = new Schema(
 );
 
 pointTransactionSchema.index({ userId: 1, createdAt: -1 });
+
+function cachedModelHasCurrentSourceEnum() {
+  const sourcePath = models.PointTransaction?.schema.path("source") as
+    | { enumValues?: string[] }
+    | undefined;
+  const enumValues = sourcePath?.enumValues ?? [];
+  return POINT_SOURCES.every((source) => enumValues.includes(source));
+}
+
+if (models.PointTransaction && !cachedModelHasCurrentSourceEnum()) {
+  deleteModel("PointTransaction");
+}
 
 export type PointTransactionRecord = InferSchemaType<
   typeof pointTransactionSchema

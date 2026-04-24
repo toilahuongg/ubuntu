@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canCreateInteraction,
+  canManageCustomer,
   canManageTasks,
   canProxySubmit,
+  canViewCustomer,
 } from "@/lib/permissions";
 
 describe("canProxySubmit", () => {
@@ -291,6 +294,246 @@ describe("canManageTasks", () => {
         status: "ACTIVE",
         teamId: "team-a",
       }),
+    ).toBe(false);
+  });
+});
+
+describe("canViewCustomer", () => {
+  const customer = {
+    caregiverIds: ["caregiver-1"],
+    regionId: "region-a",
+    teamId: "team-a",
+    zoneId: "zone-a",
+  };
+
+  it("allows admin to view any customer", () => {
+    expect(
+      canViewCustomer(
+        { fullName: "Admin", id: "admin", role: "ADMIN", status: "ACTIVE" },
+        customer,
+      ),
+    ).toBe(true);
+  });
+
+  it("allows team lead to view customers in their team", () => {
+    expect(
+      canViewCustomer(
+        {
+          fullName: "Lead",
+          id: "lead",
+          role: "TEAM_LEAD",
+          status: "ACTIVE",
+          teamId: "team-a",
+        },
+        customer,
+      ),
+    ).toBe(true);
+
+    expect(
+      canViewCustomer(
+        {
+          fullName: "Lead",
+          id: "lead",
+          role: "TEAM_LEAD",
+          status: "ACTIVE",
+          teamId: "team-b",
+        },
+        customer,
+      ),
+    ).toBe(false);
+  });
+
+  it("allows caregiver to view their assigned customers", () => {
+    expect(
+      canViewCustomer(
+        {
+          fullName: "Caregiver",
+          id: "caregiver-1",
+          role: "MEMBER",
+          status: "ACTIVE",
+        },
+        customer,
+      ),
+    ).toBe(true);
+
+    expect(
+      canViewCustomer(
+        {
+          fullName: "Other",
+          id: "caregiver-2",
+          role: "MEMBER",
+          status: "ACTIVE",
+        },
+        customer,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("canManageCustomer", () => {
+  const customer = {
+    caregiverIds: ["caregiver-1"],
+    regionId: "region-a",
+    teamId: "team-a",
+    zoneId: "zone-a",
+  };
+
+  it("allows admin to manage any customer", () => {
+    expect(
+      canManageCustomer(
+        { fullName: "Admin", id: "admin", role: "ADMIN", status: "ACTIVE" },
+        customer,
+      ),
+    ).toBe(true);
+  });
+
+  it("allows scoped leads to manage customers in scope", () => {
+    expect(
+      canManageCustomer(
+        {
+          fullName: "Lead",
+          id: "lead",
+          role: "TEAM_LEAD",
+          status: "ACTIVE",
+          teamId: "team-a",
+        },
+        customer,
+      ),
+    ).toBe(true);
+
+    expect(
+      canManageCustomer(
+        {
+          fullName: "Lead",
+          id: "lead",
+          role: "TEAM_LEAD",
+          status: "ACTIVE",
+          teamId: "team-b",
+        },
+        customer,
+      ),
+    ).toBe(false);
+  });
+
+  it("allows caregiver to manage their assigned customers", () => {
+    expect(
+      canManageCustomer(
+        {
+          fullName: "Caregiver",
+          id: "caregiver-1",
+          role: "MEMBER",
+          status: "ACTIVE",
+        },
+        customer,
+      ),
+    ).toBe(true);
+  });
+
+  it("allows any member to create customers (no customer arg)", () => {
+    expect(
+      canManageCustomer({
+        fullName: "Member",
+        id: "member",
+        role: "MEMBER",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canManageCustomer({
+        fullName: "NGV",
+        id: "ngv",
+        role: "NGV",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+  });
+
+  it("allows any signed-in role to create customers", () => {
+    expect(
+      canManageCustomer({
+        fullName: "Lead",
+        id: "lead",
+        role: "TEAM_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canManageCustomer({
+        fullName: "Zone lead",
+        id: "zone-lead",
+        role: "ZONE_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+
+    expect(
+      canManageCustomer({
+        fullName: "Regional lead",
+        id: "regional-lead",
+        role: "REGIONAL_LEAD",
+        status: "ACTIVE",
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("canCreateInteraction", () => {
+  const customer = {
+    caregiverIds: ["caregiver-1"],
+    regionId: "region-a",
+    teamId: "team-a",
+    zoneId: "zone-a",
+  };
+
+  it("allows caregiver to create interactions", () => {
+    expect(
+      canCreateInteraction(
+        {
+          fullName: "Caregiver",
+          id: "caregiver-1",
+          role: "MEMBER",
+          status: "ACTIVE",
+        },
+        customer,
+      ),
+    ).toBe(true);
+  });
+
+  it("allows admin and scoped leads", () => {
+    expect(
+      canCreateInteraction(
+        { fullName: "Admin", id: "admin", role: "ADMIN", status: "ACTIVE" },
+        customer,
+      ),
+    ).toBe(true);
+
+    expect(
+      canCreateInteraction(
+        {
+          fullName: "Lead",
+          id: "lead",
+          role: "TEAM_LEAD",
+          status: "ACTIVE",
+          teamId: "team-a",
+        },
+        customer,
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects non-caregiver members", () => {
+    expect(
+      canCreateInteraction(
+        {
+          fullName: "Other",
+          id: "caregiver-2",
+          role: "MEMBER",
+          status: "ACTIVE",
+        },
+        customer,
+      ),
     ).toBe(false);
   });
 });

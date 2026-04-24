@@ -1,6 +1,14 @@
-import { InferSchemaType, model, models, Schema, Types } from "mongoose";
+import {
+  deleteModel,
+  InferSchemaType,
+  model,
+  models,
+  Schema,
+  Types,
+} from "mongoose";
 
-const XP_SOURCES = ["task_completion"] as const;
+export const XP_SOURCES = ["task_completion", "customer_interaction"] as const;
+export type XpSource = (typeof XP_SOURCES)[number];
 
 const xpTransactionSchema = new Schema(
   {
@@ -14,6 +22,18 @@ const xpTransactionSchema = new Schema(
 );
 
 xpTransactionSchema.index({ userId: 1, createdAt: -1 });
+
+function cachedModelHasCurrentSourceEnum() {
+  const sourcePath = models.XpTransaction?.schema.path("source") as
+    | { enumValues?: string[] }
+    | undefined;
+  const enumValues = sourcePath?.enumValues ?? [];
+  return XP_SOURCES.every((source) => enumValues.includes(source));
+}
+
+if (models.XpTransaction && !cachedModelHasCurrentSourceEnum()) {
+  deleteModel("XpTransaction");
+}
 
 export type XpTransactionRecord = InferSchemaType<typeof xpTransactionSchema> & {
   _id: Types.ObjectId;
