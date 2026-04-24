@@ -16,6 +16,7 @@ import {
 import { SubmitSection } from "./submit-section";
 import { MonthActivity } from "./month-activity";
 import { TaskDetailActions } from "./task-detail-actions";
+import { LinkifyText } from "@/components/linkify-text";
 
 export default async function TaskDetailPage({
   params,
@@ -103,7 +104,7 @@ export default async function TaskDetailPage({
         <h1 className="font-display text-xl font-bold">{detail.title}</h1>
         {detail.description && (
           <p className="mt-1 text-sm text-muted-foreground">
-            {detail.description}
+            <LinkifyText text={detail.description} />
           </p>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">

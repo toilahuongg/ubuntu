@@ -1,7 +1,8 @@
 import type { ComponentType, CSSProperties } from "react";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { CalendarDays, Check, Flame, Plus, Target, Trophy, Zap } from "lucide-react";
+import { CalendarDays, Check, Flame, Plus, ShoppingBag, Target, Trophy, Zap } from "lucide-react";
+import Link from "next/link";
 
 import { PushToggle } from "@/components/push-toggle";
 import { getCurrentUser } from "@/lib/current-user";
@@ -121,6 +122,13 @@ export default async function ProfilePage() {
           level={progress.level}
           compact
         />
+        <Link
+          href="/shop"
+          className="flex items-center gap-3 rounded-xl bg-overlay-subtle px-4 py-3 text-sm font-medium ring-1 ring-border transition hover:bg-overlay-medium"
+        >
+          <ShoppingBag className="h-4 w-4 text-primary" />
+          Cửa hàng
+        </Link>
         <PushToggle compact />
         <LogoutButton compact />
       </section>

@@ -19,6 +19,7 @@ import { EditTemplateForm } from "./edit-template-form";
 import { ROLE_LABELS, SCOPE_LABELS, targetsAllRoles } from "@/lib/domain";
 import { TASK_TYPE_LABELS } from "@/lib/tasks/constants";
 import { formatTaskScheduleLabel } from "@/lib/tasks/schedule";
+import { LinkifyText } from "@/components/linkify-text";
 import type {
   TaskMoveDirection,
   TaskSummary,
@@ -122,7 +123,7 @@ function TaskCard({
                 className="mt-0.5 truncate text-xs text-muted-foreground"
                 title={task.description}
               >
-                {task.description}
+                <LinkifyText text={task.description} />
               </p>
             )}
             <div className="mt-1.5 flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
