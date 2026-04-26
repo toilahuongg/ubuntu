@@ -42,6 +42,8 @@ export async function createTaskAction(
     const parsed = taskInputSchema.parse({
       title: formData.get("title") ?? "",
       description: (formData.get("description") as string) ?? "",
+      externalLabel: (formData.get("externalLabel") as string) ?? "",
+      externalUrl: (formData.get("externalUrl") as string) ?? "",
       deadlineTime: formData.get("deadlineTime") ?? "",
       expReward: Number(formData.get("expReward") ?? 10),
       pointReward: Number(formData.get("pointReward") ?? 10),
@@ -83,6 +85,8 @@ export async function updateTaskAction(
       taskId: formData.get("taskId") ?? "",
       title: formData.get("title") ?? "",
       description: (formData.get("description") as string) ?? "",
+      externalLabel: (formData.get("externalLabel") as string) ?? "",
+      externalUrl: (formData.get("externalUrl") as string) ?? "",
       deadlineTime: formData.get("deadlineTime") ?? "",
       expReward: Number(formData.get("expReward") ?? 10),
       pointReward: Number(formData.get("pointReward") ?? 10),

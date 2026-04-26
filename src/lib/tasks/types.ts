@@ -38,6 +38,8 @@ export type TaskSummary = {
   id: string;
   title: string;
   description: string;
+  externalLabel: string;
+  externalUrl: string;
   deadlineTime: string;
   expReward: number;
   pointReward: number;
@@ -96,6 +98,8 @@ export type TaskDetail = {
   id: string;
   title: string;
   description: string;
+  externalLabel: string;
+  externalUrl: string;
   date: string;
   yearMonth: string;
   deadlineAt: string;

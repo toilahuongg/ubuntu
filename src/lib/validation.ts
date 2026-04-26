@@ -31,11 +31,32 @@ const scheduledMonthDaysSchema = z
   .optional()
   .default([]);
 
+const externalUrlSchema = z
+  .string()
+  .trim()
+  .max(500, "Liên kết quá dài.")
+  .refine(
+    (value) => {
+      if (!value) return true;
+      try {
+        const url = new URL(value);
+        return url.protocol === "http:" || url.protocol === "https:";
+      } catch {
+        return false;
+      }
+    },
+    { message: "Liên kết phải bắt đầu bằng http:// hoặc https://." },
+  )
+  .optional()
+  .default("");
+
 const taskBaseSchema = z.object({
   deadlineTime: z
     .string()
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Deadline phải theo HH:mm"),
   description: z.string().max(280).optional().default(""),
+  externalLabel: z.string().trim().max(40).optional().default(""),
+  externalUrl: externalUrlSchema,
   expReward: z
     .number()
     .int()

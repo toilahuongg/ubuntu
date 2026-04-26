@@ -121,10 +121,13 @@ export function sortTasksForDisplay<T extends DisplaySortableTask>(
 
 export function mapTask(record: TaskRecord): TaskSummary {
   const schedule = normalizeTaskSchedule(record);
+  const external = normalizeTaskExternalLink(record);
   return {
     id: record._id.toString(),
     title: record.title,
     description: record.description,
+    externalLabel: external.label,
+    externalUrl: external.url,
     deadlineTime: record.deadlineTime,
     expReward: record.expReward ?? DEFAULT_EXP_REWARD,
     pointReward: record.pointReward ?? DEFAULT_POINT_REWARD,
@@ -412,10 +415,14 @@ export async function getTaskDetail(
     }));
   }
 
+  const external = normalizeTaskExternalLink(task);
+
   return {
     id: task._id.toString(),
     title: task.title,
     description: task.description,
+    externalLabel: external.label,
+    externalUrl: external.url,
     date: dateKey,
     yearMonth,
     deadlineAt: createDeadlineAt(dateKey, task.deadlineTime).toISOString(),
@@ -444,6 +451,8 @@ export async function getTaskDetail(
 export type CreateTaskInput = {
   title: string;
   description?: string;
+  externalLabel?: string;
+  externalUrl?: string;
   deadlineTime: string;
   expReward?: number;
   pointReward?: number;
@@ -523,6 +532,7 @@ export async function createTask(
     );
   }
   const taskType: TaskType = normalizeTaskType(input.taskType);
+  const external = normalizeTaskExternalLink(input);
   const schedule = normalizeTaskSchedule({
     scheduleType: input.scheduleType,
     scheduledMonthDays: input.scheduledMonthDays,
@@ -555,6 +565,8 @@ export async function createTask(
     createdBy: toObjectId(actor.id),
     deadlineTime: input.deadlineTime,
     description: input.description?.trim() ?? "",
+    externalLabel: external.label,
+    externalUrl: external.url,
     expReward: input.expReward ?? DEFAULT_EXP_REWARD,
     pointReward: input.pointReward ?? DEFAULT_POINT_REWARD,
     lateWindowDays: input.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS,
@@ -590,6 +602,8 @@ export async function createTask(
       targetRoles,
       teamId: actorScope.teamId,
       title: input.title,
+      externalLabel: external.label,
+      externalUrl: external.url,
     },
   });
 
@@ -599,6 +613,8 @@ export async function createTask(
 export type UpdateTaskInput = {
   title: string;
   description?: string;
+  externalLabel?: string;
+  externalUrl?: string;
   deadlineTime: string;
   expReward?: number;
   pointReward?: number;
@@ -627,6 +643,7 @@ export async function updateTask(
   }
 
   const taskType = normalizeTaskType(record.taskType);
+  const external = normalizeTaskExternalLink(input);
   const targetRoles = filterTaskTargetRolesForScope(
     input.targetRoles,
     record.scope,
@@ -662,6 +679,8 @@ export async function updateTask(
       $set: {
         title: input.title,
         description: input.description?.trim() ?? "",
+        externalLabel: external.label,
+        externalUrl: external.url,
         deadlineTime: input.deadlineTime,
         expReward: input.expReward ?? DEFAULT_EXP_REWARD,
         pointReward: input.pointReward ?? DEFAULT_POINT_REWARD,
@@ -690,8 +709,34 @@ export async function updateTask(
       scheduledWeekdays: schedule.scheduledWeekdays,
       targetCount: nextTargetCount,
       targetRoles,
+      externalLabel: external.label,
+      externalUrl: external.url,
     },
   });
+}
+
+export function normalizeTaskExternalLink(input: {
+  externalLabel?: string | null;
+  externalUrl?: string | null;
+}): { label: string; url: string } {
+  const url = input.externalUrl?.trim() ?? "";
+  const label = input.externalLabel?.trim() ?? "";
+
+  if (url) {
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        throw new Error("Unsupported protocol");
+      }
+    } catch {
+      throw new Error("Liên kết phải bắt đầu bằng http:// hoặc https://.");
+    }
+  }
+
+  return {
+    label: url ? label.slice(0, 40) || "Mở liên kết" : "",
+    url,
+  };
 }
 
 export async function deleteTask(

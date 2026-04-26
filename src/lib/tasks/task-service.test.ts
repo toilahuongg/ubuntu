@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import type { SessionUser } from "@/lib/domain";
 import type { TaskRecord } from "@/lib/models";
-import { filterManageableTasksForActor } from "@/lib/tasks/task-service";
+import {
+  filterManageableTasksForActor,
+  mapTask,
+  normalizeTaskExternalLink,
+} from "@/lib/tasks/task-service";
 
 function makeTask(
   input: Partial<TaskRecord> &
@@ -17,6 +21,8 @@ function makeTask(
     createdBy: new Types.ObjectId(),
     deadlineTime: input.deadlineTime ?? "21:00",
     description: "",
+    externalLabel: input.externalLabel,
+    externalUrl: input.externalUrl,
     expReward: 10,
     isActive: true,
     lateWindowDays: 7,
@@ -115,5 +121,38 @@ describe("filterManageableTasksForActor", () => {
       "Team task",
       "Zone task",
     ]);
+  });
+});
+
+describe("task external links", () => {
+  it("maps external link fields with a default label", () => {
+    const task = makeTask({
+      _id: new Types.ObjectId(),
+      externalUrl: "https://forms.example.com/check-in",
+      scope: "TEAM",
+      teamId: new Types.ObjectId(),
+      title: "Open form",
+    });
+
+    expect(mapTask(task)).toMatchObject({
+      externalLabel: "Mở liên kết",
+      externalUrl: "https://forms.example.com/check-in",
+    });
+  });
+
+  it("normalizes labels and rejects unsafe protocols", () => {
+    expect(
+      normalizeTaskExternalLink({
+        externalLabel: "  Mở app con  ",
+        externalUrl: "  https://example.com/app  ",
+      }),
+    ).toEqual({
+      label: "Mở app con",
+      url: "https://example.com/app",
+    });
+
+    expect(() =>
+      normalizeTaskExternalLink({ externalUrl: "javascript:alert(1)" }),
+    ).toThrow("Liên kết phải bắt đầu bằng http:// hoặc https://.");
   });
 });

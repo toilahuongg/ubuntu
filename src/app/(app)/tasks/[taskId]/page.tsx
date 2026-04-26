@@ -1,5 +1,15 @@
 import { redirect } from "next/navigation";
-import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Clock, Target, Trophy, Zap } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  ExternalLink,
+  Target,
+  Trophy,
+  Zap,
+} from "lucide-react";
 import Link from "next/link";
 
 import { getSessionUser } from "@/lib/auth/session";
@@ -106,6 +116,17 @@ export default async function TaskDetailPage({
           <p className="mt-1 text-sm text-muted-foreground">
             <LinkifyText text={detail.description} />
           </p>
+        )}
+        {detail.externalUrl && (
+          <a
+            href={detail.externalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-primary/30 bg-primary px-4 py-2 text-sm font-semibold text-background shadow-[0_10px_28px_-18px_var(--primary)] transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <ExternalLink className="h-4 w-4" aria-hidden />
+            {detail.externalLabel || "Mở liên kết"}
+          </a>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">

@@ -192,6 +192,34 @@ export function CreateTemplateForm({ scope }: { scope: TaskScope }) {
         />
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+        <div>
+          <label htmlFor="externalUrl" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            Link mở app/web ngoài
+          </label>
+          <input
+            id="externalUrl"
+            name="externalUrl"
+            type="url"
+            inputMode="url"
+            placeholder="https://example.com"
+            className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+          />
+        </div>
+        <div>
+          <label htmlFor="externalLabel" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+            Nhãn nút
+          </label>
+          <input
+            id="externalLabel"
+            name="externalLabel"
+            maxLength={40}
+            placeholder="Mở liên kết"
+            className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+          />
+        </div>
+      </div>
+
       <div>
         <label htmlFor="submissionMessage" className="mb-1.5 block text-xs font-medium text-muted-foreground">
           Lời thoại khi có người nộp (tuỳ chọn)

@@ -24,6 +24,8 @@ const taskSchema = new Schema(
     createdBy: { ref: "User", required: true, type: Schema.Types.ObjectId },
     deadlineTime: { required: true, type: String },
     description: { default: "", trim: true, type: String },
+    externalLabel: { default: "", maxlength: 40, trim: true, type: String },
+    externalUrl: { default: "", trim: true, type: String },
     expReward: { default: DEFAULT_EXP_REWARD, min: 0, type: Number },
     pointReward: { default: DEFAULT_POINT_REWARD, min: 0, type: Number },
     lateWindowDays: {
@@ -80,6 +82,8 @@ export type TaskRecord = {
   createdBy: Types.ObjectId;
   deadlineTime: string;
   description: string;
+  externalLabel?: string;
+  externalUrl?: string;
   expReward: number;
   pointReward: number;
   lateWindowDays: number;

@@ -11,6 +11,8 @@ describe("taskInputSchema", () => {
     const result = taskInputSchema.parse({
       deadlineTime: "17:30",
       description: "Test task",
+      externalLabel: "  Mở app  ",
+      externalUrl: "  https://example.com/task  ",
       expReward: 10,
       isActive: true,
       targetRoles: ["MEMBER"],
@@ -19,6 +21,36 @@ describe("taskInputSchema", () => {
 
     expect(result.title).toBe("Daily check-in");
     expect(result.expReward).toBe(10);
+    expect(result.externalLabel).toBe("Mở app");
+    expect(result.externalUrl).toBe("https://example.com/task");
+  });
+
+  it("allows empty external links", () => {
+    const result = taskInputSchema.parse({
+      deadlineTime: "17:30",
+      externalUrl: "",
+      targetRoles: ["MEMBER"],
+      title: "Daily check-in",
+    });
+
+    expect(result.externalUrl).toBe("");
+  });
+
+  it("rejects unsafe or malformed external links", () => {
+    for (const externalUrl of [
+      "javascript:alert(1)",
+      "ftp://example.com",
+      "not a url",
+    ]) {
+      expect(() =>
+        taskInputSchema.parse({
+          deadlineTime: "17:30",
+          externalUrl,
+          targetRoles: ["MEMBER"],
+          title: "Daily check-in",
+        }),
+      ).toThrow("Liên kết phải bắt đầu bằng http:// hoặc https://.");
+    }
   });
 
   it("accepts daily tasks with monthly goals", () => {
