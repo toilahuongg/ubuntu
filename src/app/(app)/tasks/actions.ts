@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
 import { getTodayDateKey } from "@/lib/dates";
 import type { SessionUser } from "@/lib/domain";
+import { resolveSubmissionRevalidationPaths } from "@/lib/tasks/revalidation";
 import { saveSubmission, type SaveSubmissionResult } from "@/lib/tasks/submission-service";
 import { submitTaskInputSchema } from "@/lib/validation";
 
@@ -22,6 +23,7 @@ export async function submitTaskAction(
   dateKey?: string,
   count?: number,
   mode?: "increment" | "set",
+  revalidationPaths?: readonly string[],
 ): Promise<ActionResult<SaveSubmissionResult>> {
   return runAction(async () => {
     const parsed = submitTaskInputSchema.parse({
@@ -47,10 +49,9 @@ export async function submitTaskAction(
         mode: parsed.mode,
       },
     );
-    revalidatePath("/dashboard");
-    revalidatePath("/admin");
-    revalidatePath(`/tasks/${parsed.taskId}`);
-    revalidatePath(`/tasks/${parsed.taskId}/proxy`);
+    for (const path of resolveSubmissionRevalidationPaths(revalidationPaths)) {
+      revalidatePath(path);
+    }
     return result;
   });
 }

@@ -1,0 +1,118 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - link "Bỏ qua đến nội dung chính" [ref=e3] [cursor=pointer]:
+      - /url: "#main-content"
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - img "Ubuntu" [ref=e8]
+        - generic [ref=e9]:
+          - paragraph [ref=e10]:
+            - generic [ref=e12]: Admin Ubuntu
+          - paragraph [ref=e13]: Admin
+    - main [ref=e14]:
+      - generic [ref=e722]:
+        - generic [ref=e723]:
+          - heading "Bảng Xếp Hạng" [level=1] [ref=e724]
+          - paragraph [ref=e725]: Tháng 04/2026 — tính từ ngày 1 hàng tháng
+        - generic [ref=e726]:
+          - generic [ref=e727]:
+            - img [ref=e729]
+            - heading "Top Khu vực" [level=2] [ref=e732]
+          - generic [ref=e733]:
+            - generic [ref=e734]:
+              - generic [ref=e735]: "1"
+              - img [ref=e737]
+              - generic [ref=e743]:
+                - paragraph [ref=e744]: Khu vuc Quan 1
+                - paragraph [ref=e745]: SG-01 — 3 thành viên
+              - generic [ref=e746]: 38điểm
+            - generic [ref=e747]:
+              - generic [ref=e748]: "2"
+              - img [ref=e750]
+              - generic [ref=e756]:
+                - paragraph [ref=e757]: Khu vuc Can Tho
+                - paragraph [ref=e758]: CT-01 — 1 thành viên
+              - generic [ref=e759]: 25điểm
+            - generic [ref=e760]:
+              - generic [ref=e761]: "3"
+              - img [ref=e763]
+              - generic [ref=e769]:
+                - paragraph [ref=e770]: Khu vuc Quan 7
+                - paragraph [ref=e771]: SG-02 — 1 thành viên
+              - generic [ref=e772]: 25điểm
+        - generic [ref=e773]:
+          - generic [ref=e774]:
+            - img [ref=e776]
+            - heading "Top Thành viên" [level=2] [ref=e781]
+          - generic [ref=e782]:
+            - generic [ref=e783]:
+              - generic [ref=e784]: "1"
+              - img "Tân binh" [ref=e785]
+              - generic [ref=e786]:
+                - paragraph [ref=e787]:
+                  - generic [ref=e789]: Vo Thanh Vien B1
+                - paragraph [ref=e790]: Lv.1 — Tân binh
+              - generic [ref=e791]: 25điểm
+            - generic [ref=e792]:
+              - generic [ref=e793]: "2"
+              - img "Tân binh" [ref=e794]
+              - generic [ref=e795]:
+                - paragraph [ref=e796]:
+                  - generic [ref=e798]: Tran Thanh Vien C1
+                - paragraph [ref=e799]: Lv.1 — Tân binh
+              - generic [ref=e800]: 25điểm
+            - generic [ref=e801]:
+              - generic [ref=e802]: "3"
+              - img "Tân binh" [ref=e803]
+              - generic [ref=e804]:
+                - paragraph [ref=e805]:
+                  - generic [ref=e807]: Nguyen Thanh Vien A2
+                - paragraph [ref=e808]: Lv.1 — Tân binh
+              - generic [ref=e809]: 18điểm
+            - generic [ref=e810]:
+              - generic [ref=e811]: "4"
+              - img "Binh nhì" [ref=e812]
+              - generic [ref=e813]:
+                - paragraph [ref=e814]:
+                  - generic [ref=e816]: Nguyen NGV Quan 1
+                - paragraph [ref=e817]: Lv.2 — Binh nhì
+              - generic [ref=e818]: 10điểm
+            - generic [ref=e819]:
+              - generic [ref=e820]: "5"
+              - img "Tân binh" [ref=e821]
+              - generic [ref=e822]:
+                - paragraph [ref=e823]:
+                  - generic [ref=e825]: Nguyen Thanh Vien A1
+                - paragraph [ref=e826]: Lv.1 — Tân binh
+              - generic [ref=e827]: 10điểm
+        - generic [ref=e828]:
+          - generic [ref=e829]:
+            - img [ref=e831]
+            - heading "Top KVT" [level=2] [ref=e833]
+          - generic [ref=e834]: Chưa có dữ liệu trong tháng này.
+    - navigation "Điều hướng chính" [ref=e300]:
+      - generic [ref=e301]:
+        - link "Tổng quan" [ref=e302] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e303]
+          - generic [ref=e308]: Tổng quan
+        - link "Khách hàng" [ref=e309] [cursor=pointer]:
+          - /url: /customers
+          - img [ref=e310]
+          - generic [ref=e312]: Khách hàng
+        - link "Xếp hạng" [active] [ref=e313] [cursor=pointer]:
+          - /url: /leaderboard
+          - img [ref=e314]
+          - generic [ref=e320]: Xếp hạng
+        - link "Hồ sơ" [ref=e321] [cursor=pointer]:
+          - /url: /profile
+          - img [ref=e322]
+          - generic [ref=e325]: Hồ sơ
+        - link "Quản lý" [ref=e326] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e327]
+          - generic [ref=e330]: Quản lý
+  - button "Open Next.js Dev Tools" [ref=e358] [cursor=pointer]:
+    - img [ref=e359]
+  - alert [ref=e362]
+  - generic [ref=e363]: "0"

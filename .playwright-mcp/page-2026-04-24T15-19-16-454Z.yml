@@ -1,0 +1,31 @@
+- generic [ref=e2]:
+  - link "Bỏ qua đến nội dung chính" [ref=e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - img "Ubuntu" [ref=e8]
+      - generic [ref=e9]:
+        - paragraph [ref=e10]:
+          - generic [ref=e12]: Nguyen Thanh Vien A1
+        - paragraph [ref=e13]: Thành viên
+  - main [ref=e14]:
+    - status "Đang tải" [ref=e15]:
+      - generic [ref=e20]: Đang tải…
+  - navigation "Điều hướng chính" [ref=e21]:
+    - generic [ref=e22]:
+      - link "Tổng quan" [ref=e23] [cursor=pointer]:
+        - /url: /dashboard
+        - img [ref=e24]
+        - generic [ref=e29]: Tổng quan
+      - link "Khách hàng" [ref=e30] [cursor=pointer]:
+        - /url: /customers
+        - img [ref=e31]
+        - generic [ref=e33]: Khách hàng
+      - link "Xếp hạng" [ref=e34] [cursor=pointer]:
+        - /url: /leaderboard
+        - img [ref=e35]
+        - generic [ref=e41]: Xếp hạng
+      - link "Hồ sơ" [ref=e42] [cursor=pointer]:
+        - /url: /profile
+        - img [ref=e43]
+        - generic [ref=e46]: Hồ sơ

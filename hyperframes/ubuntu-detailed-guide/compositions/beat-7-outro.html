@@ -1,0 +1,147 @@
+<template id="beat-7-outro-template">
+  <div
+    data-composition-id="beat-7-outro"
+    data-start="0"
+    data-duration="5.5"
+    data-width="1080"
+    data-height="1920"
+  >
+    <section class="scene scene-outro">
+      <div class="scene-content">
+        <div class="chapter-tag">Kết thúc • Recap</div>
+        <div class="outro-head">
+          <img
+            class="outro-logo"
+            src="http://127.0.0.1:3011/branding/logo.svg"
+            alt="Ubuntu logo"
+          />
+          <h1 class="scene-title">Một vòng sử dụng Ubuntu từ đầu tới cuối.</h1>
+        </div>
+        <p class="scene-subtitle">
+          Đăng nhập, xử lý nhiệm vụ, chăm khách hàng và theo dõi kết quả mỗi ngày
+          trên cùng một ứng dụng dọc.
+        </p>
+
+        <div class="outro-grid">
+          <div class="thumbnail outro-thumb t1"><img src="http://127.0.0.1:3011/screenshots/login-mobile.png" alt="Login" /></div>
+          <div class="thumbnail outro-thumb t2"><img src="http://127.0.0.1:3011/screenshots/member-dashboard-mobile.png" alt="Dashboard" /></div>
+          <div class="thumbnail outro-thumb t3"><img src="http://127.0.0.1:3011/screenshots/member-task-detail-mobile.png" alt="Task" /></div>
+          <div class="thumbnail outro-thumb t4"><img src="http://127.0.0.1:3011/screenshots/customers-mobile.png" alt="Customers" /></div>
+          <div class="thumbnail outro-thumb t5"><img src="http://127.0.0.1:3011/screenshots/admin-mobile.png" alt="Admin" /></div>
+        </div>
+
+        <div class="glass-panel outro-summary">
+          <div class="pill-row">
+            <div class="mini-pill"><strong>1</strong> đăng nhập</div>
+            <div class="mini-pill"><strong>2</strong> làm nhiệm vụ</div>
+            <div class="mini-pill"><strong>3</strong> chăm khách hàng</div>
+            <div class="mini-pill"><strong>4</strong> xem kết quả</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <style>
+      [data-composition-id="beat-7-outro"] .outro-head {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+      }
+
+      [data-composition-id="beat-7-outro"] .outro-logo {
+        width: 88px;
+        height: 88px;
+        flex: 0 0 auto;
+      }
+
+      [data-composition-id="beat-7-outro"] .outro-grid {
+        position: relative;
+        flex: 1;
+      }
+
+      [data-composition-id="beat-7-outro"] .outro-thumb {
+        position: absolute;
+      }
+
+      [data-composition-id="beat-7-outro"] .t1 {
+        left: 0;
+        top: 120px;
+        width: 220px;
+        height: 380px;
+      }
+
+      [data-composition-id="beat-7-outro"] .t2 {
+        left: 250px;
+        top: 20px;
+        width: 260px;
+        height: 470px;
+      }
+
+      [data-composition-id="beat-7-outro"] .t3 {
+        right: 0;
+        top: 110px;
+        width: 220px;
+        height: 390px;
+      }
+
+      [data-composition-id="beat-7-outro"] .t4 {
+        left: 90px;
+        top: 550px;
+        width: 250px;
+        height: 440px;
+      }
+
+      [data-composition-id="beat-7-outro"] .t5 {
+        right: 90px;
+        top: 530px;
+        width: 250px;
+        height: 440px;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      tl.from(".scene-outro .chapter-tag, .scene-outro .outro-logo, .scene-outro .scene-title, .scene-outro .scene-subtitle", {
+        y: 34,
+        opacity: 0,
+        duration: 0.62,
+        stagger: 0.08,
+        ease: "power3.out",
+      }, 0);
+      tl.from(".scene-outro .outro-thumb", {
+        y: 80,
+        opacity: 0,
+        scale: 0.9,
+        duration: 0.7,
+        stagger: 0.08,
+        ease: "power2.out",
+      }, 0.4);
+      tl.from(".scene-outro .outro-summary", {
+        y: 42,
+        opacity: 0,
+        duration: 0.64,
+        ease: "power2.out",
+      }, 0.82);
+      tl.to(".scene-outro .outro-thumb", {
+        y: -14,
+        duration: 1.5,
+        stagger: 0.04,
+        yoyo: true,
+        repeat: 1,
+        ease: "sine.inOut",
+      }, 1.2);
+      tl.to(".scene-outro .outro-summary .mini-pill", {
+        y: -6,
+        duration: 0.9,
+        stagger: 0.05,
+        yoyo: true,
+        repeat: 1,
+        ease: "sine.inOut",
+      }, 1.35);
+
+      window.__timelines["beat-7-outro"] = tl;
+    </script>
+  </div>
+</template>

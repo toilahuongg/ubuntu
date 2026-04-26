@@ -1,7 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { AlertTriangle, BarChart3, CheckCircle2, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  BarChart3,
+  CheckCircle2,
+  Pencil,
+  Users,
+} from "lucide-react";
 
 import type {
   AdminOperationsPeriod,
@@ -35,6 +42,7 @@ const STATUS_LABELS: Record<
 export function OperationsDashboard({ data }: OperationsDashboardProps) {
   const [period, setPeriod] = useState<AdminOperationsPeriod>("day");
   const activeSummary = data.periods[period];
+  const editHref = getScopeEditHref(data.scope.role);
 
   return (
     <div className="space-y-5">
@@ -45,9 +53,20 @@ export function OperationsDashboard({ data }: OperationsDashboardProps) {
               <BarChart3 className="h-3.5 w-3.5" />
               {data.scope.roleLabel}
             </div>
-            <h1 className="truncate font-display text-2xl font-bold">
-              {data.scope.name}
-            </h1>
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate font-display text-2xl font-bold">
+                {data.scope.name}
+              </h1>
+              {editHref && (
+                <Link
+                  href={editHref}
+                  aria-label={`Chỉnh sửa ${data.scope.name}`}
+                  className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-overlay-subtle text-muted-foreground ring-1 ring-border transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                >
+                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                </Link>
+              )}
+            </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {data.scope.memberCount} thành viên trong phạm vi quản lý.
             </p>
@@ -67,6 +86,13 @@ export function OperationsDashboard({ data }: OperationsDashboardProps) {
       <MemberProgressPanel data={data} period={period} />
     </div>
   );
+}
+
+function getScopeEditHref(role: AdminOperationsView["scope"]["role"]) {
+  if (role === "TEAM_LEAD") return "/admin/teams";
+  if (role === "ZONE_LEAD") return "/admin/zones";
+  if (role === "REGIONAL_LEAD") return "/admin/regions";
+  return null;
 }
 
 function ProgressRing({ value }: { value: number }) {

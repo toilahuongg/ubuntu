@@ -1,0 +1,137 @@
+<template id="beat-1-login-template">
+  <div
+    data-composition-id="beat-1-login"
+    data-start="0"
+    data-duration="6"
+    data-width="1080"
+    data-height="1920"
+  >
+    <section class="scene scene-login">
+      <div class="scene-content">
+        <div class="chapter-tag">B01 • Đăng nhập</div>
+        <div class="login-copy">
+          <h1 class="scene-title">Vào Ubuntu và bắt đầu ca làm việc ngay.</h1>
+          <p class="scene-subtitle">
+            Mở WebApp từ Telegram, từ link dev, hoặc dùng luồng đăng nhập nhanh
+            để đi thẳng vào hệ thống.
+          </p>
+        </div>
+
+        <div class="pill-row login-pills">
+          <div class="mini-pill"><strong>Telegram</strong> WebApp</div>
+          <div class="mini-pill"><strong>Google</strong> fallback</div>
+          <div class="mini-pill"><strong>Dev</strong> login</div>
+        </div>
+
+        <div class="phone-frame login-shot">
+          <img
+            src="http://127.0.0.1:3011/screenshots/login-mobile.png"
+            alt="Màn hình đăng nhập Ubuntu"
+          />
+        </div>
+
+        <div class="glass-panel login-guide">
+          <div class="bullet-list">
+            <div class="bullet-row">
+              <div class="bullet-index">1</div>
+              <p>Mở Ubuntu từ Telegram hoặc môi trường dev.</p>
+            </div>
+            <div class="bullet-row">
+              <div class="bullet-index">2</div>
+              <p>Chọn phương thức phù hợp với role đang test.</p>
+            </div>
+            <div class="bullet-row">
+              <div class="bullet-index">3</div>
+              <p>Đăng nhập xong là app chuyển ngay vào dashboard.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <style>
+      [data-composition-id="beat-1-login"] .login-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      [data-composition-id="beat-1-login"] .login-shot {
+        width: 540px;
+        height: 800px;
+        align-self: center;
+      }
+
+      [data-composition-id="beat-1-login"] .login-guide {
+        margin-top: auto;
+      }
+
+      [data-composition-id="beat-1-login"] .login-pills {
+        max-width: 720px;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      const pathTargets = [
+        ".scene-login .chapter-tag",
+        ".scene-login .scene-title",
+        ".scene-login .scene-subtitle",
+      ];
+
+      tl.from(pathTargets, {
+        y: 46,
+        opacity: 0,
+        duration: 0.7,
+        stagger: 0.12,
+        ease: "power3.out",
+      }, 0);
+      tl.from(".scene-login .login-pills .mini-pill", {
+        y: 36,
+        opacity: 0,
+        duration: 0.55,
+        stagger: 0.08,
+        ease: "power2.out",
+      }, 0.3);
+      tl.from(".scene-login .login-shot", {
+        y: 120,
+        opacity: 0,
+        scale: 0.92,
+        duration: 0.9,
+        ease: "power3.out",
+      }, 0.42);
+      tl.from(".scene-login .login-guide", {
+        y: 42,
+        opacity: 0,
+        duration: 0.65,
+        ease: "power2.out",
+      }, 0.72);
+      tl.to(".scene-login .login-shot", {
+        y: -20,
+        scale: 1.025,
+        duration: 2.6,
+        yoyo: true,
+        repeat: 1,
+        ease: "sine.inOut",
+      }, 1.45);
+      tl.to(".scene-login .login-pills .mini-pill", {
+        y: -8,
+        duration: 1.2,
+        stagger: 0.05,
+        yoyo: true,
+        repeat: 2,
+        ease: "sine.inOut",
+      }, 1.3);
+      tl.to(".scene-login .scene-content", {
+        scale: 1.06,
+        opacity: 0,
+        filter: "blur(16px)",
+        duration: 0.55,
+        ease: "power2.in",
+      }, 5.25);
+
+      window.__timelines["beat-1-login"] = tl;
+    </script>
+  </div>
+</template>

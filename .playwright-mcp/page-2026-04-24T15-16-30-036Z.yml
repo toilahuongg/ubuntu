@@ -1,0 +1,133 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - link "Bỏ qua đến nội dung chính" [ref=e3] [cursor=pointer]:
+      - /url: "#main-content"
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - img "Ubuntu" [ref=e8]
+        - generic [ref=e9]:
+          - paragraph [ref=e10]:
+            - generic [ref=e12]: Admin Ubuntu
+          - paragraph [ref=e13]: Admin
+    - main [ref=e14]:
+      - generic [ref=e408]:
+        - generic [ref=e409]:
+          - img [ref=e410]
+          - generic [ref=e412]:
+            - heading "Quản Trị" [level=1] [ref=e413]
+            - paragraph [ref=e414]: Trung tâm quản lý cấu trúc, người dùng và tích hợp hệ thống.
+        - generic [ref=e415]:
+          - navigation "Tổng quan quản trị" [ref=e416]:
+            - link "1 Nhóm Toàn hệ thống" [ref=e417] [cursor=pointer]:
+              - /url: /admin/teams
+              - img [ref=e419]
+              - paragraph [ref=e423]: "1"
+              - paragraph [ref=e424]: Nhóm
+              - paragraph [ref=e425]: Toàn hệ thống
+            - link "2 Địa vực Đang hoạt động" [ref=e426] [cursor=pointer]:
+              - /url: /admin/zones
+              - img [ref=e428]
+              - paragraph [ref=e432]: "2"
+              - paragraph [ref=e433]: Địa vực
+              - paragraph [ref=e434]: Đang hoạt động
+            - link "3 Khu vực Đang hoạt động" [ref=e435] [cursor=pointer]:
+              - /url: /admin/regions
+              - img [ref=e437]
+              - paragraph [ref=e440]: "3"
+              - paragraph [ref=e441]: Khu vực
+              - paragraph [ref=e442]: Đang hoạt động
+            - link "13 Người dùng Tổng tài khoản" [ref=e443] [cursor=pointer]:
+              - /url: /admin/users
+              - img [ref=e445]
+              - paragraph [ref=e450]: "13"
+              - paragraph [ref=e451]: Người dùng
+              - paragraph [ref=e452]: Tổng tài khoản
+          - generic [ref=e453]:
+            - generic [ref=e454]:
+              - heading "Cấu trúc" [level=2] [ref=e455]
+              - navigation "Cấu trúc" [ref=e456]:
+                - link "Nhóm 1 nhóm" [ref=e457] [cursor=pointer]:
+                  - /url: /admin/teams
+                  - generic [ref=e458]:
+                    - img [ref=e459]
+                    - generic [ref=e463]:
+                      - paragraph [ref=e464]: Nhóm
+                      - paragraph [ref=e465]: 1 nhóm
+                  - img [ref=e467]
+                - link "Địa vực 2 địa vực" [ref=e469] [cursor=pointer]:
+                  - /url: /admin/zones
+                  - generic [ref=e470]:
+                    - img [ref=e471]
+                    - generic [ref=e475]:
+                      - paragraph [ref=e476]: Địa vực
+                      - paragraph [ref=e477]: 2 địa vực
+                  - img [ref=e479]
+                - link "Khu vực 3 khu vực" [ref=e481] [cursor=pointer]:
+                  - /url: /admin/regions
+                  - generic [ref=e482]:
+                    - img [ref=e483]
+                    - generic [ref=e486]:
+                      - paragraph [ref=e487]: Khu vực
+                      - paragraph [ref=e488]: 3 khu vực
+                  - img [ref=e490]
+            - generic [ref=e492]:
+              - heading "Người dùng" [level=2] [ref=e493]
+              - navigation "Người dùng" [ref=e494]:
+                - link "Người dùng 13 người dùng 1" [ref=e495] [cursor=pointer]:
+                  - /url: /admin/users
+                  - generic [ref=e496]:
+                    - img [ref=e497]
+                    - generic [ref=e509]:
+                      - paragraph [ref=e510]: Người dùng
+                      - paragraph [ref=e511]: 13 người dùng
+                  - generic [ref=e512]:
+                    - generic [ref=e513]: "1"
+                    - img [ref=e514]
+            - generic [ref=e516]:
+              - heading "Vận hành" [level=2] [ref=e517]
+              - navigation "Vận hành" [ref=e518]:
+                - link "Nhiệm vụ Quản lý mẫu nhiệm vụ toàn hệ thống" [ref=e519] [cursor=pointer]:
+                  - /url: /templates
+                  - generic [ref=e520]:
+                    - img [ref=e521]
+                    - generic [ref=e524]:
+                      - paragraph [ref=e525]: Nhiệm vụ
+                      - paragraph [ref=e526]: Quản lý mẫu nhiệm vụ toàn hệ thống
+                  - img [ref=e528]
+            - generic [ref=e530]:
+              - heading "Trang bị" [level=2] [ref=e531]
+              - navigation "Trang bị" [ref=e532]:
+                - link "Trang bị tên Quản lý cosmetic của người dùng" [ref=e533] [cursor=pointer]:
+                  - /url: /admin/cosmetics
+                  - generic [ref=e534]:
+                    - img [ref=e535]
+                    - generic [ref=e538]:
+                      - paragraph [ref=e539]: Trang bị tên
+                      - paragraph [ref=e540]: Quản lý cosmetic của người dùng
+                  - img [ref=e542]
+    - navigation "Điều hướng chính" [ref=e300]:
+      - generic [ref=e301]:
+        - link "Tổng quan" [ref=e302] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e303]
+          - generic [ref=e308]: Tổng quan
+        - link "Khách hàng" [ref=e309] [cursor=pointer]:
+          - /url: /customers
+          - img [ref=e310]
+          - generic [ref=e312]: Khách hàng
+        - link "Xếp hạng" [ref=e313] [cursor=pointer]:
+          - /url: /leaderboard
+          - img [ref=e314]
+          - generic [ref=e320]: Xếp hạng
+        - link "Hồ sơ" [ref=e321] [cursor=pointer]:
+          - /url: /profile
+          - img [ref=e322]
+          - generic [ref=e325]: Hồ sơ
+        - link "Quản lý" [active] [ref=e326] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e327]
+          - generic [ref=e330]: Quản lý
+  - button "Open Next.js Dev Tools" [ref=e358] [cursor=pointer]:
+    - img [ref=e359]
+  - alert [ref=e362]
+  - generic [ref=e363]: "0"

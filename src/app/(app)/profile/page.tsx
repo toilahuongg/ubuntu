@@ -1,7 +1,17 @@
 import type { ComponentType, CSSProperties } from "react";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { CalendarDays, Check, Flame, Plus, ShoppingBag, Target, Trophy, Zap } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Flame,
+  Plus,
+  ShoppingBag,
+  Target,
+  Trophy,
+  Zap,
+} from "lucide-react";
 import Link from "next/link";
 
 import { PushToggle } from "@/components/push-toggle";
@@ -107,6 +117,8 @@ export default async function ProfilePage() {
         </div>
       </section>
 
+      <QuickActionsSection />
+
       <TaskStatsSection stats={activityStats} />
 
       <section className="glass-card space-y-3 p-3">
@@ -122,17 +134,45 @@ export default async function ProfilePage() {
           level={progress.level}
           compact
         />
-        <Link
-          href="/shop"
-          className="flex items-center gap-3 rounded-xl bg-overlay-subtle px-4 py-3 text-sm font-medium ring-1 ring-border transition hover:bg-overlay-medium"
-        >
-          <ShoppingBag className="h-4 w-4 text-primary" />
-          Cửa hàng
-        </Link>
-        <PushToggle compact />
         <LogoutButton compact />
       </section>
     </div>
+  );
+}
+
+function QuickActionsSection() {
+  return (
+    <section className="space-y-3">
+      <div className="px-1">
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Truy cập nhanh
+        </h2>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Link
+          href="/shop"
+          className="group flex min-h-24 items-center justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/10 p-4 text-left transition-colors hover:border-primary/35 hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+              <ShoppingBag className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-foreground">
+                Cửa hàng
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                Đổi điểm và trang bị vật phẩm.
+              </span>
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" />
+        </Link>
+
+        <PushToggle compact />
+      </div>
+    </section>
   );
 }
 

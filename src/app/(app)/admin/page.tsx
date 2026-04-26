@@ -70,28 +70,13 @@ export default async function AdminPage() {
     const scopedStructureItems: NavItem[] = isZoneLead
       ? [
           {
-            href: "/admin/zones",
-            icon: Layers,
-            label: "Địa vực của tôi",
-            description: "Xem và cập nhật địa vực đang phụ trách",
-          },
-          {
             href: "/admin/regions",
             icon: MapPin,
             label: "Khu vực",
             description: "Quản lý các khu vực trong địa vực",
           },
         ]
-      : isRegionalLead
-        ? [
-            {
-              href: "/admin/regions",
-              icon: MapPin,
-              label: "Khu vực của tôi",
-              description: "Xem và cập nhật khu vực đang phụ trách",
-            },
-          ]
-        : [];
+      : [];
 
     return (
       <>
@@ -281,12 +266,6 @@ function ManagementHome({
         {
           title: "Phạm vi của tôi",
           items: [
-            {
-              href: "/admin/teams",
-              icon: Building2,
-              label: "Nhóm của tôi",
-              description: primaryTeam?.name ?? "Chưa gán nhóm",
-            },
             {
               href: "/admin/users",
               icon: UserCog,

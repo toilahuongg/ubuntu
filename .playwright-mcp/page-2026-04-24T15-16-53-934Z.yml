@@ -1,0 +1,117 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Bỏ qua đến nội dung chính" [ref=e3] [cursor=pointer]:
+      - /url: "#main-content"
+    - banner [ref=e4]:
+      - generic [ref=e6]:
+        - img "Ubuntu" [ref=e8]
+        - generic [ref=e9]:
+          - paragraph [ref=e10]:
+            - generic [ref=e12]: Admin Ubuntu
+          - paragraph [ref=e13]: Admin
+    - main [ref=e14]:
+      - generic [ref=e627]:
+        - link "Quay lại" [ref=e629] [cursor=pointer]:
+          - /url: /customers
+          - img [ref=e630]
+          - text: Quay lại
+        - generic [ref=e632]:
+          - generic [ref=e633]:
+            - generic [ref=e634]:
+              - heading "NGH" [level=1] [ref=e635]
+              - generic [ref=e637]: Bình thường – học tiếp
+            - generic [ref=e638]:
+              - link "Sửa" [ref=e639] [cursor=pointer]:
+                - /url: /customers/69eb0f77fb2fe688dc1fee3d/edit
+                - img [ref=e640]
+                - text: Sửa
+              - button "Xoá" [ref=e644]:
+                - img [ref=e645]
+                - text: Xoá
+          - generic [ref=e648]:
+            - generic [ref=e649]:
+              - text: Độ tuổi
+              - paragraph [ref=e650]: 20 - 25
+            - generic [ref=e651]:
+              - text: Giới tính
+              - paragraph [ref=e652]: Nam
+            - generic [ref=e653]:
+              - text: Công việc
+              - paragraph [ref=e654]: Sinh viên
+            - generic [ref=e655]:
+              - text: Tính cách
+              - paragraph [ref=e656]: Hướng nội tích cực
+          - generic [ref=e657]:
+            - generic [ref=e658]:
+              - img [ref=e659]
+              - generic [ref=e664]: Người chăm sóc
+            - generic [ref=e666]: Tran Nhom Truong · NT
+        - generic [ref=e667]:
+          - heading "Ghi tương tác" [level=2] [ref=e668]
+          - generic [ref=e669]:
+            - generic [ref=e670]:
+              - button "Nhắn tin" [ref=e671]:
+                - img [ref=e672]
+                - text: Nhắn tin
+              - button "Gọi điện" [ref=e674]:
+                - img [ref=e675]
+                - text: Gọi điện
+              - button "Chia sẻ nội dung" [ref=e677]:
+                - img [ref=e678]
+                - text: Chia sẻ nội dung
+            - generic [ref=e684]:
+              - generic [ref=e685]: Tình trạng
+              - generic [ref=e686]:
+                - button "Không" [ref=e687]
+                - button "Đơn thuần · Đã ghi" [disabled] [ref=e688]
+                - button "Hữu hiệu" [ref=e689]
+                - button "Đã BT" [ref=e690]
+            - generic [ref=e691]:
+              - generic [ref=e692]: Ghi chú
+              - textbox "Ghi chú thêm về tương tác..." [ref=e693]
+            - button "Ghi nhận tương tác" [ref=e694]:
+              - img [ref=e695]
+              - text: Ghi nhận tương tác
+        - generic [ref=e698]:
+          - heading "Lịch sử tương tác (1)" [level=2] [ref=e699]
+          - generic [ref=e701]:
+            - img [ref=e703]
+            - generic [ref=e705]:
+              - generic [ref=e706]:
+                - generic [ref=e707]:
+                  - generic [ref=e708]: Gọi điện
+                  - generic [ref=e709]: 24/4/2026
+                - generic [ref=e710]:
+                  - button "Sửa tương tác" [ref=e711]:
+                    - img [ref=e712]
+                  - button "Xoá tương tác" [ref=e715]:
+                    - img [ref=e716]
+              - generic [ref=e719]:
+                - generic [ref=e720]: Đơn thuần
+                - generic [ref=e721]: +5đ / +5EXP
+    - navigation "Điều hướng chính" [ref=e300]:
+      - generic [ref=e301]:
+        - link "Tổng quan" [ref=e302] [cursor=pointer]:
+          - /url: /dashboard
+          - img [ref=e303]
+          - generic [ref=e308]: Tổng quan
+        - link "Khách hàng" [ref=e309] [cursor=pointer]:
+          - /url: /customers
+          - img [ref=e310]
+          - generic [ref=e312]: Khách hàng
+        - link "Xếp hạng" [ref=e313] [cursor=pointer]:
+          - /url: /leaderboard
+          - img [ref=e314]
+          - generic [ref=e320]: Xếp hạng
+        - link "Hồ sơ" [ref=e321] [cursor=pointer]:
+          - /url: /profile
+          - img [ref=e322]
+          - generic [ref=e325]: Hồ sơ
+        - link "Quản lý" [ref=e326] [cursor=pointer]:
+          - /url: /admin
+          - img [ref=e327]
+          - generic [ref=e330]: Quản lý
+  - button "Open Next.js Dev Tools" [ref=e358] [cursor=pointer]:
+    - img [ref=e359]
+  - alert [ref=e362]
+  - generic [ref=e363]: "0"
