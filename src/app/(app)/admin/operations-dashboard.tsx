@@ -45,23 +45,57 @@ const STATUS_LABELS: Record<
 };
 
 const COMPLETION_HEAT_LEVELS: Array<{
-  color: string;
+  cellClassName: string;
   label: string;
   legendLabel: string;
   max: number;
 }> = [
-  { color: "#e2e8f0", label: "0 task", legendLabel: "0", max: 0 },
-  { color: "#fed7aa", label: "1 task", legendLabel: "1", max: 1 },
-  { color: "#fdba74", label: "2 task", legendLabel: "2", max: 2 },
-  { color: "#fb923c", label: "3 task", legendLabel: "3", max: 3 },
-  { color: "#f97316", label: "4 task", legendLabel: "4", max: 4 },
-  { color: "#ea580c", label: "5 task", legendLabel: "5", max: 5 },
-  { color: "#c2410c", label: "6+ task", legendLabel: "6+", max: Infinity },
+  {
+    cellClassName: "bg-overlay-medium",
+    label: "0 task",
+    legendLabel: "0",
+    max: 0,
+  },
+  {
+    cellClassName: "bg-orange-100 dark:bg-orange-950/50",
+    label: "1 task",
+    legendLabel: "1",
+    max: 1,
+  },
+  {
+    cellClassName: "bg-orange-200 dark:bg-orange-900/55",
+    label: "2 task",
+    legendLabel: "2",
+    max: 2,
+  },
+  {
+    cellClassName: "bg-orange-300 dark:bg-orange-800/60",
+    label: "3 task",
+    legendLabel: "3",
+    max: 3,
+  },
+  {
+    cellClassName: "bg-orange-400 dark:bg-orange-700/70",
+    label: "4 task",
+    legendLabel: "4",
+    max: 4,
+  },
+  {
+    cellClassName: "bg-orange-500 dark:bg-orange-600/80",
+    label: "5 task",
+    legendLabel: "5",
+    max: 5,
+  },
+  {
+    cellClassName: "bg-orange-600 dark:bg-orange-500/90",
+    label: "6+ task",
+    legendLabel: "6+",
+    max: Infinity,
+  },
 ];
 
 export function OperationsDashboard({ data }: OperationsDashboardProps) {
   const [period, setPeriod] = useState<AdminOperationsPeriod>("day");
-  const activeSummary = data.periods[period];
   const editHref = getScopeEditHref(data.scope.role);
 
   return (
@@ -96,11 +130,6 @@ export function OperationsDashboard({ data }: OperationsDashboardProps) {
 
         <PeriodTabs active={period} onChange={setPeriod} />
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <MetricCard label="Đã giao" value={activeSummary.assigned} />
-          <MetricCard label="Đã xong" value={activeSummary.completed} />
-          <MetricCard label="Còn thiếu" value={activeSummary.pending} tone="warn" />
-        </div>
       </section>
 
       <MemberProgressPanel data={data} period={period} />
@@ -160,31 +189,6 @@ function PeriodTabs({
           {period.label}
         </button>
       ))}
-    </div>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-  tone = "default",
-}: {
-  label: string;
-  value: number;
-  tone?: "default" | "warn";
-}) {
-  return (
-    <div className="rounded-2xl bg-overlay-subtle p-3 ring-1 ring-border">
-      <p
-        className={`text-lg font-bold leading-none ${
-          tone === "warn" && value > 0 ? "text-amber-700" : ""
-        }`}
-      >
-        {value.toLocaleString("vi-VN")}
-      </p>
-      <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
     </div>
   );
 }
@@ -360,8 +364,8 @@ function CompletionCalendar({
     period === "month" && days[0] ? getIsoWeekday(days[0].date) - 1 : 0;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-300/70 bg-white p-3 text-slate-900 shadow-sm sm:rounded-3xl sm:p-4">
-      <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-bold uppercase tracking-wide text-slate-600 sm:gap-2 sm:text-[10px]">
+    <div className="space-y-3 rounded-2xl border border-border bg-card p-3 text-foreground shadow-sm sm:rounded-3xl sm:p-4">
+      <div className="grid grid-cols-7 gap-1 text-center text-[9px] font-bold uppercase tracking-wide text-muted-foreground sm:gap-2 sm:text-[10px]">
         {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((label) => (
           <span key={label} className="py-1">
             {label}
@@ -371,22 +375,21 @@ function CompletionCalendar({
 
       <div className="space-y-1">
         <div className="overflow-x-auto pb-1">
-          <div className="flex min-w-max items-center gap-2 text-[11px] text-slate-700 sm:gap-2.5">
+          <div className="flex min-w-max items-center gap-2 text-[11px] text-muted-foreground sm:gap-2.5">
             {COMPLETION_HEAT_LEVELS.map((item) => (
               <span
                 key={item.label}
                 className="inline-flex shrink-0 items-center gap-1.5"
               >
                 <span
-                  className="h-3 w-3 rounded-[4px] ring-1 ring-slate-300"
-                  style={{ backgroundColor: item.color }}
+                  className={`h-3 w-3 rounded-[4px] ring-1 ring-border ${item.cellClassName}`}
                 />
                 {item.legendLabel}
               </span>
             ))}
           </div>
         </div>
-        <span className="block text-[11px] text-slate-500">
+        <span className="block text-[11px] text-muted-foreground">
           task hoàn thành/ngày
         </span>
       </div>
@@ -400,18 +403,20 @@ function CompletionCalendar({
           const isSelected = day.date === selectedDate;
           const isToday = day.date === todayDate;
           const heat = getCompletionHeatLevel(day.tasks.length);
+          const stateRingClass = isSelected
+            ? "ring-2 ring-foreground/45"
+            : isToday
+              ? "ring-2 ring-orange-500"
+              : "";
 
           return (
             <button
               key={day.date}
               type="button"
               onClick={() => onSelectDate(day.date)}
-              className="relative aspect-square cursor-pointer rounded-lg border border-slate-300 pb-1 pr-1 text-[11px] transition-colors duration-150 hover:border-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 sm:rounded-xl sm:text-xs"
-              style={{
-                backgroundColor: hasTasks ? heat.color : "#f1f5f9",
-                boxShadow: getDayCellShadow({ isSelected, isToday }),
-                color: "#0f172a",
-              }}
+              className={`relative aspect-square cursor-pointer rounded-lg border border-border pb-1 pr-1 text-[11px] text-foreground transition-colors duration-150 hover:border-foreground/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 sm:rounded-xl sm:text-xs ${
+                hasTasks ? heat.cellClassName : "bg-overlay-medium"
+              } ${stateRingClass}`}
               title={`${isToday ? "Hôm nay - " : ""}${formatDateLabel(day.date)}: ${day.tasks.length} task hoàn thành (${heat.label})`}
               aria-label={`${isToday ? "Hôm nay - " : ""}${formatDateLabel(day.date)}: ${day.tasks.length} task hoàn thành (${heat.label})`}
             >
@@ -420,12 +425,12 @@ function CompletionCalendar({
               </span>
               {isToday && (
                 <span
-                  className="absolute bottom-1 left-1.5 h-1.5 w-1.5 rounded-full bg-orange-700 ring-1 ring-white sm:bottom-1.5 sm:left-2.5"
+                  className="absolute bottom-1 left-1.5 h-1.5 w-1.5 rounded-full bg-orange-500 ring-1 ring-background sm:bottom-1.5 sm:left-2.5"
                   aria-hidden="true"
                 />
               )}
               {hasTasks && (
-                <span className="absolute right-1 top-1 hidden min-w-[1.1rem] rounded-full bg-white px-1 text-center text-[9px] font-bold leading-3.5 text-orange-700 ring-1 ring-orange-300 sm:inline-flex sm:right-1.5 sm:top-1.5 sm:min-w-[1.2rem] sm:px-1.5 sm:text-[10px] sm:leading-4">
+                <span className="absolute right-1 top-1 hidden min-w-[1.1rem] rounded-full bg-card px-1 text-center text-[9px] font-bold leading-3.5 text-orange-600 ring-1 ring-orange-300/70 sm:inline-flex sm:right-1.5 sm:top-1.5 sm:min-w-[1.2rem] sm:px-1.5 sm:text-[10px] sm:leading-4">
                   {day.tasks.length}
                 </span>
               )}
@@ -445,54 +450,54 @@ function CompletedTaskList({
   isToday: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-300 bg-slate-50 p-3 text-slate-900 sm:p-4">
+    <div className="rounded-2xl border border-border bg-overlay-subtle p-3 text-foreground sm:p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[13px] font-bold text-slate-800 sm:text-sm">
+            <p className="text-[13px] font-bold text-foreground sm:text-sm">
               {formatDateLabel(day.date)}
             </p>
             {isToday && (
-              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200">
+              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:ring-orange-500/40">
                 Hôm nay
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-slate-600">
+          <p className="mt-1 text-xs text-muted-foreground">
             {day.tasks.length} task, {day.completionCount} lượt hoàn thành
           </p>
         </div>
-        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
+        <span className="rounded-full bg-card px-2 py-1 text-[11px] font-semibold text-muted-foreground ring-1 ring-border">
           {getWeekdayLabel(day.date)}
         </span>
       </div>
 
       {day.tasks.length > 0 ? (
-        <ul className="space-y-1.5 text-xs text-slate-700">
+        <ul className="space-y-1.5 text-xs text-foreground">
           {day.tasks.map((task) => (
             <li
               key={`${day.date}-${task.id}`}
-              className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-2 py-2 sm:gap-3 sm:px-2.5"
+              className="flex items-center justify-between gap-2 rounded-xl border border-border bg-card px-2 py-2 sm:gap-3 sm:px-2.5"
             >
-              <span className="flex min-w-0 items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-orange-700" />
+              <span className="flex min-w-0 items-center gap-2 text-foreground">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-300" />
                 <span className="min-w-0">
-                  <span className="block truncate font-semibold text-slate-800">
+                  <span className="block truncate font-semibold text-foreground">
                     {task.title}
                   </span>
-                  <span className="mt-0.5 block text-[11px] text-slate-500">
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
                     {TASK_TYPE_LABELS[task.taskType]} · {formatTime(task.submittedAt)}
                   </span>
                 </span>
               </span>
-              <span className="shrink-0 text-[11px] font-semibold text-orange-700">
+              <span className="shrink-0 text-[11px] font-semibold text-orange-600 dark:text-orange-300">
                 {task.completionCount} lượt
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-muted-foreground">
           Chưa có task hoàn thành trong ngày này.
         </p>
       )}
@@ -538,19 +543,6 @@ function getCompletionHeatLevel(tasksDone: number) {
     COMPLETION_HEAT_LEVELS.find((level) => tasksDone <= level.max) ??
     COMPLETION_HEAT_LEVELS[COMPLETION_HEAT_LEVELS.length - 1]
   );
-}
-
-function getDayCellShadow({
-  isSelected,
-  isToday,
-}: {
-  isSelected: boolean;
-  isToday: boolean;
-}) {
-  const shadows: string[] = [];
-  if (isToday) shadows.push("0 0 0 2px rgba(249,115,22,0.95)");
-  if (isSelected) shadows.push("inset 0 0 0 2px rgba(71,85,105,0.95)");
-  return shadows.length > 0 ? shadows.join(", ") : undefined;
 }
 
 function resolveMemberStatus(summary: AdminOperationsView["periods"]["day"]) {
