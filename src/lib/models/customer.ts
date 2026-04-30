@@ -16,7 +16,7 @@ const customerSchema = new Schema(
       default: [],
       type: [{ ref: "User", type: Schema.Types.ObjectId }],
       validate: {
-        message: "Mỗi khách hàng chỉ có tối đa 3 người chăm sóc.",
+        message: "Mỗi học viên chỉ có tối đa 3 người chăm sóc.",
         validator: (v: Types.ObjectId[]) => v.length <= 3,
       },
     },

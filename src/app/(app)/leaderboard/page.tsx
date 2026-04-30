@@ -46,7 +46,7 @@ export default async function LeaderboardPage() {
         )}
       </Section>
 
-      <Section title="Top Thành viên" icon={<Users className="h-4 w-4" />}>
+      <Section title="Top TĐ" icon={<Users className="h-4 w-4" />}>
         {topMembers.length === 0 ? (
           <EmptyRow />
         ) : (

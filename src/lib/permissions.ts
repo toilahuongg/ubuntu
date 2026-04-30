@@ -1,7 +1,7 @@
 import type { Role, SessionUser } from "@/lib/domain";
 
 function isMemberLike(user: SessionUser) {
-  return user.role === "MEMBER" || user.role === "NGV";
+  return user.role === "MEMBER" || user.role === "NGV" || user.role === "TDM";
 }
 
 export function isAdmin(user: SessionUser) {
@@ -116,7 +116,7 @@ export function canManageUser(actor: SessionUser, subject: SessionUser) {
 export function canAssignUserRole(actor: SessionUser, role: Role) {
   if (isAdmin(actor)) return true;
   if (isTeamLead(actor) || isZoneLead(actor) || isRegionalLead(actor)) {
-    return role === "NGV" || role === "MEMBER";
+    return role === "NGV" || role === "TDM" || role === "MEMBER";
   }
   return false;
 }
@@ -128,6 +128,7 @@ export function getAssignableUserRoles(actor: SessionUser): Role[] {
     "ZONE_LEAD",
     "REGIONAL_LEAD",
     "NGV",
+    "TDM",
     "MEMBER",
   ];
   return roles.filter((role) => canAssignUserRole(actor, role));
@@ -150,6 +151,7 @@ export function canProxySubmit(actor: SessionUser, subject: SessionUser) {
     if (
       subject.role !== "REGIONAL_LEAD" &&
       subject.role !== "NGV" &&
+      subject.role !== "TDM" &&
       subject.role !== "MEMBER"
     ) {
       return false;

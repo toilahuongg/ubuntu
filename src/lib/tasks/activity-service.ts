@@ -87,7 +87,7 @@ export async function listRecentActivities(
       date: s.date,
       subject: {
         id: subjectId,
-        fullName: subjectMap.get(subjectId) ?? "Thành viên",
+        fullName: subjectMap.get(subjectId) ?? "TĐ",
       },
       actor:
         actorMap.has(actorId)
@@ -107,7 +107,7 @@ export async function listTaskActivitiesThisMonth(
   const yearMonth = getCurrentYearMonth();
 
   const visibleUsers =
-    actor.role === "MEMBER" || actor.role === "NGV"
+    actor.role === "MEMBER" || actor.role === "NGV" || actor.role === "TDM"
       ? await listTeamMembersForViewing(actor)
       : await listVisibleUsersForActor(actor);
 
@@ -153,7 +153,7 @@ export async function listTaskActivitiesThisMonth(
       date: s.date,
       subject: {
         id: subjectId,
-        fullName: subjectMap.get(subjectId) ?? "Thành viên",
+        fullName: subjectMap.get(subjectId) ?? "TĐ",
       },
       actor: actorMap.has(actorId)
         ? { id: actorId, fullName: actorMap.get(actorId) ?? "" }

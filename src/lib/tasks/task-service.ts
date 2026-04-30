@@ -275,7 +275,7 @@ export async function getTaskDetail(
   const [visibleUsers, viewableUsers, submissionsToday, monthlySubmissions] =
     await Promise.all([
       listVisibleUsersForActor(actor),
-      actor.role === "MEMBER" || actor.role === "NGV"
+      actor.role === "MEMBER" || actor.role === "NGV" || actor.role === "TDM"
         ? listTeamMembersForViewing(actor)
         : listVisibleUsersForActor(actor),
       SubmissionModel.find({

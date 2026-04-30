@@ -269,7 +269,7 @@ function ManagementHome({
             {
               href: "/admin/users",
               icon: UserCog,
-              label: "Thành viên nhóm",
+              label: "TĐ nhóm",
               description: `${snapshot.users.length} thành viên trong nhóm`,
               badge: pendingCount,
             },
@@ -333,7 +333,7 @@ function ManagementHome({
         {
           href: "/admin/users",
           icon: Users,
-          label: "Thành viên",
+          label: "TĐ",
           note: "Trong nhóm của bạn",
           value: snapshot.users.length,
         },

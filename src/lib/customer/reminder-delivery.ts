@@ -47,7 +47,7 @@ async function deliverCustomerReminderCandidates(
     const pushResult = await safeSendWebPush(reminder.userId, {
       body: reminder.text,
       tag: `customer-reminder-${reminder.customerId}`,
-      title: "Nhắc chăm sóc khách hàng",
+      title: "Nhắc chăm sóc học viên",
       url: `/customers/${reminder.customerId}`,
     });
     pushSent += pushResult.sent;

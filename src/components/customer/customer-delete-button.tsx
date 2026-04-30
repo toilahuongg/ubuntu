@@ -13,7 +13,7 @@ export function CustomerDeleteButton({ customerId }: { customerId: string }) {
 
   async function handleDelete() {
     const confirmed = window.confirm(
-      "Xoá khách hàng này và toàn bộ lịch sử tương tác?",
+      "Xoá học viên này và toàn bộ lịch sử tương tác?",
     );
     if (!confirmed) return;
 

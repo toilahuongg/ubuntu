@@ -221,11 +221,11 @@ export const customerInputSchema = z.object({
 });
 
 export const updateCustomerInputSchema = customerInputSchema.extend({
-  customerId: z.string().min(1, "Thiếu mã khách hàng."),
+  customerId: z.string().min(1, "Thiếu mã học viên."),
 });
 
 export const customerInteractionInputSchema = z.object({
-  customerId: z.string().min(1, "Thiếu mã khách hàng."),
+  customerId: z.string().min(1, "Thiếu mã học viên."),
   caregiverId: z.string().optional().nullable(),
   type: z.enum(INTERACTION_TYPES),
   sharedContent: z.enum(SHARED_CONTENTS).optional().nullable(),

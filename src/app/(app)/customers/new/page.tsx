@@ -13,7 +13,7 @@ export default async function NewCustomerPage() {
   return (
     <div className="mx-auto max-w-2xl animate-slide-up">
       <h1 className="mb-5 font-display text-lg font-bold tracking-tight">
-        Tạo khách hàng mới
+        Tạo học viên mới
       </h1>
       <div className="glass-card p-4">
         <CustomerForm

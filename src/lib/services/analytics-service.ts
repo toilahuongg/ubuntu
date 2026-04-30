@@ -109,7 +109,7 @@ function countDailyStreak(dates: string[], completionByDate: Map<string, number>
 async function resolveSubjectUserIds(
   user: SessionUser,
 ): Promise<Types.ObjectId[] | "self"> {
-  if (user.role === "MEMBER" || user.role === "NGV") return "self";
+  if (user.role === "MEMBER" || user.role === "NGV" || user.role === "TDM") return "self";
 
   await connectToDatabase();
 

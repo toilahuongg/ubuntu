@@ -482,7 +482,7 @@ export async function createCustomer(
   await connectToDatabase();
 
   if (!canManageCustomer(createdBy)) {
-    throw new Error("Bạn không có quyền tạo khách hàng.");
+    throw new Error("Bạn không có quyền tạo học viên.");
   }
 
   const assignment = await resolveCustomerAssignment(
@@ -530,11 +530,11 @@ export async function updateCustomer(
 
   const customer = (await CustomerModel.findById(id).lean()) as CustomerRecord | null;
   if (!customer) {
-    throw new Error("Khách hàng không tồn tại.");
+    throw new Error("Học viên không tồn tại.");
   }
 
   if (!canManageCustomer(changedBy, serializeCustomer(customer))) {
-    throw new Error("Bạn không có quyền cập nhật khách hàng này.");
+    throw new Error("Bạn không có quyền cập nhật học viên này.");
   }
 
   const update: Record<string, unknown> = {};
@@ -554,7 +554,7 @@ export async function updateCustomer(
 
   if (assignmentTouched) {
     if (!canAssignCustomerCaregivers(changedBy)) {
-      throw new Error("Bạn không có quyền thay đổi phân công khách hàng này.");
+      throw new Error("Bạn không có quyền thay đổi phân công học viên này.");
     }
 
     const assignment = await resolveCustomerAssignment(
@@ -585,7 +585,7 @@ export async function updateCustomer(
   ).lean()) as CustomerRecord | null;
 
   if (!updated) {
-    throw new Error("Cập nhật khách hàng thất bại.");
+    throw new Error("Cập nhật học viên thất bại.");
   }
 
   return serializeCustomer(updated);
@@ -599,11 +599,11 @@ export async function deleteCustomer(
 
   const customer = (await CustomerModel.findById(id).lean()) as CustomerRecord | null;
   if (!customer) {
-    throw new Error("Khách hàng không tồn tại.");
+    throw new Error("Học viên không tồn tại.");
   }
 
   if (!canManageCustomer(actor, serializeCustomer(customer))) {
-    throw new Error("Bạn không có quyền xoá khách hàng này.");
+    throw new Error("Bạn không có quyền xoá học viên này.");
   }
 
   await reverseCustomerInteractionRewards(id);
@@ -620,11 +620,11 @@ export async function getCustomerById(
 
   const customer = (await CustomerModel.findById(id).lean()) as CustomerRecord | null;
   if (!customer) {
-    throw new Error("Khách hàng không tồn tại.");
+    throw new Error("Học viên không tồn tại.");
   }
 
   if (!canViewCustomer(actor, serializeCustomer(customer))) {
-    throw new Error("Bạn không có quyền xem khách hàng này.");
+    throw new Error("Bạn không có quyền xem học viên này.");
   }
 
   const heartLogs = await CustomerHeartLogModel.find({ customerId: toObjectId(id) })

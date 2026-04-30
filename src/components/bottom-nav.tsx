@@ -28,7 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     href: "/customers",
-    label: "Khách hàng",
+    label: "Học viên",
     icon: Heart,
   },
   {

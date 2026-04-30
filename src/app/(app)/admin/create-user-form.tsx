@@ -108,10 +108,10 @@ export function CreateUserForm({
     );
   }
 
-  const needsTeam = role === "TEAM_LEAD" || role === "ZONE_LEAD" || role === "REGIONAL_LEAD" || role === "NGV" || role === "MEMBER";
+  const needsTeam = role === "TEAM_LEAD" || role === "ZONE_LEAD" || role === "REGIONAL_LEAD" || role === "NGV" || role === "TDM" || role === "MEMBER";
   const needsZone = role === "ZONE_LEAD";
   const needsRegion =
-    role === "REGIONAL_LEAD" || role === "NGV" || role === "MEMBER";
+    role === "REGIONAL_LEAD" || role === "NGV" || role === "TDM" || role === "MEMBER";
 
   return (
     <form action={handleSubmit} className="glass-card space-y-3 p-4">

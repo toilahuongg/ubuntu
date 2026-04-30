@@ -43,7 +43,7 @@ export default async function CustomerDashboardPage() {
     <div className="mx-auto max-w-2xl space-y-5 animate-slide-up">
       <div>
         <h1 className="font-display text-lg font-bold tracking-tight">
-          Tổng quan khách hàng
+          Tổng quan học viên
         </h1>
         <p className="text-xs text-muted-foreground">
           Số liệu chăm sóc của bạn
@@ -54,7 +54,7 @@ export default async function CustomerDashboardPage() {
       <div className="grid grid-cols-3 gap-3">
         <div className="glass-card p-4 text-center">
           <p className="text-2xl font-bold">{total}</p>
-          <p className="mt-1 text-[11px] text-muted-foreground">Khách hàng</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">Học viên</p>
         </div>
         <div className="glass-card p-4 text-center">
           <p className="text-2xl font-bold text-emerald-600">{baptized}</p>

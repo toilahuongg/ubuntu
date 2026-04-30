@@ -24,7 +24,7 @@ export default async function EditCustomerPage({
   return (
     <div className="mx-auto max-w-2xl animate-slide-up">
       <h1 className="mb-5 font-display text-lg font-bold tracking-tight">
-        Chỉnh sửa khách hàng
+        Chỉnh sửa học viên
       </h1>
       <div className="glass-card p-4">
         <CustomerForm

@@ -7,6 +7,7 @@ export const ROLES = [
   "ZONE_LEAD",
   "REGIONAL_LEAD",
   "NGV",
+  "TDM",
   "MEMBER",
 ] as const;
 
@@ -15,12 +16,13 @@ export const TASK_TARGET_ROLES = [
   "ZONE_LEAD",
   "REGIONAL_LEAD",
   "NGV",
+  "TDM",
   "MEMBER",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
 
-export const MEMBER_LIKE_ROLES = ["NGV", "MEMBER"] as const satisfies readonly Role[];
+export const MEMBER_LIKE_ROLES = ["NGV", "TDM", "MEMBER"] as const satisfies readonly Role[];
 
 export function isRole(value: unknown): value is Role {
   return typeof value === "string" && (ROLES as readonly string[]).includes(value);
@@ -30,8 +32,8 @@ export type TaskTargetRole = (typeof TASK_TARGET_ROLES)[number];
 
 export const TASK_TARGET_ROLES_BY_SCOPE = {
   TEAM: TASK_TARGET_ROLES,
-  ZONE: ["ZONE_LEAD", "REGIONAL_LEAD", "NGV", "MEMBER"],
-  REGION: ["REGIONAL_LEAD", "NGV", "MEMBER"],
+  ZONE: ["ZONE_LEAD", "REGIONAL_LEAD", "NGV", "TDM", "MEMBER"],
+  REGION: ["REGIONAL_LEAD", "NGV", "TDM", "MEMBER"],
 } as const satisfies Record<TaskScope, readonly TaskTargetRole[]>;
 
 export function normalizeTargetRoles(
@@ -103,8 +105,9 @@ export const ROLE_LABELS: Record<Role, string> = {
   TEAM_LEAD: "NT",
   ZONE_LEAD: "ĐVT",
   REGIONAL_LEAD: "KVT",
-  NGV: "NGV",
-  MEMBER: "Thành viên",
+  NGV: "NTĐ",
+  TDM: "TĐM",
+  MEMBER: "TĐ",
 };
 
 export const SCOPE_LABELS: Record<TaskScope, string> = {

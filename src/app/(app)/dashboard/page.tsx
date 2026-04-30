@@ -16,7 +16,7 @@ export default async function DashboardPage() {
 
   const dateKey = getTodayDateKey();
 
-  if (session.role === "MEMBER" || session.role === "NGV") {
+  if (session.role === "MEMBER" || session.role === "NGV" || session.role === "TDM") {
     const [data, activities] = await Promise.all([
       buildMemberDashboard(session, dateKey),
       listRecentActivities(session, 10),

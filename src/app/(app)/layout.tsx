@@ -44,6 +44,7 @@ export default async function AppLayout({
     (session.role !== "TEAM_LEAD" && !session.zoneId) ||
     ((session.role === "MEMBER" ||
       session.role === "NGV" ||
+      session.role === "TDM" ||
       session.role === "REGIONAL_LEAD") &&
       !session.regionId);
   if (underScoped) {

@@ -122,7 +122,7 @@ export function CustomerForm({
           onChange={(e) => setName(e.target.value)}
           required
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
-          placeholder="Tên khách hàng"
+          placeholder="Tên học viên"
         />
       </div>
 
@@ -309,7 +309,7 @@ export function CustomerForm({
             ? "Đang lưu..."
             : isEdit
               ? "Cập nhật"
-              : "Tạo khách hàng"}
+              : "Tạo học viên"}
         </button>
       </div>
     </form>

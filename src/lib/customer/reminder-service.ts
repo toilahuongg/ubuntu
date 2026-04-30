@@ -29,9 +29,9 @@ export function buildCustomerReminderText(
   daysSinceLastInteraction: number,
 ): string {
   if (daysSinceLastInteraction === 0) {
-    return `Nhắc nhở: Khách hàng "${customerName}" chưa có tương tác nào. Hãy chăm sóc ngay nhé.`;
+    return `Nhắc nhở: Học viên "${customerName}" chưa có tương tác nào. Hãy chăm sóc ngay nhé.`;
   }
-  return `Nhắc nhở: Khách hàng "${customerName}" đã ${daysSinceLastInteraction} ngày chưa được chăm sóc. Mở app để xem chi tiết.`;
+  return `Nhắc nhở: Học viên "${customerName}" đã ${daysSinceLastInteraction} ngày chưa được chăm sóc. Mở app để xem chi tiết.`;
 }
 
 export function buildCustomerReminderCandidatesFromData(input: {

@@ -598,6 +598,7 @@ async function resolveUserHierarchy(input: {
 
   if (
     input.role === "MEMBER" ||
+    input.role === "TDM" ||
     input.role === "NGV" ||
     input.role === "REGIONAL_LEAD"
   ) {
@@ -605,7 +606,7 @@ async function resolveUserHierarchy(input: {
     // Silently returning nulls here previously created orphan users that
     // could not be found by any leader's visibility query.
     if (!input.regionId) {
-      throw new Error("Vui lòng chọn Khu vực cho thành viên/NGV/KVT.");
+      throw new Error("Vui lòng chọn Khu vực cho TĐ/TĐM/NTĐ/KVT.");
     }
     const region = (await RegionModel.findById(input.regionId).lean()) as RegionRecord | null;
     if (!region) throw new Error("Khu vực không tồn tại.");

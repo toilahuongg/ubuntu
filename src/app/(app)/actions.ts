@@ -173,7 +173,7 @@ async function assertCanAssignUserTarget(
   }
 
   if (!input.regionId) {
-    throw new Error("Vui lòng chọn Khu vực cho thành viên/NGV/KVT.");
+    throw new Error("Vui lòng chọn Khu vực cho TĐ/TĐM/NTĐ/KVT.");
   }
 
   const region = await getRegionById(input.regionId);

@@ -12,7 +12,7 @@ export async function MembersRoster({ actor }: { actor: SessionUser }) {
     <section id="members" className="scroll-mt-20">
       <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
         <Users className="h-4 w-4" />
-        Thành viên ({users.length})
+        TĐ ({users.length})
       </h2>
       <div className="glass-card divide-y divide-border overflow-hidden">
         {users.map((user) => (

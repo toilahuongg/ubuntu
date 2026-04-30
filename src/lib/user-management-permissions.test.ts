@@ -156,8 +156,8 @@ describe("user management permissions", () => {
 
     expect(canAssignUserRole(teamLead, "ADMIN")).toBe(false);
     expect(canAssignUserRole(teamLead, "ZONE_LEAD")).toBe(false);
-    expect(getAssignableUserRoles(teamLead)).toEqual(["NGV", "MEMBER"]);
-    expect(getAssignableUserRoles(regionalLead)).toEqual(["NGV", "MEMBER"]);
+    expect(getAssignableUserRoles(teamLead)).toEqual(["NGV", "TDM", "MEMBER"]);
+    expect(getAssignableUserRoles(regionalLead)).toEqual(["NGV", "TDM", "MEMBER"]);
   });
 });
 

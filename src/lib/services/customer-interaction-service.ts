@@ -130,7 +130,7 @@ async function assertCanManageCustomerInteraction(
   customer: CustomerRecord,
 ) {
   if (!canCreateInteraction(actor, serializeCustomerForPermission(customer))) {
-    throw new Error("Bạn không có quyền chỉnh sửa tương tác của khách hàng này.");
+    throw new Error("Bạn không có quyền chỉnh sửa tương tác của học viên này.");
   }
 }
 
@@ -149,7 +149,7 @@ async function assertOneTimeOutcomeAvailable(
   }).session(session ?? null);
   if (existingMilestone) {
     throw new Error(
-      `Khách hàng này đã có kết quả ${INTERACTION_OUTCOME_LABELS[outcome]}.`,
+      `Học viên này đã có kết quả ${INTERACTION_OUTCOME_LABELS[outcome]}.`,
     );
   }
 }
@@ -286,7 +286,7 @@ async function syncInteractionRewards(input: {
       {
         $set: {
           amount: input.newScore.exp,
-          description: `Chăm sóc khách hàng: ${input.customerName}`,
+          description: `Chăm sóc học viên: ${input.customerName}`,
         },
       },
       { session: input.session, upsert: true },
@@ -309,7 +309,7 @@ async function syncInteractionRewards(input: {
       {
         $set: {
           amount: input.newScore.points,
-          description: `Thưởng chăm sóc khách hàng: ${input.customerName}`,
+          description: `Thưởng chăm sóc học viên: ${input.customerName}`,
         },
       },
       { session: input.session, upsert: true },
@@ -375,7 +375,7 @@ export async function createInteraction(
       .session(session ?? null)
       .lean()) as CustomerRecord | null;
     if (!customer) {
-      throw new Error("Khách hàng không tồn tại.");
+      throw new Error("Học viên không tồn tại.");
     }
 
     const customerView = {
@@ -399,7 +399,7 @@ export async function createInteraction(
     };
 
     if (!canCreateInteraction(caregiver, customerView)) {
-      throw new Error("Bạn không có quyền ghi tương tác cho khách hàng này.");
+      throw new Error("Bạn không có quyền ghi tương tác cho học viên này.");
     }
 
     await assertOneTimeOutcomeAvailable(
@@ -441,7 +441,7 @@ export async function createInteraction(
     } catch (error) {
       if (isOneTimeInteractionOutcome(input.outcome) && isDuplicateKeyError(error)) {
         throw new Error(
-          `Khách hàng này đã có kết quả ${INTERACTION_OUTCOME_LABELS[input.outcome]}.`,
+          `Học viên này đã có kết quả ${INTERACTION_OUTCOME_LABELS[input.outcome]}.`,
         );
       }
       throw error;
@@ -469,7 +469,7 @@ export async function createInteraction(
           [
             {
               amount: score.exp,
-              description: `Chăm sóc khách hàng: ${customer.name}`,
+              description: `Chăm sóc học viên: ${customer.name}`,
               source: "customer_interaction",
               sourceId: interaction._id,
               userId: toObjectId(interactionCaregiverId),
@@ -484,7 +484,7 @@ export async function createInteraction(
           [
             {
               amount: score.points,
-              description: `Thưởng chăm sóc khách hàng: ${customer.name}`,
+              description: `Thưởng chăm sóc học viên: ${customer.name}`,
               source: "customer_interaction_reward",
               sourceId: interaction._id,
               userId: toObjectId(interactionCaregiverId),
@@ -572,7 +572,7 @@ export async function updateInteraction(
       .session(session ?? null)
       .lean()) as CustomerRecord | null;
     if (!customer) {
-      throw new Error("Khách hàng không tồn tại.");
+      throw new Error("Học viên không tồn tại.");
     }
 
     await assertCanManageCustomerInteraction(actor, customer);
@@ -614,7 +614,7 @@ export async function updateInteraction(
     } catch (error) {
       if (isOneTimeInteractionOutcome(input.outcome) && isDuplicateKeyError(error)) {
         throw new Error(
-          `Khách hàng này đã có kết quả ${INTERACTION_OUTCOME_LABELS[input.outcome]}.`,
+          `Học viên này đã có kết quả ${INTERACTION_OUTCOME_LABELS[input.outcome]}.`,
         );
       }
       throw error;
@@ -676,7 +676,7 @@ export async function deleteInteraction(
       .session(session ?? null)
       .lean()) as CustomerRecord | null;
     if (!customer) {
-      throw new Error("Khách hàng không tồn tại.");
+      throw new Error("Học viên không tồn tại.");
     }
 
     await assertCanManageCustomerInteraction(actor, customer);
@@ -721,7 +721,7 @@ export async function listInteractionsByCustomer(
     | CustomerRecord
     | null;
   if (!customer) {
-    throw new Error("Khách hàng không tồn tại.");
+    throw new Error("Học viên không tồn tại.");
   }
 
   if (!canViewCustomer(actor, serializeCustomerForPermission(customer))) {

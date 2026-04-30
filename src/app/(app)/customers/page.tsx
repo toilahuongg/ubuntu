@@ -93,10 +93,10 @@ export default async function CustomersPage({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-lg font-bold tracking-tight">
-            Khách hàng
+            Học viên
           </h1>
           <p className="text-xs text-muted-foreground">
-            {customers.length} khách hàng
+            {customers.length} học viên
             {activeFilterCount > 0 ? ` theo ${activeFilterCount} bộ lọc` : " đang quản lý"}
           </p>
         </div>
@@ -111,23 +111,25 @@ export default async function CustomersPage({
         )}
       </div>
 
-      <form
-        action="/customers"
-        className="glass-card space-y-3 p-4"
-        method="get"
-      >
-        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-          <SlidersHorizontal className="h-4 w-4" />
-          Bộ lọc khách hàng
-        </div>
+      <form action="/customers" className="glass-card p-3 sm:p-4" method="get">
+        <details className="group sm:pointer-events-none sm:open" open={activeFilterCount > 0}>
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg text-xs font-semibold text-muted-foreground sm:cursor-default">
+            <span className="inline-flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4" />
+              Bộ lọc học viên
+            </span>
+            <span className="text-[11px] sm:hidden">
+              {activeFilterCount > 0 ? `${activeFilterCount} đang bật` : "Nhấn để mở"}
+            </span>
+          </summary>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
           <label className="space-y-1">
             <span className="text-[11px] font-medium text-muted-foreground">
               Người chăm sóc
             </span>
             <select
-              className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40"
+              className="min-h-10 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40"
               defaultValue={filters.caregiverId ?? ""}
               name="caregiverId"
             >
@@ -145,7 +147,7 @@ export default async function CustomersPage({
               Tương tác cuối
             </span>
             <select
-              className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40"
+              className="min-h-10 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40"
               defaultValue={filters.interactionRecency ?? ""}
               name="recency"
             >
@@ -163,7 +165,7 @@ export default async function CustomersPage({
               Sắp xếp
             </span>
             <select
-              className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40"
+              className="min-h-10 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40"
               defaultValue={filters.sort ?? "NEWEST"}
               name="sort"
             >
@@ -174,25 +176,26 @@ export default async function CustomersPage({
               ))}
             </select>
           </label>
-        </div>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
-            type="submit"
-          >
-            <Filter className="h-3.5 w-3.5" />
-            Lọc khách hàng
-          </button>
-          {activeFilterCount > 0 && (
-            <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-overlay-subtle px-4 py-2 text-xs font-semibold ring-1 ring-border transition hover:bg-overlay-medium"
-              href="/customers"
+          <div className="mt-2 flex items-center gap-2 sm:mt-3">
+            <button
+              className="inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
+              type="submit"
             >
-              Xóa lọc
-            </Link>
-          )}
-        </div>
+              <Filter className="h-3.5 w-3.5" />
+              Lọc học viên
+            </button>
+            {activeFilterCount > 0 && (
+              <Link
+                className="inline-flex min-h-10 items-center justify-center rounded-xl bg-overlay-subtle px-4 py-2 text-xs font-semibold ring-1 ring-border transition hover:bg-overlay-medium"
+                href="/customers"
+              >
+                Xóa lọc
+              </Link>
+            )}
+          </div>
+        </details>
       </form>
 
       {customers.length > 0 ? (
@@ -206,13 +209,13 @@ export default async function CustomersPage({
           <Heart className="mb-3 h-10 w-10 text-muted-foreground/40" />
           <p className="text-sm font-medium">
             {activeFilterCount > 0
-              ? "Không có khách hàng phù hợp."
-              : "Chưa có khách hàng nào."}
+              ? "Không có học viên phù hợp."
+              : "Chưa có học viên nào."}
           </p>
           <p className="mt-1 max-w-xs text-xs text-muted-foreground">
             {activeFilterCount > 0
               ? "Thử nới điều kiện lọc hoặc tìm theo từ khóa khác."
-              : "Bắt đầu chăm sóc bằng cách tạo hồ sơ khách hàng đầu tiên."}
+              : "Bắt đầu chăm sóc bằng cách tạo hồ sơ học viên đầu tiên."}
           </p>
           {canManageCustomer(session) && activeFilterCount === 0 && (
             <Link
@@ -220,7 +223,7 @@ export default async function CustomersPage({
               className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
             >
               <Plus className="h-3.5 w-3.5" />
-              Tạo khách hàng
+              Tạo học viên
             </Link>
           )}
         </div>
