@@ -1,9 +1,12 @@
-const CACHE_NAME = "ubuntu-v5";
+const CACHE_NAME = "ubuntu-v6";
+const OFFLINE_URL = "/offline";
+
 const PRECACHE = [
   "/manifest.json",
   "/icons/logo.svg",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  OFFLINE_URL,
 ];
 
 self.addEventListener("install", (event) => {
@@ -22,6 +25,16 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+function isNavigation(request) {
+  return request.mode === "navigate";
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
@@ -29,31 +42,64 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
 
+  // Never cache API requests
   if (url.pathname.startsWith("/api/")) return;
 
-  if (url.pathname.startsWith("/_next/")) return;
-
-  if (
-    url.pathname.startsWith("/icons/") ||
-    url.pathname.startsWith("/badges/")
-  ) {
+  // Cache hashed Next.js static assets (JS, CSS, fonts) — immutable, safe to cache-first
+  if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(
-      caches.match(request).then(
-        (cached) =>
-          cached ||
-          fetch(request).then((response) => {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-            return response;
-          })
-      )
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        });
+      })
     );
     return;
   }
 
-  event.respondWith(
-    fetch(request).catch(() => caches.match(request))
-  );
+  // Cache-first for static assets (icons, badges, cosmetics)
+  if (
+    url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/badges/") ||
+    url.pathname.startsWith("/cosmetics/")
+  ) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // Navigation: network-first, fallback to cache, then offline page
+  if (isNavigation(request)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          const offlineResponse = await caches.match(OFFLINE_URL);
+          return offlineResponse || new Response("Bạn đang ngoại tuyến", {
+            status: 503,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          });
+        })
+    );
+    return;
+  }
 });
 
 self.addEventListener("push", (event) => {
@@ -71,6 +117,7 @@ self.addEventListener("push", (event) => {
     badge: "/icons/icon-192.png",
     tag: data.tag,
     data: { url: data.url || "/" },
+    actions: data.actions || [],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -84,11 +131,10 @@ self.addEventListener("notificationclick", (event) => {
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
-        for (const client of clientList) {
-          if ("focus" in client) {
-            client.navigate(targetUrl).catch(() => {});
-            return client.focus();
-          }
+        const focusedClient = clientList.find((c) => "focus" in c);
+        if (focusedClient) {
+          focusedClient.navigate(targetUrl).catch(() => {});
+          return focusedClient.focus();
         }
         if (self.clients.openWindow) {
           return self.clients.openWindow(targetUrl);

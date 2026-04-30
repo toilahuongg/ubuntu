@@ -63,9 +63,11 @@ export default function RootLayout({
     >
       <head>
         <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
         <link rel="icon" type="image/svg+xml" href="/icons/logo.svg" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#f6f7fb" />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground bg-gradient-mesh">
         <Script

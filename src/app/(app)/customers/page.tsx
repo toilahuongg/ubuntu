@@ -112,7 +112,10 @@ export default async function CustomersPage({
       </div>
 
       <form action="/customers" className="glass-card p-3 sm:p-4" method="get">
-        <details className="group sm:pointer-events-none sm:open" open={activeFilterCount > 0}>
+        <details
+          className="group sm:pointer-events-none sm:open"
+          open={activeFilterCount > 0 ? true : undefined}
+        >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg text-xs font-semibold text-muted-foreground sm:cursor-default">
             <span className="inline-flex items-center gap-2">
               <SlidersHorizontal className="h-4 w-4" />

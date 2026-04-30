@@ -3,10 +3,32 @@
   "short_name": "Ubuntu",
   "description": "Giao và cập nhật nhiệm vụ hàng ngày cho nhóm",
   "start_url": "/dashboard",
+  "scope": "/",
+  "id": "/",
+  "lang": "vi",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#F0EAFF",
   "theme_color": "#7C3AED",
   "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities"],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Xem bảng điều khiển",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Hồ sơ",
+      "short_name": "Hồ sơ",
+      "description": "Xem hồ sơ cá nhân",
+      "url": "/profile",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/logo.svg",
@@ -26,5 +48,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
 }
