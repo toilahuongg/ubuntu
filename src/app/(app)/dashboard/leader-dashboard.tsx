@@ -1,10 +1,4 @@
-import {
-  Calendar,
-  CheckCircle2,
-  Clock,
-  TrendingUp,
-  Users,
-} from "lucide-react";
+import { Calendar, CheckCircle2 } from "lucide-react";
 
 import { CompletionTrendCard } from "@/components/completion-trend-card";
 import { formatDateLabel } from "@/lib/dates";
@@ -27,10 +21,7 @@ export function LeaderDashboard({
 }) {
   const progressPercent =
     data.nextLevelXp > 0
-      ? Math.min(
-          100,
-          Math.round((data.progressXp / data.nextLevelXp) * 100),
-        )
+      ? Math.min(100, Math.round((data.progressXp / data.nextLevelXp) * 100))
       : 0;
   const monthlyCards = data.cards.filter(
     (card) => card.taskType === "MONTHLY_PER_MEMBER",
@@ -94,9 +85,9 @@ export function LeaderDashboard({
         </div>
       )}
 
-
       <CompletionTrendCard
-        data={data.trends} description="Tổng lượt hoàn thành của cá nhân bạn."
+        data={data.trends}
+        description="Tổng lượt hoàn thành của cá nhân bạn."
         todayCount={data.trends.at(-1)?.completed || 0}
       />
 
@@ -120,13 +111,16 @@ function StatCard({
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
         style={{
           background: "color-mix(in srgb, var(--accent) 82%, var(--card) 18%)",
-          color: "color-mix(in srgb, var(--primary) 82%, var(--foreground) 18%)",
+          color:
+            "color-mix(in srgb, var(--primary) 82%, var(--foreground) 18%)",
         }}
       >
         {icon}
       </div>
       <div>
-        <p className="text-lg font-bold leading-none text-foreground">{value}</p>
+        <p className="text-lg font-bold leading-none text-foreground">
+          {value}
+        </p>
         <p className="mt-0.5 text-[11px] text-muted-foreground">{label}</p>
       </div>
     </div>

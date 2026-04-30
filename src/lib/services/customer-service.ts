@@ -156,24 +156,53 @@ function startOfTomorrow() {
   return date;
 }
 
-function buildListFilter(
+async function buildScopeCondition(actor: SessionUser) {
+  if (isAdmin(actor)) return null;
+
+  if (isTeamLead(actor) && actor.teamId) {
+    const users = await UserModel.find(
+      { teamId: toObjectId(actor.teamId) },
+      { _id: 1 },
+    ).lean();
+    const caregiverIds = users.map((user) => user._id);
+    return caregiverIds.length > 0
+      ? ({ caregiverIds: { $in: caregiverIds } } as Record<string, unknown>)
+      : ({ _id: null } as Record<string, unknown>);
+  }
+
+  if (isZoneLead(actor) && actor.zoneId) {
+    const users = await UserModel.find(
+      { zoneId: toObjectId(actor.zoneId) },
+      { _id: 1 },
+    ).lean();
+    const caregiverIds = users.map((user) => user._id);
+    return caregiverIds.length > 0
+      ? ({ caregiverIds: { $in: caregiverIds } } as Record<string, unknown>)
+      : ({ _id: null } as Record<string, unknown>);
+  }
+
+  if (isRegionalLead(actor) && actor.regionId) {
+    const users = await UserModel.find(
+      { regionId: toObjectId(actor.regionId) },
+      { _id: 1 },
+    ).lean();
+    const caregiverIds = users.map((user) => user._id);
+    return caregiverIds.length > 0
+      ? ({ caregiverIds: { $in: caregiverIds } } as Record<string, unknown>)
+      : ({ _id: null } as Record<string, unknown>);
+  }
+
+  return { caregiverIds: toObjectId(actor.id) };
+}
+
+async function buildListFilter(
   actor: SessionUser,
   filters?: CustomerListFilters,
 ) {
   const baseFilter: Record<string, unknown> = {};
   const andConditions: Record<string, unknown>[] = [];
-
-  if (actor.role === "ADMIN") {
-    // no scope restriction
-  } else if (actor.role === "TEAM_LEAD" && actor.teamId) {
-    baseFilter.teamId = toObjectId(actor.teamId);
-  } else if (actor.role === "ZONE_LEAD" && actor.zoneId) {
-    baseFilter.zoneId = toObjectId(actor.zoneId);
-  } else if (actor.role === "REGIONAL_LEAD" && actor.regionId) {
-    baseFilter.regionId = toObjectId(actor.regionId);
-  } else {
-    baseFilter.caregiverIds = toObjectId(actor.id);
-  }
+  const scopeCondition = await buildScopeCondition(actor);
+  if (scopeCondition) andConditions.push(scopeCondition);
 
   if (filters?.heartStatus) {
     baseFilter.heartStatus = filters.heartStatus;
@@ -238,11 +267,14 @@ function buildListFilter(
     });
   }
 
-  if (andConditions.length === 0) return baseFilter;
+  const hasBaseFilter = Object.keys(baseFilter).length > 0;
+  if (andConditions.length === 0) return hasBaseFilter ? baseFilter : {};
+  if (!hasBaseFilter) {
+    if (andConditions.length === 1) return andConditions[0];
+    return { $and: andConditions };
+  }
 
-  return {
-    $and: [baseFilter, ...andConditions],
-  };
+  return { $and: [baseFilter, ...andConditions] };
 }
 
 function buildListSort(sort: CustomerListFilters["sort"]): Record<string, 1 | -1> {
@@ -657,7 +689,7 @@ export async function listCustomers(
 ): Promise<CustomerListItem[]> {
   await connectToDatabase();
 
-  const filter = buildListFilter(actor, filters);
+  const filter = await buildListFilter(actor, filters);
   const customers = (await CustomerModel.find(filter)
     .sort(buildListSort(filters?.sort))
     .lean()) as CustomerRecord[];
