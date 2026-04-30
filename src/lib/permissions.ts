@@ -87,11 +87,7 @@ export function canManageUser(actor: SessionUser, subject: SessionUser) {
   }
 
   if (isTeamLead(actor)) {
-    return (
-      isMemberLike(subject) &&
-      !!actor.teamId &&
-      actor.teamId === subject.teamId
-    );
+    return !!actor.teamId && actor.teamId === subject.teamId;
   }
 
   if (isZoneLead(actor)) {
@@ -115,7 +111,16 @@ export function canManageUser(actor: SessionUser, subject: SessionUser) {
 
 export function canAssignUserRole(actor: SessionUser, role: Role) {
   if (isAdmin(actor)) return true;
-  if (isTeamLead(actor) || isZoneLead(actor) || isRegionalLead(actor)) {
+  if (isTeamLead(actor)) {
+    return (
+      role === "ZONE_LEAD" ||
+      role === "REGIONAL_LEAD" ||
+      role === "NGV" ||
+      role === "TDM" ||
+      role === "MEMBER"
+    );
+  }
+  if (isZoneLead(actor) || isRegionalLead(actor)) {
     return role === "NGV" || role === "TDM" || role === "MEMBER";
   }
   return false;

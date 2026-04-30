@@ -88,6 +88,26 @@ describe("user management permissions", () => {
         teamId: "team-a",
         zoneId: "zone-a",
       }),
+    ).toBe(true);
+    expect(
+      canManageUser(teamLead, {
+        ...baseUser,
+        id: "regional-lead",
+        role: "REGIONAL_LEAD",
+        regionId: "region-a",
+        teamId: "team-a",
+        zoneId: "zone-a",
+      }),
+    ).toBe(true);
+    expect(
+      canManageUser(teamLead, {
+        ...baseUser,
+        id: "other-team-member",
+        regionId: "region-b",
+        role: "MEMBER",
+        teamId: "team-b",
+        zoneId: "zone-b",
+      }),
     ).toBe(false);
     expect(
       canManageUser(teamLead, {
@@ -155,8 +175,15 @@ describe("user management permissions", () => {
     };
 
     expect(canAssignUserRole(teamLead, "ADMIN")).toBe(false);
-    expect(canAssignUserRole(teamLead, "ZONE_LEAD")).toBe(false);
-    expect(getAssignableUserRoles(teamLead)).toEqual(["NGV", "TDM", "MEMBER"]);
+    expect(canAssignUserRole(teamLead, "ZONE_LEAD")).toBe(true);
+    expect(canAssignUserRole(teamLead, "REGIONAL_LEAD")).toBe(true);
+    expect(getAssignableUserRoles(teamLead)).toEqual([
+      "ZONE_LEAD",
+      "REGIONAL_LEAD",
+      "NGV",
+      "TDM",
+      "MEMBER",
+    ]);
     expect(getAssignableUserRoles(regionalLead)).toEqual(["NGV", "TDM", "MEMBER"]);
   });
 });
