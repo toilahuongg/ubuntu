@@ -15,11 +15,14 @@ import {
   listVisibleUsersForActor,
 } from "@/lib/services/organization-service";
 import type {
+  AdminOperationsCompletionDay,
+  AdminOperationsCompletionTask,
   AdminOperationsMember,
   AdminOperationsPeriod,
   AdminOperationsSummary,
   AdminOperationsView,
 } from "@/lib/services/admin-operations-types";
+import { normalizeTaskType } from "@/lib/tasks/constants";
 import { appliesToUser } from "@/lib/tasks/policy";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
 import { taskToScope } from "@/lib/tasks/task-service";
@@ -107,6 +110,20 @@ function emptySummary(): AdminOperationsSummary {
     completed: 0,
     pending: 0,
     completionPercent: 0,
+  };
+}
+
+function buildCompletionDay(
+  date: string,
+  tasks: AdminOperationsCompletionTask[],
+): AdminOperationsCompletionDay {
+  return {
+    date,
+    completionCount: tasks.reduce(
+      (total, task) => total + task.completionCount,
+      0,
+    ),
+    tasks,
   };
 }
 
@@ -229,6 +246,10 @@ export async function buildAdminOperationsView(
     string,
     Record<AdminOperationsPeriod, ProgressSlot[]>
   >();
+  const completionTasksByMemberDate = new Map<
+    string,
+    Map<string, AdminOperationsCompletionTask[]>
+  >();
   const todayTaskSlots = new Map<string, ProgressSlot[]>();
 
   for (const user of visibleUsers) {
@@ -237,6 +258,37 @@ export async function buildAdminOperationsView(
       week: [],
       month: [],
     });
+  }
+
+  const taskById = new Map(tasks.map((task) => [task._id.toString(), task]));
+  const userById = new Map(visibleUsers.map((user) => [user.id, user]));
+
+  for (const submission of submissions) {
+    if ((submission.completionCount ?? 0) <= 0) continue;
+
+    const taskId = submission.taskId.toString();
+    const userId = submission.subjectUserId.toString();
+    const task = taskById.get(taskId);
+    const user = userById.get(userId);
+
+    if (!task || !user) continue;
+    if (!isTaskScheduledForDate(task, submission.date)) continue;
+    if (!appliesToUser(taskToScope(task), userShape(user))) continue;
+
+    const byDate =
+      completionTasksByMemberDate.get(userId) ??
+      new Map<string, AdminOperationsCompletionTask[]>();
+    const tasksForDate = byDate.get(submission.date) ?? [];
+    tasksForDate.push({
+      id: taskId,
+      title: task.title,
+      taskType: normalizeTaskType(task.taskType),
+      completionCount: submission.completionCount,
+      submittedAt: submission.submittedAt.toISOString(),
+    });
+    tasksForDate.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+    byDate.set(submission.date, tasksForDate);
+    completionTasksByMemberDate.set(userId, byDate);
   }
 
   for (const task of tasks) {
@@ -281,6 +333,19 @@ export async function buildAdminOperationsView(
         week: summarizeProgressSlots(memberSlots.week),
         month: summarizeProgressSlots(memberSlots.month),
       };
+      const memberCompletionTasks = completionTasksByMemberDate.get(user.id);
+      const completions = {
+        day: periodDates.day.map((date) =>
+          buildCompletionDay(date, memberCompletionTasks?.get(date) ?? []),
+        ),
+        week: periodDates.week.map((date) =>
+          buildCompletionDay(date, memberCompletionTasks?.get(date) ?? []),
+        ),
+        month: periodDates.month.map((date) =>
+          buildCompletionDay(date, memberCompletionTasks?.get(date) ?? []),
+        ),
+      };
+
       return {
         id: user.id,
         fullName: user.fullName,
@@ -289,6 +354,7 @@ export async function buildAdminOperationsView(
         todayPending: periods.day.pending,
         status: resolveMemberStatus(periods.day),
         periods,
+        completions,
       };
     })
     .sort((a, b) => {

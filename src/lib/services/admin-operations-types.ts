@@ -1,4 +1,5 @@
 import type { Role } from "@/lib/domain";
+import type { TaskType } from "@/lib/tasks/constants";
 
 export type AdminOperationsPeriod = "day" | "week" | "month";
 
@@ -9,6 +10,20 @@ export type AdminOperationsSummary = {
   completionPercent: number;
 };
 
+export type AdminOperationsCompletionTask = {
+  id: string;
+  title: string;
+  taskType: TaskType;
+  completionCount: number;
+  submittedAt: string;
+};
+
+export type AdminOperationsCompletionDay = {
+  date: string;
+  completionCount: number;
+  tasks: AdminOperationsCompletionTask[];
+};
+
 export type AdminOperationsMember = {
   id: string;
   fullName: string;
@@ -17,6 +32,7 @@ export type AdminOperationsMember = {
   todayPending: number;
   status: "complete" | "idle" | "in_progress" | "needs_attention";
   periods: Record<AdminOperationsPeriod, AdminOperationsSummary>;
+  completions: Record<AdminOperationsPeriod, AdminOperationsCompletionDay[]>;
 };
 
 export type AdminOperationsTask = {

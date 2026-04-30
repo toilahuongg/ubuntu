@@ -1,12 +1,10 @@
-import type { ComponentType, CSSProperties } from "react";
+import type { ComponentType } from "react";
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
   CalendarDays,
-  Check,
   ChevronRight,
   Flame,
-  Plus,
   ShoppingBag,
   Target,
   Trophy,
@@ -19,14 +17,12 @@ import { getCurrentUser } from "@/lib/current-user";
 import { ROLE_LABELS } from "@/lib/domain";
 import {
   getUserTaskActivityStats,
-  type TaskActivityRow,
   type UserTaskActivityStats,
 } from "@/lib/services/analytics-service";
 import { getUserProgress } from "@/lib/services/gamification-service";
 import { EditProfileForm } from "./edit-profile-form";
 import { LogoutButton } from "./logout-button";
-
-const STAT_ACCENTS = ["#34d399", "#c084fc", "#fb7185", "#fb923c", "#22d3ee"];
+import { TaskActivityCalendar } from "./task-activity-calendar";
 
 function formatNumber(value: number) {
   return value.toLocaleString("vi-VN");
@@ -203,11 +199,11 @@ function TaskStatsSection({ stats }: { stats: UserTaskActivityStats }) {
       </div>
 
       {stats.rows.length > 0 ? (
-        <div className="space-y-3">
-          {stats.rows.map((row, index) => (
-            <TaskActivityRowCard key={row.id} row={row} index={index} />
-          ))}
-        </div>
+        <TaskActivityCalendar
+          rows={stats.rows}
+          startDate={stats.startDate}
+          endDate={stats.endDate}
+        />
       ) : (
         <div className="glass-card flex flex-col items-center px-5 py-10 text-center">
           <Target className="mb-3 h-9 w-9 text-muted-foreground/40" />
@@ -234,115 +230,5 @@ function StatsPill({
       <Icon className="h-3.5 w-3.5 text-primary" />
       {label}
     </span>
-  );
-}
-
-function TaskActivityRowCard({
-  index,
-  row,
-}: {
-  index: number;
-  row: TaskActivityRow;
-}) {
-  const accent = STAT_ACCENTS[index % STAT_ACCENTS.length];
-  const style = { "--profile-stat-accent": accent } as CSSProperties;
-
-  return (
-    <article
-      className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950 p-3 text-slate-50 shadow-[0_16px_36px_-28px_rgba(2,6,23,0.9)]"
-      style={style}
-    >
-      <div className="mb-3 flex items-start gap-3">
-        <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-slate-950"
-          style={{ backgroundColor: "var(--profile-stat-accent)" }}
-          aria-hidden
-        >
-          {index + 1}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold" title={row.title}>
-            {row.title}
-          </h3>
-          <p
-            className="mt-0.5 line-clamp-1 text-xs text-slate-300"
-            title={row.description || `${row.completedDays} ngày hoàn thành`}
-          >
-            {row.description || `${row.completedDays} ngày hoàn thành`}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-semibold text-slate-300">
-            <span className="rounded-full bg-white/10 px-2 py-0.5">
-              {formatNumber(row.totalCompletions)} lượt
-            </span>
-            <span className="rounded-full bg-white/10 px-2 py-0.5">
-              {row.currentStreak} streak
-            </span>
-          </div>
-        </div>
-
-        <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10"
-          style={{
-            backgroundColor:
-              row.todayCompletionCount > 0
-                ? "var(--profile-stat-accent)"
-                : "rgba(255, 255, 255, 0.08)",
-            color: row.todayCompletionCount > 0 ? "#020617" : "#f8fafc",
-          }}
-          title={
-            row.todayCompletionCount > 0
-              ? `Hôm nay: ${row.todayCompletionCount} lượt`
-              : "Hôm nay chưa hoàn thành"
-          }
-          aria-label={
-            row.todayCompletionCount > 0
-              ? `Hôm nay đã hoàn thành ${row.todayCompletionCount} lượt`
-              : "Hôm nay chưa hoàn thành"
-          }
-        >
-          {row.todayCompletionCount > 0 ? (
-            <Check className="h-6 w-6 stroke-[3]" />
-          ) : (
-            <Plus className="h-6 w-6 stroke-[2.5]" />
-          )}
-        </div>
-      </div>
-
-      <div
-        className="grid gap-[3px]"
-        style={{ gridTemplateColumns: "repeat(30, minmax(0, 1fr))" }}
-      >
-        {row.cells.map((cell) => (
-          <span
-            key={cell.date}
-            className="block aspect-square min-w-0 rounded-[3px] ring-1 ring-white/5"
-            style={{
-              backgroundColor:
-                cell.completionCount > 0
-                  ? "var(--profile-stat-accent)"
-                  : cell.scheduled
-                    ? "color-mix(in srgb, var(--profile-stat-accent) 24%, transparent)"
-                    : "rgba(255, 255, 255, 0.07)",
-              opacity: cell.scheduled || cell.completionCount > 0 ? 1 : 0.55,
-            }}
-            title={`${formatShortDate(cell.date)}: ${
-              cell.completionCount > 0
-                ? `${cell.completionCount} lượt`
-                : cell.scheduled
-                  ? "chưa hoàn thành"
-                  : "không có lịch"
-            }`}
-            aria-label={`${formatShortDate(cell.date)} ${
-              cell.completionCount > 0
-                ? `${cell.completionCount} lượt`
-                : cell.scheduled
-                  ? "chưa hoàn thành"
-                  : "không có lịch"
-            }`}
-          />
-        ))}
-      </div>
-    </article>
   );
 }

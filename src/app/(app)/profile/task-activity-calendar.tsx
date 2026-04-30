@@ -65,6 +65,19 @@ function getHeatLevel(tasksDone: number): HeatLevel {
   );
 }
 
+function getDayCellShadow({
+  isSelected,
+  isToday,
+}: {
+  isSelected: boolean;
+  isToday: boolean;
+}) {
+  const shadows: string[] = [];
+  if (isToday) shadows.push("0 0 0 2px rgba(249,115,22,0.95)");
+  if (isSelected) shadows.push("inset 0 0 0 2px rgba(71,85,105,0.95)");
+  return shadows.length > 0 ? shadows.join(", ") : undefined;
+}
+
 export function TaskActivityCalendar({
   rows,
   startDate,
@@ -159,6 +172,7 @@ export function TaskActivityCalendar({
           const dateKey = toDateKey(date);
           const inRange = dateKey >= startDate && dateKey <= endDate;
           const isSelected = dateKey === selectedDate;
+          const isToday = dateKey === endDate && inRange;
           const daySummary = summaries.summaryByDate.get(dateKey);
           const tasksDone = daySummary?.tasksDone ?? 0;
           const heat = getHeatLevel(tasksDone);
@@ -179,18 +193,22 @@ export function TaskActivityCalendar({
                     ? heat.color
                     : inRange
                       ? "#f1f5f9"
-                      : "#f8fafc",
-                boxShadow: isSelected
-                  ? "inset 0 0 0 2px rgba(71,85,105,0.95)"
-                  : undefined,
+                    : "#f8fafc",
+                boxShadow: getDayCellShadow({ isSelected, isToday }),
                 color: inRange ? "#0f172a" : "#94a3b8",
               }}
-              title={`${formatDateLabel(dateKey)}: ${tasksDone} nhiệm vụ hoàn thành (${heat.label})`}
-              aria-label={`${formatDateLabel(dateKey)}: ${tasksDone} nhiệm vụ hoàn thành (${heat.label})`}
+              title={`${isToday ? "Hôm nay - " : ""}${formatDateLabel(dateKey)}: ${tasksDone} nhiệm vụ hoàn thành (${heat.label})`}
+              aria-label={`${isToday ? "Hôm nay - " : ""}${formatDateLabel(dateKey)}: ${tasksDone} nhiệm vụ hoàn thành (${heat.label})`}
               >
               <span className="absolute left-1.5 top-1 text-[10px] font-medium sm:left-2.5 sm:top-2 sm:text-[11px]">
                 {date.getUTCDate()}
               </span>
+              {isToday ? (
+                <span
+                  className="absolute bottom-1 left-1.5 h-1.5 w-1.5 rounded-full bg-orange-700 ring-1 ring-white sm:bottom-1.5 sm:left-2.5"
+                  aria-hidden="true"
+                />
+              ) : null}
               {tasksDone > 0 ? (
                 <span className="absolute right-1 top-1 hidden min-w-[1.1rem] rounded-full bg-white px-1 text-center text-[9px] font-bold leading-3.5 text-orange-700 ring-1 ring-orange-300 sm:inline-flex sm:right-1.5 sm:top-1.5 sm:min-w-[1.2rem] sm:px-1.5 sm:text-[10px] sm:leading-4">
                   {tasksDone}
@@ -202,9 +220,16 @@ export function TaskActivityCalendar({
       </div>
 
       <div className="rounded-2xl border border-slate-300 bg-slate-50 p-3 sm:p-4">
-        <p className="text-[13px] font-bold text-slate-800 sm:text-sm">
-          {formatDateLabel(selectedDate)}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[13px] font-bold text-slate-800 sm:text-sm">
+            {formatDateLabel(selectedDate)}
+          </p>
+          {selectedDate === endDate ? (
+            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700 ring-1 ring-orange-200">
+              Hôm nay
+            </span>
+          ) : null}
+        </div>
         <p className="mt-1 text-xs text-slate-600">
           {selectedSummary?.tasksDone ?? 0} nhiệm vụ,{" "}
           {selectedSummary?.totalCompletions ?? 0} lượt hoàn thành
