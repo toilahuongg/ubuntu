@@ -1,10 +1,11 @@
 # Nhiệm Vụ Mỗi Ngày
 
-Web app vận hành nội bộ theo phân cấp `KVT > ĐV > NT > Thành viên`. Đăng nhập bằng Telegram WebApp, chạy trên Next.js App Router + MongoDB.
+Web app vận hành nội bộ theo phân cấp `KVT > ĐV > NT > Thành viên`. Đăng nhập bằng Telegram WebApp, chạy trên React Router v7 (RSC Framework Mode) + MongoDB.
 
 ## Stack
 
-- Next.js 16 (App Router) + React 19 + TypeScript
+- React Router v7 (RSC Framework Mode) + React 19 + TypeScript
+- Vite 8 + TypeScript
 - shadcn/ui + Tailwind v4 + `@base-ui/react`
 - MongoDB + Mongoose
 - Telegram WebApp auth + bot webhook (`jose` cho session)
@@ -13,8 +14,9 @@ Web app vận hành nội bộ theo phân cấp `KVT > ĐV > NT > Thành viên`.
 
 ## Cấu trúc
 
-- `src/app/(app)` — UI chính: `admin`, `region`, `zone`, `dashboard`, `tasks`, `templates`, `leaderboard`, `profile`
-- `src/app/api` — `auth/{telegram,dev-login,logout}`, `telegram/webhook`, `jobs/{daily-occurrences,reminders}`
+- `app/routes` — React Router route modules (UI + resource routes API)
+- `app/(app)` — UI chính dùng lại component/page cũ: `admin`, `region`, `zone`, `dashboard`, `tasks`, `templates`, `leaderboard`, `profile`
+- `app/api` — code API theo nhóm: `auth/{telegram,dev-login,logout}`, `telegram/webhook`, `jobs/{customer-reminders,reminders,monthly-reminders}`
 - `src/lib/models` — `user`, `region`, `zone`, `team`, `task-template`, `task-occurrence`, `submission`, `xp-transaction`, `audit-log`
 - `src/lib/services` — `auth-service`, `organization-service`, `task-service`, `gamification-service`
 - `src/scripts` — `seed`, `seed-cosmetics`, `telegram-webhook`, `fix-telegram-index`
@@ -54,8 +56,8 @@ npm run dev
 | `SESSION_SECRET` | Secret ký JWT session |
 | `TELEGRAM_BOT_TOKEN` | Token bot Telegram |
 | `TELEGRAM_WEBHOOK_SECRET` | Secret header xác thực webhook |
-| `NEXT_PUBLIC_APP_URL` | URL app (dùng cho webhook & link) |
-| `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | Username bot để mở WebApp |
+| `VITE_APP_URL` | URL app (dùng cho webhook & link) |
+| `VITE_TELEGRAM_BOT_USERNAME` | Username bot để mở WebApp |
 | `CRON_SECRET` | Secret header cho jobs |
 | `APP_TIMEZONE` | Mặc định `Asia/Ho_Chi_Minh` |
 
@@ -68,7 +70,7 @@ npm run dev
 ## API jobs & Telegram
 
 - `POST /api/telegram/webhook` — webhook bot Telegram
-- `POST /api/jobs/daily-occurrences` — sinh occurrence cho ngày hiện tại
+- `POST /api/jobs/customer-reminders` — chạy một lượt reminder chăm sóc khách hàng
 - `POST /api/jobs/reminders` — chạy một lượt reminder task đang đến giờ
 - `POST /api/jobs/monthly-reminders` — chạy một lượt reminder đặt mục tiêu tháng đang đến giờ
 

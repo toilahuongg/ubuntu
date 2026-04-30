@@ -1,0 +1,125 @@
+"use client";
+
+import { Link } from "react-router";
+import { useState, useTransition } from "react";
+import { Pencil, Plus, UserPlus } from "lucide-react";
+
+import { CosmeticName } from "@/components/cosmetic-name";
+import type { CosmeticView, EquippedView } from "@/lib/cosmetics/serialize";
+import type { CosmeticSlot } from "@/lib/models";
+
+import { toggleCosmeticActiveAction } from "./actions";
+
+type CosmeticRow = CosmeticView & {
+  description: string;
+  cost: number | null;
+  unlockLevel: number | null;
+  active: boolean;
+};
+
+const SLOT_LABELS: Record<CosmeticSlot, string> = {
+  prefix: "Trước",
+  suffix: "Sau",
+  color: "Màu",
+  effect: "Hiệu ứng",
+};
+
+export function CosmeticsManager({
+  cosmetics,
+}: {
+  cosmetics: CosmeticRow[];
+}) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function toggleActive(row: CosmeticRow) {
+    setError(null);
+    startTransition(async () => {
+      const res = await toggleCosmeticActiveAction(row.id, !row.active);
+      if (!res.ok) setError(res.error);
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      {error ? (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
+
+      <Link
+        to="/admin/cosmetics/new"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+      >
+        <Plus className="h-4 w-4" /> Thêm trang bị mới
+      </Link>
+
+      <div className="space-y-2">
+        {cosmetics.length === 0 ? (
+          <p className="glass-card py-10 text-center text-sm text-muted-foreground">
+            Chưa có trang bị nào.
+          </p>
+        ) : (
+          cosmetics.map((row) => (
+            <div key={row.id} className="glass-card space-y-2 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{row.name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    <span className="font-mono">{row.code}</span>
+                    {" · "}
+                    {SLOT_LABELS[row.slot]} · {row.rarity}
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Link
+                    to={`/admin/cosmetics/${row.id}#grant`}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-overlay-subtle hover:text-foreground"
+                    aria-label="Cấp cho người dùng"
+                    title="Cấp cho người dùng"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    to={`/admin/cosmetics/${row.id}`}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-overlay-subtle hover:text-foreground"
+                    aria-label="Sửa"
+                    title="Sửa"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-overlay-subtle px-3 py-2 text-sm">
+                <CosmeticName
+                  fullName="Tên hiển thị"
+                  equipped={{ [row.slot]: row } as EquippedView}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                <span>
+                  {row.cost !== null
+                    ? `${row.cost.toLocaleString("vi-VN")} điểm`
+                    : "Không bán"}
+                  {row.unlockLevel ? ` · Cấp ${row.unlockLevel}` : ""}
+                </span>
+                <label className="inline-flex cursor-pointer items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    checked={row.active}
+                    onChange={() => toggleActive(row)}
+                    disabled={pending}
+                  />
+                  <span>{row.active ? "Đang bán" : "Tạm ngưng"}</span>
+                </label>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
