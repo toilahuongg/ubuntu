@@ -344,13 +344,20 @@ export async function saveSubmission(
     let leveledUp = false;
     let xpAwarded = 0;
 
-    if (isFirstSubmission && (expReward > 0 || pointReward > 0)) {
-      xpAwarded = expReward;
-      if (expReward > 0) {
+    const previousCount = existing?.completionCount ?? 0;
+    const countAwarded = mode === "set"
+      ? Math.max(0, updated.completionCount - previousCount)
+      : count;
+
+    if (countAwarded > 0 && (expReward > 0 || pointReward > 0)) {
+      const totalExp = countAwarded * expReward;
+      const totalPoints = countAwarded * pointReward;
+      xpAwarded = totalExp;
+      if (totalExp > 0) {
         await XpTransactionModel.create(
           [
             {
-              amount: expReward,
+              amount: totalExp,
               description: `Hoàn thành: ${taskRaw.title}`,
               source: "task_completion",
               sourceId: taskRaw._id,
@@ -360,11 +367,11 @@ export async function saveSubmission(
           session ? { session } : undefined,
         );
       }
-      if (pointReward > 0) {
+      if (totalPoints > 0) {
         await PointTransactionModel.create(
           [
             {
-              amount: pointReward,
+              amount: totalPoints,
               description: `Thưởng nhiệm vụ: ${taskRaw.title}`,
               source: "task_reward",
               sourceId: taskRaw._id,
@@ -379,8 +386,8 @@ export async function saveSubmission(
         subjectRaw._id,
         {
           $inc: {
-            totalXp: expReward,
-            pointBalance: pointReward,
+            totalXp: totalExp,
+            pointBalance: totalPoints,
           },
         },
         { new: true, session },
