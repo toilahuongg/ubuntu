@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Send } from "lucide-react";
 
-import { submitTaskAction } from "@/app/(app)/tasks/actions";
+import { submitTaskViaApi } from "@/lib/tasks/client-submit";
 import { isDailyTaskType, type TaskType } from "@/lib/tasks/constants";
 import type { TaskStatus } from "@/lib/tasks/types";
 
@@ -22,7 +22,7 @@ export function SubmitSection({
   taskType: TaskType;
 }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -30,21 +30,29 @@ export function SubmitSection({
     setError(null);
     setSuccess(null);
     if (submitDisabled) return;
-    startTransition(async () => {
-      const result = alreadySubmittedToday
-        ? await submitTaskAction(taskId, subjectUserId, undefined, 0, "set")
-        : await submitTaskAction(taskId, subjectUserId);
-      if (result.ok) {
+    setIsPending(true);
+    void (async () => {
+      const result = await submitTaskViaApi({
+        taskId,
+        subjectUserId,
+        count: alreadySubmittedToday ? 0 : undefined,
+        mode: alreadySubmittedToday ? "set" : undefined,
+      });
+      if (result.status === "success") {
         setSuccess(
           alreadySubmittedToday
             ? "Đã bỏ hoàn thành hôm nay."
             : "Đã nộp hoàn thành hôm nay.",
         );
         router.refresh();
+      } else if (result.status === "timeout_unknown") {
+        setSuccess(result.message);
+        window.setTimeout(() => router.refresh(), 1200);
       } else {
-        setError(result.error);
+        setError(result.message);
       }
-    });
+      setIsPending(false);
+    })();
   }
 
   const isLocked = status === "LOCKED" || status === "COMPLETED";

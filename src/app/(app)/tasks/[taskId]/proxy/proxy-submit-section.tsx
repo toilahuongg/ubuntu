@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarRange, Check, Minus, Plus, Send, X } from "lucide-react";
 
 import type { SessionUser } from "@/lib/domain";
-import { submitTaskAction } from "@/app/(app)/tasks/actions";
+import { submitTaskViaApi } from "@/lib/tasks/client-submit";
 import { isDailyTaskType, type TaskType } from "@/lib/tasks/constants";
 import type { TaskStatus } from "@/lib/tasks/types";
 
@@ -91,7 +91,7 @@ export function ProxySubmitSection({
   taskType: TaskType;
 }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [activeDate, setActiveDate] = useState<string | null>(null);
@@ -131,23 +131,28 @@ export function ProxySubmitSection({
     const amount = Math.max(0, Math.min(maxCount, Math.floor(count) || 0));
     setError(null);
     setSuccess(null);
-    startTransition(async () => {
-      const result = await submitTaskAction(
+    setIsPending(true);
+    void (async () => {
+      const result = await submitTaskViaApi({
         taskId,
-        selectedSubject.id,
+        subjectUserId: selectedSubject.id,
         dateKey,
-        amount,
-        "set",
-      );
-      if (result.ok) {
+        count: amount,
+        mode: "set",
+      });
+      if (result.status === "success") {
         setSuccess(amount === 0 ? "Đã đánh dấu chưa nộp." : "Đã lưu dữ liệu nộp.");
         setActiveDate(null);
         setCount(0);
         router.refresh();
+      } else if (result.status === "timeout_unknown") {
+        setSuccess(result.message);
+        window.setTimeout(() => router.refresh(), 1200);
       } else {
-        setError(result.error);
+        setError(result.message);
       }
-    });
+      setIsPending(false);
+    })();
   }
 
   function cellState(dateKey: string) {

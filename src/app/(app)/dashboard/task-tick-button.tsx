@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 
-import { submitTaskAction } from "@/app/(app)/tasks/actions";
+import { submitTaskViaApi } from "@/lib/tasks/client-submit";
 import type { TaskStatus } from "@/lib/tasks/types";
 
 export function TaskTickButton({
@@ -19,7 +20,8 @@ export function TaskTickButton({
   status: TaskStatus;
   isGoalComplete?: boolean;
 }) {
-  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [optimisticCount, setOptimisticCount] = useState(myCompletionCount);
 
@@ -41,15 +43,25 @@ export function TaskTickButton({
     const previousCount = optimisticCount;
     const nextCount = isDone ? 0 : Math.max(1, previousCount);
     setOptimisticCount(nextCount);
-    startTransition(async () => {
-      const result = isDone
-        ? await submitTaskAction(taskId, subjectUserId, undefined, 0, "set")
-        : await submitTaskAction(taskId, subjectUserId);
-      if (!result.ok) {
+    setIsPending(true);
+    void (async () => {
+      const result = await submitTaskViaApi({
+        taskId,
+        subjectUserId,
+        count: isDone ? 0 : undefined,
+        mode: isDone ? "set" : undefined,
+      });
+      if (result.status === "error") {
         setOptimisticCount(previousCount);
-        setError(result.error);
+        setError(result.message);
+      } else if (result.status === "timeout_unknown") {
+        setError(result.message);
+        window.setTimeout(() => router.refresh(), 1200);
+      } else {
+        router.refresh();
       }
-    });
+      setIsPending(false);
+    })();
   }
 
   const label = isDone
