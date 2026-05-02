@@ -250,8 +250,8 @@ function Podium({ items }: { items: PodiumItem[] }) {
   const desktopRanks = [2, 1, 3] as const;
 
   return (
-    <div className="px-4 py-5">
-      <div className="hidden min-[560px]:block">
+    <div className="py-5">
+      <div className="hidden min-[375px]:block">
         <div className="relative mx-auto h-[300px] max-w-xl">
           <div className="absolute inset-x-6 bottom-6 z-10 grid grid-cols-3 items-end gap-6">
             {desktopRanks.map((rank) => {
@@ -288,7 +288,7 @@ function Podium({ items }: { items: PodiumItem[] }) {
         </div>
       </div>
 
-      <div className="space-y-3 min-[560px]:hidden">
+      <div className="space-y-3 min-[375px]:hidden">
         {topThree.map((item) => {
           const style = PODIUM_STYLES[item.podiumRank];
 
