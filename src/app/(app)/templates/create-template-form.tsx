@@ -11,7 +11,7 @@ import {
   SCOPE_LABELS,
   type TaskScope,
 } from "@/lib/domain";
-import { TASK_TYPE_LABELS, type TaskType } from "@/lib/tasks/constants";
+import type { TaskType } from "@/lib/tasks/constants";
 import {
   DEFAULT_TASK_SCHEDULE_TYPE,
   type TaskScheduleType,
@@ -19,18 +19,27 @@ import {
 
 const TASK_TYPE_OPTIONS: Array<{
   value: TaskType;
+  label: string;
   description: string;
 }> = [
   {
     value: "MONTHLY_PER_MEMBER",
+    label: "Theo tháng",
     description: "Đặt mục tiêu tháng, mỗi ngày có thể ghi nhiều lượt.",
   },
   {
+    value: "WEEKLY_PER_MEMBER",
+    label: "Theo tuần",
+    description: "Đặt mục tiêu tháng, gom theo nhóm nhiệm vụ tuần, mỗi ngày ghi nhiều lượt.",
+  },
+  {
     value: "DAILY_PER_MEMBER",
+    label: "Theo ngày",
     description: "Đặt mục tiêu tháng, mỗi ngày chỉ tính một lượt hoàn thành.",
   },
   {
     value: "COUNT_TOTAL",
+    label: "Theo số lần",
     description: "Cộng tổng số lần của tất cả thành viên; đạt mục tiêu thì task đóng.",
   },
 ];
@@ -92,7 +101,7 @@ export function CreateTemplateForm({ scope }: { scope: TaskScope }) {
         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
           Loại nhiệm vụ *
         </label>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
           {TASK_TYPE_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -104,7 +113,7 @@ export function CreateTemplateForm({ scope }: { scope: TaskScope }) {
                   : "border-border bg-overlay-subtle text-muted-foreground"
               }`}
             >
-              {TASK_TYPE_LABELS[option.value]}
+              {option.label}
             </button>
           ))}
         </div>

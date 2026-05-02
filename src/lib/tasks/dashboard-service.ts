@@ -10,6 +10,7 @@ import {
   SubmissionModel,
   type SubmissionRecordModel,
   TaskModel,
+  TaskReminderPreferenceModel,
   type TaskRecord,
 } from "@/lib/models";
 import { listVisibleUsersForActor } from "@/lib/services/organization-service";
@@ -24,6 +25,7 @@ import {
 } from "@/lib/tasks/constants";
 import { appliesToUser } from "@/lib/tasks/policy";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
+import { resolveEffectiveReminderTime } from "@/lib/tasks/reminder-service";
 import {
   computeTaskStatus,
   mapTask,
@@ -213,13 +215,14 @@ export function buildTaskProgress(input: {
 }): TaskProgress {
   const taskType = normalizeTaskType(input.taskType);
   const supportsGoal = supportsMonthlyGoal(taskType);
-  const unitLabel: TaskProgress["unitLabel"] = isDailyTaskType(taskType)
-    ? "ngày"
-    : "lượt";
+  const unitLabel: TaskProgress["unitLabel"] =
+    isDailyTaskType(taskType) ? "ngày" : "lượt";
   return {
     kind:
       taskType === "COUNT_TOTAL"
         ? ("TOTAL" as const)
+        : taskType === "WEEKLY_PER_MEMBER"
+          ? ("WEEKLY_MEMBER" as const)
         : isDailyTaskType(taskType)
           ? ("DAILY_MEMBER" as const)
           : ("MONTHLY_MEMBER" as const),
@@ -320,6 +323,7 @@ function buildTaskCard(
     totalByTask: Map<string, number>;
     monthlyByTaskUser: Map<string, number>;
     goalByTaskUser: Map<string, number>;
+    reminderByTaskId: Map<string, { enabled: boolean; reminderTime: string }>;
   },
 ): TaskCard {
   const taskId = t._id.toString();
@@ -347,6 +351,12 @@ function buildTaskCard(
           current: ctx.monthlyByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? 0,
           target: ctx.goalByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? null,
         });
+  const reminderPreference = ctx.reminderByTaskId.get(taskId);
+  const reminderSettings = resolveEffectiveReminderTime({
+    defaultReminderTime: t.deadlineTime,
+    deadlineTime: t.deadlineTime,
+    preference: reminderPreference ?? null,
+  });
 
   return {
     id: taskId,
@@ -354,6 +364,7 @@ function buildTaskCard(
     description: t.description,
     date: ctx.dateKey,
     deadlineAt: createDeadlineAt(ctx.dateKey, t.deadlineTime).toISOString(),
+    notificationTime: reminderSettings.effectiveReminderTime ?? t.deadlineTime,
     expReward: t.expReward ?? DEFAULT_EXP_REWARD,
     pointReward: t.pointReward ?? DEFAULT_POINT_REWARD,
     status: computeTaskStatus(t, ctx.dateKey),
@@ -374,6 +385,22 @@ export async function buildDashboardView(
     await loadVisibleTasksAndSubs(actor, dateKey);
 
   const sortedTasks = sortTasksForDisplay(relevantTasks);
+  const taskObjectIds = sortedTasks.map((t) => t._id);
+  const reminderPreferences =
+    taskObjectIds.length > 0
+      ? await TaskReminderPreferenceModel.find({
+          taskId: { $in: taskObjectIds },
+          userId: toObjectId(actor.id),
+        })
+          .select({ enabled: 1, reminderTime: 1, taskId: 1 })
+          .lean()
+      : [];
+  const reminderByTaskId = new Map(
+    reminderPreferences.map((p) => [
+      p.taskId.toString(),
+      { enabled: p.enabled, reminderTime: p.reminderTime },
+    ]),
+  );
 
   const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(sortedTasks, [actor.id], dateKey);
@@ -389,6 +416,7 @@ export async function buildDashboardView(
       totalByTask,
       monthlyByTaskUser,
       goalByTaskUser,
+      reminderByTaskId,
     }),
   );
   const actorTaskIds = new Set(

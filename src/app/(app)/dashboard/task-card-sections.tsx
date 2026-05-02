@@ -146,10 +146,7 @@ function TaskCardRow({
             ) : null}
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {new Date(card.deadlineAt).toLocaleTimeString("vi-VN", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              {card.notificationTime}
             </span>
             {card.expReward > 0 && (
               <span
@@ -218,7 +215,10 @@ function TabButton({
 }
 
 function isCardDone(card: TaskCard) {
-  return card.taskType === "MONTHLY_PER_MEMBER"
+  return (
+    card.taskType === "MONTHLY_PER_MEMBER" ||
+    card.taskType === "WEEKLY_PER_MEMBER"
+  )
     ? card.progress.isGoalComplete
     : card.myCompletionCount > 0;
 }

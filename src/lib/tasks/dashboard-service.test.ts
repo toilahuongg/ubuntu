@@ -20,6 +20,7 @@ function makeCard(
     description: "",
     date: "2026-04-20",
     deadlineAt: "2026-04-20T14:00:00.000Z",
+    notificationTime: "21:00",
     expReward: 10,
     pointReward: 10,
     status: "OPEN",
@@ -29,6 +30,8 @@ function makeCard(
     taskType:
       progress.kind === "DAILY_MEMBER"
         ? "DAILY_PER_MEMBER"
+        : progress.kind === "WEEKLY_MEMBER"
+          ? "WEEKLY_PER_MEMBER"
         : progress.kind === "MONTHLY_MEMBER"
           ? "MONTHLY_PER_MEMBER"
           : "COUNT_TOTAL",
@@ -97,6 +100,21 @@ describe("dashboard task progress", () => {
     });
   });
 
+  it("marks weekly tasks with weekly progress kind and monthly goals", () => {
+    const progress = buildTaskProgress({
+      taskType: "WEEKLY_PER_MEMBER",
+      current: 4,
+      target: 8,
+    });
+
+    expect(progress).toMatchObject({
+      kind: "WEEKLY_MEMBER",
+      unitLabel: "lượt",
+      isGoalMissing: false,
+      isGoalComplete: false,
+    });
+  });
+
   it("keeps count-total tasks out of monthly-goal missing notices", () => {
     const progress = buildTaskProgress({
       taskType: "COUNT_TOTAL",
@@ -141,12 +159,22 @@ describe("dashboard task progress", () => {
           target: null,
         }),
       ),
+      makeCard(
+        "weekly",
+        "Nhiệm vụ tuần",
+        buildTaskProgress({
+          taskType: "WEEKLY_PER_MEMBER",
+          current: 0,
+          target: null,
+        }),
+      ),
     ]);
 
-    expect(notice?.missingCount).toBe(2);
+    expect(notice?.missingCount).toBe(3);
     expect(notice?.tasks.map((task) => task.id)).toEqual([
       "monthly",
       "daily",
+      "weekly",
     ]);
   });
 });

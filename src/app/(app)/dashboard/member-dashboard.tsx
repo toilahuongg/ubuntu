@@ -27,8 +27,13 @@ export function MemberDashboard({
   const monthlyCards = data.cards.filter(
     (card) => card.taskType === "MONTHLY_PER_MEMBER",
   );
+  const weeklyCards = data.cards.filter(
+    (card) => card.taskType === "WEEKLY_PER_MEMBER",
+  );
   const todayCards = data.cards.filter(
-    (card) => card.taskType !== "MONTHLY_PER_MEMBER",
+    (card) =>
+      card.taskType !== "MONTHLY_PER_MEMBER" &&
+      card.taskType !== "WEEKLY_PER_MEMBER",
   );
   const completedCount = data.cards.filter((card) => card.myCompletionCount > 0).length;
   const pendingCount = Math.max(data.cards.length - completedCount, 0);
@@ -49,6 +54,12 @@ export function MemberDashboard({
             <div className="inline-flex items-center gap-2 rounded-full bg-overlay-subtle px-3 py-1 text-xs font-semibold text-muted-foreground ring-1 ring-border">
               <span className="h-2 w-2 rounded-full bg-[color:var(--warning)]" />
               {monthlyCards.length} nhiệm vụ tháng
+            </div>
+          )}
+          {weeklyCards.length > 0 && (
+            <div className="inline-flex items-center gap-2 rounded-full bg-overlay-subtle px-3 py-1 text-xs font-semibold text-muted-foreground ring-1 ring-border">
+              <span className="h-2 w-2 rounded-full bg-[color:var(--primary)]" />
+              {weeklyCards.length} nhiệm vụ tuần
             </div>
           )}
         </div>
@@ -79,6 +90,13 @@ export function MemberDashboard({
       <TaskCardSection
         title="Nhiệm vụ tháng"
         cards={monthlyCards}
+        userId={userId}
+        variant="member"
+      />
+
+      <TaskCardSection
+        title="Nhiệm vụ tuần"
+        cards={weeklyCards}
         userId={userId}
         variant="member"
       />

@@ -26,8 +26,13 @@ export function LeaderDashboard({
   const monthlyCards = data.cards.filter(
     (card) => card.taskType === "MONTHLY_PER_MEMBER",
   );
+  const weeklyCards = data.cards.filter(
+    (card) => card.taskType === "WEEKLY_PER_MEMBER",
+  );
   const todayCards = data.cards.filter(
-    (card) => card.taskType !== "MONTHLY_PER_MEMBER",
+    (card) =>
+      card.taskType !== "MONTHLY_PER_MEMBER" &&
+      card.taskType !== "WEEKLY_PER_MEMBER",
   );
   const personalCards = data.cards.filter((card) => card.isApplicableToActor);
   const completedCount = personalCards.filter(
@@ -76,6 +81,13 @@ export function LeaderDashboard({
         variant="leader"
       />
 
+      <TaskCardSection
+        title="Nhiệm vụ tuần"
+        cards={weeklyCards}
+        userId={userId}
+        variant="leader"
+      />
+
       {data.cards.length === 0 && (
         <div className="glass-card flex flex-col items-center py-12 text-center">
           <CheckCircle2 className="mb-3 h-10 w-10 text-muted-foreground/40" />
@@ -92,37 +104,6 @@ export function LeaderDashboard({
       />
 
       <ActivityFeed activities={activities} />
-    </div>
-  );
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="glass-card flex items-center gap-3 p-4">
-      <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl"
-        style={{
-          background: "color-mix(in srgb, var(--accent) 82%, var(--card) 18%)",
-          color:
-            "color-mix(in srgb, var(--primary) 82%, var(--foreground) 18%)",
-        }}
-      >
-        {icon}
-      </div>
-      <div>
-        <p className="text-lg font-bold leading-none text-foreground">
-          {value}
-        </p>
-        <p className="mt-0.5 text-[11px] text-muted-foreground">{label}</p>
-      </div>
     </div>
   );
 }

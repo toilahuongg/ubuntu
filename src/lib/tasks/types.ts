@@ -12,7 +12,11 @@ import type { TaskScheduleType } from "@/lib/tasks/schedule";
 export type TaskStatus = "OPEN" | "LOCKED" | "COMPLETED";
 export type TaskMoveDirection = "up" | "down";
 
-export type TaskProgressKind = "TOTAL" | "MONTHLY_MEMBER" | "DAILY_MEMBER";
+export type TaskProgressKind =
+  | "TOTAL"
+  | "MONTHLY_MEMBER"
+  | "WEEKLY_MEMBER"
+  | "DAILY_MEMBER";
 
 export type TaskProgress = {
   kind: TaskProgressKind;
@@ -68,6 +72,7 @@ export type TaskCard = {
   description: string;
   date: string;
   deadlineAt: string;
+  notificationTime: string;
   expReward: number;
   pointReward: number;
   status: TaskStatus;
