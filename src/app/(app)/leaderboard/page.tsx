@@ -92,7 +92,7 @@ function Section({
 }) {
   return (
     <section className="glass-card overflow-hidden">
-      <header className="flex items-center gap-2 border-b border-border px-4 py-3">
+      <header className="flex items-center gap-2 border-b border-border px-3 py-2.5 min-[375px]:px-4 min-[375px]:py-3">
         <span className="text-muted-foreground">{icon}</span>
         <h2 className="text-sm font-semibold">{title}</h2>
       </header>
@@ -250,7 +250,7 @@ function Podium({ items }: { items: PodiumItem[] }) {
   const desktopRanks = [2, 1, 3] as const;
 
   return (
-    <div className="py-5">
+    <div className="py-4 min-[375px]:py-5">
       <div className="hidden min-[375px]:block">
         <div className="relative mx-auto h-[300px] max-w-xl">
           <div className="absolute inset-x-6 bottom-6 z-10 grid grid-cols-3 items-end gap-6">
@@ -275,10 +275,12 @@ function Podium({ items }: { items: PodiumItem[] }) {
                       className={`relative z-10 flex w-full flex-col items-center justify-center rounded-t-lg border px-3 text-center shadow-lg ${style.stand}`}
                     >
                       <div className="absolute inset-x-2 top-1 h-1 rounded-full bg-white/45" />
-                      <p className="text-2xl font-bold tabular-nums leading-none">
+                      <p className="text-xl font-bold tabular-nums leading-none min-[375px]:text-2xl">
                         {item.score.toLocaleString("vi-VN")}
                       </p>
-                      <p className="text-sm font-medium opacity-75">điểm</p>
+                      <p className="text-xs font-medium opacity-75 min-[375px]:text-sm">
+                        điểm
+                      </p>
                     </div>
                   ) : null}
                 </div>
@@ -288,14 +290,14 @@ function Podium({ items }: { items: PodiumItem[] }) {
         </div>
       </div>
 
-      <div className="space-y-3 min-[375px]:hidden">
+      <div className="space-y-2.5 px-2 min-[375px]:hidden">
         {topThree.map((item) => {
           const style = PODIUM_STYLES[item.podiumRank];
 
           return (
             <article
               key={item.id}
-              className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
+              className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-2.5 py-2.5 shadow-sm"
             >
               <span
                 className={`flex h-8 min-w-8 items-center justify-center rounded-full border px-2 text-xs font-bold ${style.badge}`}
@@ -333,7 +335,9 @@ function Podium({ items }: { items: PodiumItem[] }) {
               <RankBadge rank={item.rank} />
               {item.icon}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{item.name}</p>
+                <p className="truncate text-sm font-medium min-[376px]:max-[559px]:text-xs">
+                  {item.name}
+                </p>
                 <p className="text-[11px] text-muted-foreground">
                   {item.subtitle}
                 </p>
@@ -390,10 +394,14 @@ function PodiumProfile({
           {isFirst && item.iconLg ? item.iconLg : item.icon}
         </div>
       </div>
-      <p className={`mt-2 truncate text-base font-semibold ${style.name}`}>
+      <p
+        className={`mt-2 truncate text-sm font-semibold min-[375px]:text-base min-[376px]:max-[559px]:text-sm ${style.name}`}
+      >
         {item.name}
       </p>
-      <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
+      <p className="truncate text-[11px] text-muted-foreground min-[375px]:text-xs">
+        {item.subtitle}
+      </p>
     </div>
   );
 }
