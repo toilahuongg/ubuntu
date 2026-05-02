@@ -37,7 +37,10 @@ export async function listRecentActivities(
 ): Promise<ActivityEntry[]> {
   await connectToDatabase();
 
-  const visibleUsers = await listVisibleUsersForActor(actor);
+  const visibleUsers =
+    actor.role === "ADMIN"
+      ? await listVisibleUsersForActor(actor)
+      : await listTeamMembersForViewing(actor);
   if (visibleUsers.length === 0) return [];
 
   const visibleIds = visibleUsers.map((u) => toObjectId(u.id));
@@ -107,9 +110,9 @@ export async function listTaskActivitiesThisMonth(
   const yearMonth = getCurrentYearMonth();
 
   const visibleUsers =
-    actor.role === "MEMBER" || actor.role === "NGV" || actor.role === "TDM"
-      ? await listTeamMembersForViewing(actor)
-      : await listVisibleUsersForActor(actor);
+    actor.role === "ADMIN"
+      ? await listVisibleUsersForActor(actor)
+      : await listTeamMembersForViewing(actor);
 
   if (visibleUsers.length === 0) return [];
 

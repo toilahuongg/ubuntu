@@ -50,16 +50,16 @@ export function MemberDashboard({
             <span className="h-2 w-2 rounded-full bg-primary" />
             {todayCards.length} nhiệm vụ hôm nay
           </div>
-          {monthlyCards.length > 0 && (
-            <div className="inline-flex items-center gap-2 rounded-full bg-overlay-subtle px-3 py-1 text-xs font-semibold text-muted-foreground ring-1 ring-border">
-              <span className="h-2 w-2 rounded-full bg-[color:var(--warning)]" />
-              {monthlyCards.length} nhiệm vụ tháng
-            </div>
-          )}
           {weeklyCards.length > 0 && (
             <div className="inline-flex items-center gap-2 rounded-full bg-overlay-subtle px-3 py-1 text-xs font-semibold text-muted-foreground ring-1 ring-border">
               <span className="h-2 w-2 rounded-full bg-[color:var(--primary)]" />
               {weeklyCards.length} nhiệm vụ tuần
+            </div>
+          )}
+          {monthlyCards.length > 0 && (
+            <div className="inline-flex items-center gap-2 rounded-full bg-overlay-subtle px-3 py-1 text-xs font-semibold text-muted-foreground ring-1 ring-border">
+              <span className="h-2 w-2 rounded-full bg-[color:var(--warning)]" />
+              {monthlyCards.length} nhiệm vụ tháng
             </div>
           )}
         </div>
@@ -88,15 +88,15 @@ export function MemberDashboard({
       />
 
       <TaskCardSection
-        title="Nhiệm vụ tháng"
-        cards={monthlyCards}
+        title="Nhiệm vụ tuần"
+        cards={weeklyCards}
         userId={userId}
         variant="member"
       />
 
       <TaskCardSection
-        title="Nhiệm vụ tuần"
-        cards={weeklyCards}
+        title="Nhiệm vụ tháng"
+        cards={monthlyCards}
         userId={userId}
         variant="member"
       />

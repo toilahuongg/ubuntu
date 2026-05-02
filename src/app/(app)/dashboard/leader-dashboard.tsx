@@ -75,15 +75,15 @@ export function LeaderDashboard({
       />
 
       <TaskCardSection
-        title="Nhiệm vụ tháng"
-        cards={monthlyCards}
+        title="Nhiệm vụ tuần"
+        cards={weeklyCards}
         userId={userId}
         variant="leader"
       />
 
       <TaskCardSection
-        title="Nhiệm vụ tuần"
-        cards={weeklyCards}
+        title="Nhiệm vụ tháng"
+        cards={monthlyCards}
         userId={userId}
         variant="leader"
       />
