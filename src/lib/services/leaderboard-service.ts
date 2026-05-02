@@ -103,10 +103,15 @@ async function getTopUsersByMonthlyXp(
 }
 
 export async function getTopMembers(limit = 5): Promise<LeaderboardEntry[]> {
-  return getTopUsersByMonthlyXp(
-    { role: { $in: ["MEMBER", "NGV", "TDM"] }, status: "ACTIVE" },
-    limit,
-  );
+  return getTopUsersByMonthlyXp({ role: "MEMBER", status: "ACTIVE" }, limit);
+}
+
+export async function getTopNgv(limit = 5): Promise<LeaderboardEntry[]> {
+  return getTopUsersByMonthlyXp({ role: "NGV", status: "ACTIVE" }, limit);
+}
+
+export async function getTopTdm(limit = 5): Promise<LeaderboardEntry[]> {
+  return getTopUsersByMonthlyXp({ role: "TDM", status: "ACTIVE" }, limit);
 }
 
 export async function getTopRegionalLeads(

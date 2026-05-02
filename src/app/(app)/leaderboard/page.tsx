@@ -6,8 +6,10 @@ import { getSessionUser } from "@/lib/auth/session";
 import {
   getLeaderboardMonthLabel,
   getTopMembers,
+  getTopNgv,
   getTopRegionalLeads,
   getTopRegions,
+  getTopTdm,
   type RegionLeaderboardEntry,
 } from "@/lib/services/leaderboard-service";
 import type { LeaderboardEntry } from "@/lib/services/gamification-service";
@@ -17,9 +19,11 @@ export default async function LeaderboardPage() {
   const session = await getSessionUser();
   if (!session) redirect("/login");
 
-  const [topRegions, topMembers, topLeads] = await Promise.all([
+  const [topRegions, topMembers, topNgv, topTdm, topLeads] = await Promise.all([
     getTopRegions(3),
     getTopMembers(5),
+    getTopNgv(5),
+    getTopTdm(5),
     getTopRegionalLeads(3),
   ]);
 
@@ -52,6 +56,38 @@ export default async function LeaderboardPage() {
         ) : (
           <div className="divide-y divide-border">
             {topMembers.map((entry) => (
+              <UserRow
+                key={entry.id}
+                entry={entry}
+                isSelf={entry.id === session.id}
+              />
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section title="Top NTĐ" icon={<Users className="h-4 w-4" />}>
+        {topNgv.length === 0 ? (
+          <EmptyRow />
+        ) : (
+          <div className="divide-y divide-border">
+            {topNgv.map((entry) => (
+              <UserRow
+                key={entry.id}
+                entry={entry}
+                isSelf={entry.id === session.id}
+              />
+            ))}
+          </div>
+        )}
+      </Section>
+
+      <Section title="Top TĐM" icon={<Users className="h-4 w-4" />}>
+        {topTdm.length === 0 ? (
+          <EmptyRow />
+        ) : (
+          <div className="divide-y divide-border">
+            {topTdm.map((entry) => (
               <UserRow
                 key={entry.id}
                 entry={entry}
