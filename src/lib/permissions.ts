@@ -133,8 +133,8 @@ export function getAssignableUserRoles(actor: SessionUser): Role[] {
     "ZONE_LEAD",
     "REGIONAL_LEAD",
     "NGV",
-    "TDM",
     "MEMBER",
+    "TDM",
   ];
   return roles.filter((role) => canAssignUserRole(actor, role));
 }

@@ -46,6 +46,14 @@ export default async function LeaderboardPage() {
         )}
       </Section>
 
+      <Section title="Top TĐM" icon={<Users className="h-4 w-4" />}>
+        {topTdm.length === 0 ? (
+          <EmptyRow />
+        ) : (
+          <UserPodium entries={topTdm} selfId={session.id} />
+        )}
+      </Section>
+
       <Section title="Top TĐ" icon={<Users className="h-4 w-4" />}>
         {topMembers.length === 0 ? (
           <EmptyRow />
@@ -59,14 +67,6 @@ export default async function LeaderboardPage() {
           <EmptyRow />
         ) : (
           <UserPodium entries={topNgv} selfId={session.id} />
-        )}
-      </Section>
-
-      <Section title="Top TĐM" icon={<Users className="h-4 w-4" />}>
-        {topTdm.length === 0 ? (
-          <EmptyRow />
-        ) : (
-          <UserPodium entries={topTdm} selfId={session.id} />
         )}
       </Section>
 
