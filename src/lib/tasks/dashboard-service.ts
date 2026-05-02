@@ -522,6 +522,22 @@ export async function buildMemberDashboard(
   );
 
   const sortedPersonal = sortTasksForDisplay(personalTasks);
+  const personalTaskObjectIds = sortedPersonal.map((t) => t._id);
+  const reminderPreferences =
+    personalTaskObjectIds.length > 0
+      ? await TaskReminderPreferenceModel.find({
+          taskId: { $in: personalTaskObjectIds },
+          userId: toObjectId(actor.id),
+        })
+          .select({ enabled: 1, reminderTime: 1, taskId: 1 })
+          .lean()
+      : [];
+  const reminderByTaskId = new Map(
+    reminderPreferences.map((p) => [
+      p.taskId.toString(),
+      { enabled: p.enabled, reminderTime: p.reminderTime },
+    ]),
+  );
 
   const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(sortedPersonal, [actor.id], dateKey);
@@ -548,6 +564,7 @@ export async function buildMemberDashboard(
       totalByTask,
       monthlyByTaskUser,
       goalByTaskUser,
+      reminderByTaskId,
     }),
   );
   const goalNotice = buildDashboardGoalNotice(cards);
