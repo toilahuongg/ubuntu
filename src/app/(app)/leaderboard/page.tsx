@@ -70,10 +70,7 @@ export default async function LeaderboardPage() {
         )}
       </Section>
 
-      <Section
-        title="Top KVT"
-        icon={<Crown className="h-4 w-4" />}
-      >
+      <Section title="Top KVT" icon={<Crown className="h-4 w-4" />}>
         {topLeads.length === 0 ? (
           <EmptyRow />
         ) : (
@@ -141,7 +138,10 @@ function regionToPodiumItem(region: RegionLeaderboardEntry): PodiumItem {
   };
 }
 
-function userToPodiumItem(entry: LeaderboardEntry, isSelf: boolean): PodiumItem {
+function userToPodiumItem(
+  entry: LeaderboardEntry,
+  isSelf: boolean,
+): PodiumItem {
   return {
     id: entry.id,
     rank: entry.rank,
@@ -161,7 +161,7 @@ function userToPodiumItem(entry: LeaderboardEntry, isSelf: boolean): PodiumItem 
         alt={entry.levelInfo.nameVi}
         width={48}
         height={48}
-        className="h-12 w-12 shrink-0 rounded-full bg-white object-cover"
+        className="h-12 w-12 shrink-0 rounded-full object-cover"
       />
     ),
     iconLg: (
@@ -170,7 +170,7 @@ function userToPodiumItem(entry: LeaderboardEntry, isSelf: boolean): PodiumItem 
         alt={entry.levelInfo.nameVi}
         width={64}
         height={64}
-        className="h-14 w-14 shrink-0 rounded-full bg-white object-cover sm:h-16 sm:w-16"
+        className="h-14 w-14 shrink-0 rounded-full object-cover sm:h-16 sm:w-16"
       />
     ),
   };
@@ -189,7 +189,9 @@ function UserPodium({
 }) {
   return (
     <Podium
-      items={entries.map((entry) => userToPodiumItem(entry, entry.id === selfId))}
+      items={entries.map((entry) =>
+        userToPodiumItem(entry, entry.id === selfId),
+      )}
     />
   );
 }
@@ -206,24 +208,31 @@ type PodiumItem = {
 
 const PODIUM_STYLES = {
   1: {
-    stand: "h-[104px] border-amber-200 bg-gradient-to-b from-amber-100 via-amber-200 to-amber-300 text-amber-950 shadow-amber-200/70",
-    badge: "border-amber-300 bg-gradient-to-b from-amber-300 to-amber-500 text-white shadow-amber-200/80",
-    avatarRing: "border-amber-200 bg-amber-50 shadow-[0_0_30px_rgba(251,191,36,0.28)]",
+    stand:
+      "h-[104px] border-amber-200 bg-gradient-to-b from-amber-100 via-amber-200 to-amber-300 text-amber-950 shadow-amber-200/70",
+    badge:
+      "border-amber-300 bg-gradient-to-b from-amber-300 to-amber-500 text-white shadow-amber-200/80",
+    avatarRing:
+      "border-amber-200 bg-amber-50 shadow-[0_0_30px_rgba(251,191,36,0.28)]",
     iconColor: "text-amber-600",
     name: "text-foreground",
     profile: "mb-3",
   },
   2: {
-    stand: "h-[86px] border-slate-200 bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 text-slate-900 shadow-slate-200/70",
-    badge: "border-slate-200 bg-gradient-to-b from-slate-200 to-slate-400 text-white shadow-slate-200/80",
+    stand:
+      "h-[86px] border-slate-200 bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 text-slate-900 shadow-slate-200/70",
+    badge:
+      "border-slate-200 bg-gradient-to-b from-slate-200 to-slate-400 text-white shadow-slate-200/80",
     avatarRing: "border-slate-200 bg-slate-50",
     iconColor: "text-slate-500",
     name: "text-foreground",
     profile: "mb-2",
   },
   3: {
-    stand: "h-[64px] border-orange-200 bg-gradient-to-b from-orange-100 via-orange-200 to-orange-300 text-orange-950 shadow-orange-200/70",
-    badge: "border-orange-200 bg-gradient-to-b from-orange-200 to-orange-500 text-white shadow-orange-200/80",
+    stand:
+      "h-[64px] border-orange-200 bg-gradient-to-b from-orange-100 via-orange-200 to-orange-300 text-orange-950 shadow-orange-200/70",
+    badge:
+      "border-orange-200 bg-gradient-to-b from-orange-200 to-orange-500 text-white shadow-orange-200/80",
     avatarRing: "border-orange-200 bg-orange-50",
     iconColor: "text-orange-700",
     name: "text-foreground",
@@ -244,7 +253,6 @@ function Podium({ items }: { items: PodiumItem[] }) {
     <div className="px-4 py-5">
       <div className="hidden min-[560px]:block">
         <div className="relative mx-auto h-[300px] max-w-xl">
-          <PodiumFrame />
           <div className="absolute inset-x-6 bottom-6 z-10 grid grid-cols-3 items-end gap-6">
             {desktopRanks.map((rank) => {
               const item = topByRank.get(rank);
@@ -287,23 +295,32 @@ function Podium({ items }: { items: PodiumItem[] }) {
           return (
             <article
               key={item.id}
-              className="flex items-center gap-3 rounded-xl border border-border bg-white p-3 shadow-sm"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
             >
               <span
                 className={`flex h-8 min-w-8 items-center justify-center rounded-full border px-2 text-xs font-bold ${style.badge}`}
               >
                 #{item.rank}
               </span>
-              <div className={`rounded-full border p-1 ${style.avatarRing}`}>
+              <div
+                className={`flex h-12 w-12 shrink-0 items-center justify-center ${style.iconColor}`}
+              >
                 {item.podiumRank === 1 && item.iconLg ? item.iconLg : item.icon}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{item.name}</p>
+                <p className="truncate text-sm font-semibold text-card-foreground">
+                  {item.name}
+                </p>
                 <p className="truncate text-[11px] text-muted-foreground">
                   {item.subtitle}
                 </p>
               </div>
-              <XpValue xp={item.score} />
+              <span className="text-sm font-bold tabular-nums text-card-foreground">
+                {item.score.toLocaleString("vi-VN")}
+                <span className="ml-0.5 text-[10px] font-normal text-muted-foreground">
+                  điểm
+                </span>
+              </span>
             </article>
           );
         })}
@@ -317,7 +334,9 @@ function Podium({ items }: { items: PodiumItem[] }) {
               {item.icon}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{item.name}</p>
-                <p className="text-[11px] text-muted-foreground">{item.subtitle}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {item.subtitle}
+                </p>
               </div>
               <XpValue xp={item.score} />
             </div>
@@ -325,62 +344,6 @@ function Podium({ items }: { items: PodiumItem[] }) {
         </div>
       ) : null}
     </div>
-  );
-}
-
-function PodiumFrame() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 h-full w-full text-border"
-      preserveAspectRatio="none"
-      viewBox="0 0 640 300"
-    >
-      <rect
-        x="1.5"
-        y="1.5"
-        width="637"
-        height="297"
-        rx="24"
-        className="fill-white/35 stroke-current"
-        strokeWidth="1.5"
-      />
-      <rect
-        x="10"
-        y="10"
-        width="620"
-        height="280"
-        rx="18"
-        className="fill-transparent stroke-current opacity-35"
-        strokeWidth="1"
-        strokeDasharray="1 9"
-      />
-      <path
-        d="M34 2H118M522 2h84M34 298h118M488 298h118"
-        className="stroke-sky-200/80 dark:stroke-sky-500/35"
-        strokeLinecap="round"
-        strokeWidth="3"
-      />
-      <path
-        d="M2 34V118M638 34v118M2 182v84M638 182v84"
-        className="stroke-sky-200/60 dark:stroke-sky-500/25"
-        strokeLinecap="round"
-        strokeWidth="2"
-      />
-      <path
-        d="M24 24c18 0 28-10 28-22M616 24c-18 0-28-10-28-22M24 276c18 0 28 10 28 22M616 276c-18 0-28 10-28 22"
-        className="stroke-amber-200/70 dark:stroke-amber-300/35"
-        fill="none"
-        strokeLinecap="round"
-        strokeWidth="2"
-      />
-      <path
-        d="M72 24H568"
-        className="stroke-white/70 dark:stroke-white/10"
-        strokeLinecap="round"
-        strokeWidth="1"
-      />
-    </svg>
   );
 }
 
@@ -424,21 +387,13 @@ function PodiumProfile({
             isFirst ? "p-3" : ""
           }`}
         >
-          {isFirst ? (
-            <>
-              <span className="absolute -left-8 top-4 h-14 w-5 rounded-full border-l-4 border-amber-300/80" />
-              <span className="absolute -right-8 top-4 h-14 w-5 rounded-full border-r-4 border-amber-300/80" />
-            </>
-          ) : null}
           {isFirst && item.iconLg ? item.iconLg : item.icon}
         </div>
       </div>
       <p className={`mt-2 truncate text-base font-semibold ${style.name}`}>
         {item.name}
       </p>
-      <p className="truncate text-xs text-muted-foreground">
-        {item.subtitle}
-      </p>
+      <p className="truncate text-xs text-muted-foreground">{item.subtitle}</p>
     </div>
   );
 }
