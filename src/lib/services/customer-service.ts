@@ -372,6 +372,7 @@ function buildAssignableCaregiverFilter(actor: SessionUser) {
   const base: Record<string, unknown> = { status: "ACTIVE" };
 
   if (isAdmin(actor)) return base;
+  if (actor.teamId) return { ...base, teamId: toObjectId(actor.teamId) };
   if (isTeamLead(actor) && actor.teamId) {
     return { ...base, teamId: toObjectId(actor.teamId) };
   }
