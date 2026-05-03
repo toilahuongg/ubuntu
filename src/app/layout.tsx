@@ -67,6 +67,7 @@ export default function RootLayout({
         <link rel="icon" type="image/svg+xml" href="/icons/logo.svg" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#f6f7fb" />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground bg-gradient-mesh">
