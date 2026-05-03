@@ -14,6 +14,7 @@ import {
 } from "@/lib/services/leaderboard-service";
 import type { LeaderboardEntry } from "@/lib/services/gamification-service";
 import { CosmeticName } from "@/components/cosmetic-name";
+import { ResponsiveNameTicker } from "./responsive-name-ticker";
 
 export default async function LeaderboardPage() {
   const session = await getSessionUser();
@@ -335,9 +336,9 @@ function Podium({ items }: { items: PodiumItem[] }) {
               <RankBadge rank={item.rank} />
               {item.icon}
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium min-[376px]:max-[559px]:text-xs">
+                <ResponsiveNameTicker className="text-sm font-medium min-[376px]:max-[559px]:text-xs">
                   {item.name}
-                </p>
+                </ResponsiveNameTicker>
                 <p className="text-[11px] text-muted-foreground">
                   {item.subtitle}
                 </p>
@@ -394,11 +395,11 @@ function PodiumProfile({
           {isFirst && item.iconLg ? item.iconLg : item.icon}
         </div>
       </div>
-      <p
-        className={`mt-2 truncate text-sm font-semibold min-[375px]:text-base min-[376px]:max-[559px]:text-sm ${style.name}`}
+      <ResponsiveNameTicker
+        className={`mt-2 text-sm font-semibold min-[375px]:text-base min-[376px]:max-[559px]:text-sm ${style.name}`}
       >
         {item.name}
-      </p>
+      </ResponsiveNameTicker>
       <p className="truncate text-[11px] text-muted-foreground min-[375px]:text-xs">
         {item.subtitle}
       </p>

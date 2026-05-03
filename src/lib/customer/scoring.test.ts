@@ -11,10 +11,10 @@ describe("calculateInteractionScore", () => {
     expect(calculateInteractionScore("SIMPLE")).toEqual({ points: 5, exp: 5 });
   });
 
-  it("returns +50 points and +5 exp for EFFECTIVE", () => {
+  it("returns +50 points and +50 exp for EFFECTIVE", () => {
     expect(calculateInteractionScore("EFFECTIVE")).toEqual({
       points: 50,
-      exp: 5,
+      exp: 50,
     });
   });
 

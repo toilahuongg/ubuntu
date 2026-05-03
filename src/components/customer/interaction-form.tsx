@@ -53,7 +53,7 @@ export function InteractionForm({
     outcome === "SIMPLE"
       ? { points: 5, exp: 5 }
       : outcome === "EFFECTIVE"
-        ? { points: 50, exp: 5 }
+        ? { points: 50, exp: 50 }
         : outcome === "BAPTIZED"
           ? { points: 500, exp: 500 }
           : { points: 0, exp: 0 };
