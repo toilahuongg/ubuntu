@@ -7,7 +7,7 @@ import {
   ListChecks,
   MapPin,
   MessageCircle,
-  Sparkles,
+  ShoppingBag,
   Shield,
   UserCog,
   Users,
@@ -64,8 +64,9 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
+  const dateKey = getTodayDateKey();
+
   if (!canManageStructure) {
-    const dateKey = getTodayDateKey();
     const operations = await buildAdminOperationsView(session, dateKey);
     const scopedStructureItems: NavItem[] = isZoneLead
       ? [
@@ -80,10 +81,7 @@ export default async function AdminPage() {
 
     return (
       <>
-        <AdminTitle
-          description="Theo dõi tiến độ thành viên và xử lý nhanh nhiệm vụ trong phạm vi của bạn."
-          title="Vận hành"
-        />
+        <AdminTitle description={`Xin chào, ${session.fullName}`} title="Tổng quan" />
         <OperationsDashboard data={operations} />
         {scopedStructureItems.length > 0 && (
           <nav className="grid gap-2" aria-label="Cấu trúc trong phạm vi">
@@ -113,7 +111,6 @@ export default async function AdminPage() {
   }
 
   if (session.role === "TEAM_LEAD") {
-    const dateKey = getTodayDateKey();
     const [snapshot, pendingUsers, operations] = await Promise.all([
       getAdminSnapshot(session),
       listPendingUsers(),
@@ -123,30 +120,31 @@ export default async function AdminPage() {
     return (
       <>
         <AdminTitle
-          description="Tổng quan tiến độ nhóm và các công cụ quản trị trong phạm vi NT."
-          title="Quản trị nhóm"
+          description={`Xin chào, ${session.fullName}`}
+          title="Tổng quan"
         />
-        <OperationsDashboard data={operations} />
         <ManagementHome
           pendingCount={pendingUsers.length}
           role={session.role}
           snapshot={snapshot}
           telegramEnabled={telegramEnabled}
         />
+        <OperationsDashboard data={operations} />
       </>
     );
   }
 
-  const [snapshot, pendingUsers] = await Promise.all([
+  const [snapshot, pendingUsers, operations] = await Promise.all([
     getAdminSnapshot(session),
     listPendingUsers(),
+    buildAdminOperationsView(session, dateKey),
   ]);
 
   return (
     <>
       <AdminTitle
-        description="Trung tâm quản lý cấu trúc, người dùng và tích hợp hệ thống."
-        title="Quản Trị"
+        description={`Xin chào, ${session.fullName}`}
+        title="Tổng quan"
       />
       <ManagementHome
         pendingCount={pendingUsers.length}
@@ -154,6 +152,7 @@ export default async function AdminPage() {
         snapshot={snapshot}
         telegramEnabled={telegramEnabled}
       />
+      <OperationsDashboard data={operations} />
     </>
   );
 }
@@ -166,11 +165,15 @@ function AdminTitle({
   title: string;
 }) {
   return (
-    <div className="flex items-start gap-2">
-      <Shield className="mt-0.5 h-5 w-5" />
-      <div>
-        <h1 className="font-display text-xl font-bold">{title}</h1>
-        <p className="text-xs text-muted-foreground">{description}</p>
+    <div className="flex items-end justify-between gap-3">
+      <div className="space-y-1">
+        <h1 className="font-display text-2xl font-semibold tracking-tight">
+          {title}
+        </h1>
+        <p className="text-sm leading-5 text-muted-foreground">{description}</p>
+      </div>
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-sky-200 bg-white text-sky-600">
+        <Shield className="h-5 w-5" />
       </div>
     </div>
   );
@@ -198,6 +201,12 @@ function ManagementHome({
         ? "Quản lý mẫu nhiệm vụ toàn hệ thống"
         : "Quản lý mẫu nhiệm vụ trong nhóm",
     },
+    {
+      href: "/admin/cosmetics",
+      icon: ShoppingBag,
+      label: "Cửa hàng",
+      description: "Quản lý vật phẩm, giá bán và trạng thái",
+    },
   ];
 
   if (telegramEnabled) {
@@ -212,86 +221,11 @@ function ManagementHome({
   const sections: NavSection[] = isAdmin
     ? [
         {
-          title: "Cấu trúc",
-          items: [
-            {
-              href: "/admin/teams",
-              icon: Building2,
-              label: "Nhóm",
-              description: `${snapshot.teams.length} nhóm`,
-            },
-            {
-              href: "/admin/zones",
-              icon: Layers,
-              label: "Địa vực",
-              description: `${snapshot.zones.length} địa vực`,
-            },
-            {
-              href: "/admin/regions",
-              icon: MapPin,
-              label: "Khu vực",
-              description: `${snapshot.regions.length} khu vực`,
-            },
-          ],
-        },
-        {
-          title: "Người dùng",
-          items: [
-            {
-              href: "/admin/users",
-              icon: UserCog,
-              label: "Người dùng",
-              description: `${snapshot.users.length} người dùng`,
-              badge: pendingCount,
-            },
-          ],
-        },
-        {
           title: "Vận hành",
           items: operationItems,
         },
-        {
-          title: "Trang bị",
-          items: [
-            {
-              href: "/admin/cosmetics",
-              icon: Sparkles,
-              label: "Trang bị tên",
-              description: "Quản lý cosmetic của người dùng",
-            },
-          ],
-        },
       ]
     : [
-        {
-          title: "Phạm vi của tôi",
-          items: [
-            {
-              href: "/admin/users",
-              icon: UserCog,
-              label: "TĐ nhóm",
-              description: `${snapshot.users.length} thành viên trong nhóm`,
-              badge: pendingCount,
-            },
-          ],
-        },
-        {
-          title: "Cấu trúc nhóm",
-          items: [
-            {
-              href: "/admin/zones",
-              icon: Layers,
-              label: "Địa vực",
-              description: `${snapshot.zones.length} địa vực`,
-            },
-            {
-              href: "/admin/regions",
-              icon: MapPin,
-              label: "Khu vực",
-              description: `${snapshot.regions.length} khu vực`,
-            },
-          ],
-        },
         {
           title: "Vận hành",
           items: operationItems,
@@ -325,7 +259,7 @@ function ManagementHome({
           href: "/admin/users",
           icon: Users,
           label: "Người dùng",
-          note: "Tổng tài khoản",
+          note: pendingCount > 0 ? `${pendingCount} chờ duyệt` : "Tổng tài khoản",
           value: snapshot.users.length,
         },
       ]
@@ -362,10 +296,10 @@ function ManagementHome({
       ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <nav
         aria-label="Tổng quan quản trị"
-        className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+        className="grid grid-cols-4 gap-1.5"
       >
         {topStats.map((item) => (
           <StatCard key={`${role}-${item.href}-${item.label}`} {...item} />
@@ -375,9 +309,11 @@ function ManagementHome({
       <div className="space-y-4">
         {sections.map((section) => (
           <section key={section.title} className="space-y-2">
-            <h2 className="font-display text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {section.title}
-            </h2>
+            <div className="flex items-center justify-between border-b border-border/40 pb-2">
+              <h2 className="font-display text-sm font-semibold text-foreground">
+                {section.title}
+              </h2>
+            </div>
             <nav className="grid gap-2" aria-label={section.title}>
               {section.items.map((item) => (
                 <AdminNavLink key={item.href} {...item} />
@@ -408,22 +344,28 @@ function StatCard({
   return (
     <Link
       href={href}
-      className={`glass-card flex flex-col items-center rounded-3xl p-3 text-center transition-colors hover:bg-overlay-subtle ${
+      className={`glass-card group min-h-[6.25rem] p-2.5 text-left transition-colors duration-150 hover:border-sky-300 hover:bg-sky-50/40 ${
         tone === "alert" ? "ring-1 ring-destructive/20" : ""
       }`}
     >
-      <div
-        className={`mb-2 inline-flex h-8 w-8 items-center justify-center rounded-full ${
-          tone === "alert"
-            ? "bg-destructive/10 text-destructive"
-            : "bg-overlay-subtle text-muted-foreground"
-        }`}
-      >
-        <Icon className="h-4 w-4" />
+      <div className="flex justify-center">
+        <div
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
+            tone === "alert"
+              ? "border-destructive/25 bg-destructive/10 text-destructive"
+              : "border-sky-100 bg-sky-50 text-sky-600"
+          }`}
+        >
+          <Icon className="h-4 w-4" />
+        </div>
       </div>
-      <p className="text-2xl font-bold leading-none">{value}</p>
-      <p className="mt-1 text-[11px] font-semibold">{label}</p>
-      <p className="mt-1 text-[10px] text-muted-foreground">{note}</p>
+      <p className="mt-3 text-center text-xl font-semibold leading-none">{value}</p>
+      <p className="mt-1 truncate text-center text-[11px] font-medium text-foreground">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-center text-[10px] leading-4 text-muted-foreground">
+        {note}
+      </p>
     </Link>
   );
 }
@@ -438,18 +380,22 @@ function AdminNavLink({
   return (
     <Link
       href={href}
-      className="glass-card flex items-center justify-between p-4 transition-colors hover:bg-overlay-subtle"
+      className="glass-card group flex items-center justify-between p-4 transition-colors duration-150 hover:border-primary/35 hover:bg-accent/35"
     >
-      <div className="flex items-center gap-3">
-        <Icon className="h-5 w-5 text-muted-foreground" />
-        <div>
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-background text-muted-foreground">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
           <p className="font-semibold">{label}</p>
-          <p className="text-xs text-muted-foreground">{description}</p>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {description}
+          </p>
         </div>
       </div>
       <div className="flex items-center gap-2">
         {badge ? (
-          <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
+          <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-md bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
             {badge}
           </span>
         ) : null}

@@ -50,7 +50,7 @@ export function GrantCosmeticPanel({
 
   return (
     <section id="grant" className="mt-6 space-y-3">
-      <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+      <h2 className="font-display text-sm font-semibold text-foreground">
         Cấp &ldquo;{cosmeticName}&rdquo; cho người dùng
       </h2>
 

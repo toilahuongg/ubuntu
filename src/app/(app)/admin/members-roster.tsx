@@ -10,7 +10,7 @@ export async function MembersRoster({ actor }: { actor: SessionUser }) {
 
   return (
     <section id="members" className="scroll-mt-20">
-      <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+      <h2 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-foreground">
         <Users className="h-4 w-4" />
         TĐ ({users.length})
       </h2>

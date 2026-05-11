@@ -1,8 +1,6 @@
 import type { Role } from "@/lib/domain";
 import type { TaskType } from "@/lib/tasks/constants";
 
-export type AdminOperationsPeriod = "day" | "week" | "month";
-
 export type AdminOperationsSummary = {
   assigned: number;
   completed: number;
@@ -12,10 +10,10 @@ export type AdminOperationsSummary = {
 
 export type AdminOperationsCompletionTask = {
   id: string;
-  title: string;
-  taskType: TaskType;
   completionCount: number;
   submittedAt: string;
+  taskType: TaskType;
+  title: string;
 };
 
 export type AdminOperationsCompletionDay = {
@@ -24,35 +22,58 @@ export type AdminOperationsCompletionDay = {
   tasks: AdminOperationsCompletionTask[];
 };
 
-export type AdminOperationsMember = {
-  id: string;
-  fullName: string;
-  role: Role;
-  roleLabel: string;
-  todayPending: number;
-  status: "complete" | "idle" | "in_progress" | "needs_attention";
-  periods: Record<AdminOperationsPeriod, AdminOperationsSummary>;
-  completions: Record<AdminOperationsPeriod, AdminOperationsCompletionDay[]>;
+export type AdminOperationsSelection = {
+  teamId: string | null;
+  zoneId: string | null;
+  regionId: string | null;
 };
 
-export type AdminOperationsTask = {
+export type AdminOperationsNodeSummary = {
   id: string;
-  title: string;
-  deadlineAt: string;
-  assigned: number;
-  completed: number;
-  pending: number;
-  completionPercent: number;
+  memberCount: number;
+  name: string;
+  summary: AdminOperationsSummary;
+};
+
+export type AdminOperationsRegionNode = AdminOperationsNodeSummary & {
+  teamId: string;
+  zoneId: string;
+};
+
+export type AdminOperationsZoneNode = AdminOperationsNodeSummary & {
+  regions: AdminOperationsRegionNode[];
+  teamId: string;
+};
+
+export type AdminOperationsTeamNode = AdminOperationsNodeSummary & {
+  zones: AdminOperationsZoneNode[];
+};
+
+export type AdminOperationsMember = {
+  completionDays: AdminOperationsCompletionDay[];
+  id: string;
+  fullName: string;
+  regionId: string | null;
+  role: Role;
+  roleLabel: string;
+  status: "complete" | "idle" | "in_progress" | "needs_attention";
+  summary: AdminOperationsSummary;
+  teamId: string | null;
+  zoneId: string | null;
 };
 
 export type AdminOperationsView = {
+  dateKey: string;
+  members: AdminOperationsMember[];
   scope: {
+    memberCount: number;
+    name: string;
     role: Role;
     roleLabel: string;
-    name: string;
-    memberCount: number;
   };
-  periods: Record<AdminOperationsPeriod, AdminOperationsSummary>;
-  members: AdminOperationsMember[];
-  todayTasks: AdminOperationsTask[];
+  selectionDefaults: AdminOperationsSelection;
+  summary: AdminOperationsSummary;
+  tree: {
+    teams: AdminOperationsTeamNode[];
+  };
 };

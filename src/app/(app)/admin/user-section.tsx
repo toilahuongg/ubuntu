@@ -253,9 +253,9 @@ function UserRow({
 function StatusBadge({ status }: { status: UserStatus }) {
   const color =
     status === "ACTIVE"
-      ? "bg-emerald-500/15 text-emerald-400"
+      ? "bg-emerald-500/12 text-emerald-700"
       : status === "PENDING"
-        ? "bg-yellow-500/15 text-yellow-400"
+        ? "bg-yellow-500/15 text-yellow-700"
         : "bg-destructive/15 text-destructive";
   const dot =
     status === "ACTIVE"
@@ -265,7 +265,7 @@ function StatusBadge({ status }: { status: UserStatus }) {
         : "bg-destructive";
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${color}`}
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold ${color}`}
     >
       <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${dot}`} />
       {STATUS_LABELS[status]}
@@ -345,7 +345,7 @@ function EditUserRow({
   return (
     <form action={handleSubmit} className="space-y-3 px-4 py-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-xs font-semibold text-muted-foreground">
           Sửa người dùng
         </p>
         <button

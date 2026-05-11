@@ -26,7 +26,7 @@ export function PendingUsers({ users }: { users: SerializedUser[] }) {
   return (
     <section>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2 className="font-display text-sm font-semibold text-foreground">
           <Clock className="mr-1 inline h-3.5 w-3.5" />
           Chờ duyệt ({users.length})
         </h2>

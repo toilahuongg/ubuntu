@@ -106,7 +106,7 @@ self.addEventListener("push", (event) => {
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
-  } catch (_err) {
+  } catch {
     data = { title: "Thông báo", body: event.data ? event.data.text() : "" };
   }
 

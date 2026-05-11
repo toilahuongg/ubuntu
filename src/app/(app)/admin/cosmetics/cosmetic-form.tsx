@@ -98,7 +98,7 @@ export function CosmeticForm({ initial }: { initial: Initial | null }) {
 
       {/* Live preview */}
       <div className="glass-card p-4">
-        <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+        <p className="mb-2 text-[11px] font-medium text-muted-foreground">
           Xem trước
         </p>
         <p className="text-lg font-semibold">
@@ -163,7 +163,7 @@ export function CosmeticForm({ initial }: { initial: Initial | null }) {
       </div>
 
       <div className="glass-card space-y-3 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-semibold text-muted-foreground">
           Hình thức hiển thị
         </p>
         {(slot === "prefix" || slot === "suffix") && (
@@ -206,7 +206,7 @@ export function CosmeticForm({ initial }: { initial: Initial | null }) {
       </div>
 
       <div className="glass-card space-y-3 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-semibold text-muted-foreground">
           Mở khóa & giá
         </p>
         <div className="grid grid-cols-2 gap-2">

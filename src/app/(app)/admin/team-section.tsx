@@ -91,7 +91,7 @@ function EditTeamRow({ team, onClose }: { team: Team; onClose: () => void }) {
   return (
     <form action={handleSubmit} className="space-y-3 px-4 py-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-xs font-semibold text-muted-foreground">
           Sửa nhóm
         </p>
         <button

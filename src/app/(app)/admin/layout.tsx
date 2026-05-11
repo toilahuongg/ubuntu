@@ -23,6 +23,8 @@ export default async function AdminLayout({
   if (!canManage) redirect("/dashboard");
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">{children}</div>
+    <div className="admin-shell mx-auto w-full max-w-md space-y-4 animate-slide-up">
+      {children}
+    </div>
   );
 }

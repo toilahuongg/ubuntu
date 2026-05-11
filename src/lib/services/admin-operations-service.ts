@@ -1,36 +1,68 @@
 import "server-only";
 
-import { getIsoWeekdayFromDateKey, getYearMonthFromDateKey } from "@/lib/dates";
+import { getYearMonthFromDateKey } from "@/lib/dates";
 import type { SerializedUser, SessionUser } from "@/lib/domain";
 import { ROLE_LABELS } from "@/lib/domain";
 import {
   SubmissionModel,
-  type SubmissionRecordModel,
   TaskModel,
+  type SubmissionRecordModel,
   type TaskRecord,
 } from "@/lib/models";
 import { connectToDatabase } from "@/lib/mongoose";
-import {
-  getUserOrgContext,
-  listVisibleUsersForActor,
-} from "@/lib/services/organization-service";
 import type {
   AdminOperationsCompletionDay,
   AdminOperationsCompletionTask,
   AdminOperationsMember,
-  AdminOperationsPeriod,
+  AdminOperationsRegionNode,
+  AdminOperationsSelection,
   AdminOperationsSummary,
+  AdminOperationsTeamNode,
   AdminOperationsView,
+  AdminOperationsZoneNode,
 } from "@/lib/services/admin-operations-types";
 import { normalizeTaskType } from "@/lib/tasks/constants";
+import {
+  getStructureSnapshot,
+  getUserOrgContext,
+  listVisibleUsersForActor,
+} from "@/lib/services/organization-service";
 import { appliesToUser } from "@/lib/tasks/policy";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
 import { taskToScope } from "@/lib/tasks/task-service";
 import { toObjectId } from "@/lib/utils/ids";
 
-type ProgressSlot = {
-  assigned: boolean;
-  completed: boolean;
+type ProgressCounter = {
+  assigned: number;
+  completed: number;
+};
+
+type AdminOperationsStructure = {
+  regions: Array<{
+    id: string;
+    name: string;
+    teamId: string;
+    zoneId: string;
+  }>;
+  teams: Array<{
+    id: string;
+    name: string;
+  }>;
+  zones: Array<{
+    id: string;
+    name: string;
+    teamId: string;
+  }>;
+};
+
+type BuildAdminOperationsViewModelInput = {
+  actor: SessionUser;
+  dateKey: string;
+  orgContext: Awaited<ReturnType<typeof getUserOrgContext>>;
+  structure: AdminOperationsStructure;
+  submissions: SubmissionRecordModel[];
+  tasks: TaskRecord[];
+  visibleUsers: SerializedUser[];
 };
 
 function shiftDateKey(dateKey: string, days: number) {
@@ -49,10 +81,7 @@ function enumerateDates(startKey: string, endKey: string) {
   return dates;
 }
 
-export function getAdminOperationsPeriodDateKeys(dateKey: string) {
-  const weekday = getIsoWeekdayFromDateKey(dateKey);
-  const weekStart = shiftDateKey(dateKey, 1 - weekday);
-  const weekEnd = shiftDateKey(dateKey, 7 - weekday);
+export function getAdminOperationsMonthDateKeys(dateKey: string) {
   const [year, month] = getYearMonthFromDateKey(dateKey)
     .split("-")
     .map(Number);
@@ -62,25 +91,49 @@ export function getAdminOperationsPeriodDateKeys(dateKey: string) {
     monthEndDay,
   ).padStart(2, "0")}`;
 
-  return {
-    day: [dateKey],
-    week: enumerateDates(weekStart, weekEnd),
-    month: enumerateDates(monthStart, monthEnd),
-  } satisfies Record<AdminOperationsPeriod, string[]>;
+  return enumerateDates(monthStart, monthEnd);
 }
 
-export function summarizeProgressSlots(
-  slots: readonly ProgressSlot[],
-): AdminOperationsSummary {
-  const assigned = slots.filter((slot) => slot.assigned).length;
-  const completed = slots.filter((slot) => slot.assigned && slot.completed).length;
+function createCounter(): ProgressCounter {
+  return { assigned: 0, completed: 0 };
+}
+
+function buildCompletionDay(
+  date: string,
+  tasks: AdminOperationsCompletionTask[],
+): AdminOperationsCompletionDay {
   return {
-    assigned,
-    completed,
-    pending: Math.max(assigned - completed, 0),
-    completionPercent:
-      assigned > 0 ? Math.round((completed / assigned) * 100) : 0,
+    completionCount: tasks.reduce(
+      (total, task) => total + task.completionCount,
+      0,
+    ),
+    date,
+    tasks,
   };
+}
+
+function counterToSummary(counter: ProgressCounter): AdminOperationsSummary {
+  return {
+    assigned: counter.assigned,
+    completed: counter.completed,
+    pending: Math.max(counter.assigned - counter.completed, 0),
+    completionPercent:
+      counter.assigned > 0
+        ? Math.round((counter.completed / counter.assigned) * 100)
+        : 0,
+  };
+}
+
+function addCounter(target: ProgressCounter, source: ProgressCounter) {
+  target.assigned += source.assigned;
+  target.completed += source.completed;
+}
+
+function memberStatusWeight(status: AdminOperationsMember["status"]) {
+  if (status === "needs_attention") return 0;
+  if (status === "in_progress") return 1;
+  if (status === "complete") return 2;
+  return 3;
 }
 
 function userShape(
@@ -104,47 +157,326 @@ function submissionKey(taskId: string, userId: string, dateKey: string) {
   return `${taskId}:${userId}:${dateKey}`;
 }
 
-function emptySummary(): AdminOperationsSummary {
-  return {
-    assigned: 0,
-    completed: 0,
-    pending: 0,
-    completionPercent: 0,
-  };
-}
-
-function buildCompletionDay(
-  date: string,
-  tasks: AdminOperationsCompletionTask[],
-): AdminOperationsCompletionDay {
-  return {
-    date,
-    completionCount: tasks.reduce(
-      (total, task) => total + task.completionCount,
-      0,
-    ),
-    tasks,
-  };
-}
-
 function resolveScopeName(
   actor: SessionUser,
-  users: SerializedUser[],
   context: Awaited<ReturnType<typeof getUserOrgContext>>,
 ) {
-  if (actor.role === "TEAM_LEAD") return context.team?.name ?? "Toàn nhóm";
+  if (actor.role === "ADMIN") return "Toàn hệ thống";
+  if (actor.role === "TEAM_LEAD") return context.team?.name ?? "Nhóm của tôi";
   if (actor.role === "ZONE_LEAD") return context.zone?.name ?? "Địa vực của tôi";
   if (actor.role === "REGIONAL_LEAD") {
     return context.region?.name ?? "Khu vực của tôi";
   }
-  return users.length > 0 ? "Toàn hệ thống" : "Quản trị";
+  return "Phạm vi của tôi";
 }
 
 function resolveMemberStatus(summary: AdminOperationsSummary) {
   if (summary.assigned === 0) return "idle" as const;
-  if (summary.pending > 0) return "needs_attention" as const;
-  if (summary.completionPercent === 100) return "complete" as const;
+  if (summary.pending === 0) return "complete" as const;
+  if (summary.completed === 0) return "needs_attention" as const;
   return "in_progress" as const;
+}
+
+function buildSelectionDefaults(
+  actor: SessionUser,
+  structure: AdminOperationsStructure,
+): AdminOperationsSelection {
+  const firstTeamId = structure.teams[0]?.id ?? null;
+  const firstZoneId = structure.zones[0]?.id ?? null;
+  const firstRegionId = structure.regions[0]?.id ?? null;
+
+  return {
+    teamId:
+      actor.role === "TEAM_LEAD" ||
+      actor.role === "ZONE_LEAD" ||
+      actor.role === "REGIONAL_LEAD"
+        ? actor.teamId ?? firstTeamId
+        : null,
+    zoneId:
+      actor.role === "ZONE_LEAD" || actor.role === "REGIONAL_LEAD"
+        ? actor.zoneId ?? firstZoneId
+        : null,
+    regionId:
+      actor.role === "REGIONAL_LEAD"
+        ? actor.regionId ?? firstRegionId
+        : null,
+  };
+}
+
+export function buildAdminOperationsViewModel({
+  actor,
+  dateKey,
+  orgContext,
+  structure,
+  submissions,
+  tasks,
+  visibleUsers,
+}: BuildAdminOperationsViewModelInput): AdminOperationsView {
+  const monthDates = getAdminOperationsMonthDateKeys(dateKey);
+  const completedSlots = new Set(
+    submissions
+      .filter((submission) => (submission.completionCount ?? 0) > 0)
+      .map((submission) =>
+        submissionKey(
+          submission.taskId.toString(),
+          submission.subjectUserId.toString(),
+          submission.date,
+        ),
+      ),
+  );
+  const taskById = new Map(tasks.map((task) => [task._id.toString(), task]));
+  const userById = new Map(visibleUsers.map((user) => [user.id, user]));
+  const completionTasksByMemberDate = new Map<
+    string,
+    Map<string, AdminOperationsCompletionTask[]>
+  >();
+
+  for (const submission of submissions) {
+    const completionCount = submission.completionCount ?? 1;
+    if (completionCount <= 0) continue;
+
+    const taskId = submission.taskId.toString();
+    const userId = submission.subjectUserId.toString();
+    const task = taskById.get(taskId);
+    const user = userById.get(userId);
+
+    if (!task || !user) continue;
+    if (!isTaskScheduledForDate(task, submission.date)) continue;
+    if (!appliesToUser(taskToScope(task), userShape(user))) continue;
+
+    const byDate =
+      completionTasksByMemberDate.get(userId) ??
+      new Map<string, AdminOperationsCompletionTask[]>();
+    const tasksForDate = byDate.get(submission.date) ?? [];
+    tasksForDate.push({
+      completionCount,
+      id: taskId,
+      submittedAt: submission.submittedAt.toISOString(),
+      taskType: normalizeTaskType(task.taskType),
+      title: task.title,
+    });
+    tasksForDate.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+    byDate.set(submission.date, tasksForDate);
+    completionTasksByMemberDate.set(userId, byDate);
+  }
+
+  const rootCounter = createCounter();
+  const memberCounters = new Map<string, ProgressCounter>();
+
+  for (const user of visibleUsers) {
+    memberCounters.set(user.id, createCounter());
+  }
+
+  for (const task of tasks) {
+    const taskId = task._id.toString();
+    const scope = taskToScope(task);
+    const scheduledDates = monthDates.filter((currentDate) =>
+      isTaskScheduledForDate(task, currentDate),
+    );
+
+    if (scheduledDates.length === 0) continue;
+
+    for (const currentDate of scheduledDates) {
+      for (const user of visibleUsers) {
+        if (!appliesToUser(scope, userShape(user))) continue;
+
+        const counter = memberCounters.get(user.id);
+        if (!counter) continue;
+
+        counter.assigned += 1;
+        rootCounter.assigned += 1;
+
+        if (completedSlots.has(submissionKey(taskId, user.id, currentDate))) {
+          counter.completed += 1;
+          rootCounter.completed += 1;
+        }
+      }
+    }
+  }
+
+  const members = visibleUsers
+    .map((user) => {
+      const summary = counterToSummary(memberCounters.get(user.id) ?? createCounter());
+      const memberCompletionTasks = completionTasksByMemberDate.get(user.id);
+      return {
+        completionDays: monthDates.map((date) =>
+          buildCompletionDay(date, memberCompletionTasks?.get(date) ?? []),
+        ),
+        id: user.id,
+        fullName: user.fullName,
+        regionId: user.regionId ?? null,
+        role: user.role,
+        roleLabel: ROLE_LABELS[user.role],
+        status: resolveMemberStatus(summary),
+        summary,
+        teamId: user.teamId ?? null,
+        zoneId: user.zoneId ?? null,
+      } satisfies AdminOperationsMember;
+    })
+    .sort((a, b) => {
+      const statusDiff = memberStatusWeight(a.status) - memberStatusWeight(b.status);
+      if (statusDiff !== 0) return statusDiff;
+      const pendingDiff = b.summary.pending - a.summary.pending;
+      if (pendingDiff !== 0) return pendingDiff;
+      const assignedDiff = b.summary.assigned - a.summary.assigned;
+      if (assignedDiff !== 0) return assignedDiff;
+      return a.fullName.localeCompare(b.fullName, "vi");
+    });
+
+  const memberCountByTeam = new Map<string, number>();
+  const memberCountByZone = new Map<string, number>();
+  const memberCountByRegion = new Map<string, number>();
+  const teamCounters = new Map<string, ProgressCounter>();
+  const zoneCounters = new Map<string, ProgressCounter>();
+  const regionCounters = new Map<string, ProgressCounter>();
+
+  for (const team of structure.teams) {
+    teamCounters.set(team.id, createCounter());
+  }
+  for (const zone of structure.zones) {
+    zoneCounters.set(zone.id, createCounter());
+  }
+  for (const region of structure.regions) {
+    regionCounters.set(region.id, createCounter());
+  }
+
+  for (const member of members) {
+    if (member.teamId) {
+      memberCountByTeam.set(
+        member.teamId,
+        (memberCountByTeam.get(member.teamId) ?? 0) + 1,
+      );
+      addCounter(teamCounters.get(member.teamId) ?? createCounter(), member.summary);
+    }
+    if (member.zoneId) {
+      memberCountByZone.set(
+        member.zoneId,
+        (memberCountByZone.get(member.zoneId) ?? 0) + 1,
+      );
+      addCounter(zoneCounters.get(member.zoneId) ?? createCounter(), member.summary);
+    }
+    if (member.regionId) {
+      memberCountByRegion.set(
+        member.regionId,
+        (memberCountByRegion.get(member.regionId) ?? 0) + 1,
+      );
+      addCounter(regionCounters.get(member.regionId) ?? createCounter(), member.summary);
+    }
+  }
+
+  const regionsByZone = new Map<string, AdminOperationsRegionNode[]>();
+  for (const region of structure.regions) {
+    const regionNode: AdminOperationsRegionNode = {
+      id: region.id,
+      memberCount: memberCountByRegion.get(region.id) ?? 0,
+      name: region.name,
+      summary: counterToSummary(regionCounters.get(region.id) ?? createCounter()),
+      teamId: region.teamId,
+      zoneId: region.zoneId,
+    };
+    const bucket = regionsByZone.get(region.zoneId) ?? [];
+    bucket.push(regionNode);
+    regionsByZone.set(region.zoneId, bucket);
+  }
+
+  const zonesByTeam = new Map<string, AdminOperationsZoneNode[]>();
+  for (const zone of structure.zones) {
+    const zoneNode: AdminOperationsZoneNode = {
+      id: zone.id,
+      memberCount: memberCountByZone.get(zone.id) ?? 0,
+      name: zone.name,
+      regions: regionsByZone.get(zone.id) ?? [],
+      summary: counterToSummary(zoneCounters.get(zone.id) ?? createCounter()),
+      teamId: zone.teamId,
+    };
+    const bucket = zonesByTeam.get(zone.teamId) ?? [];
+    bucket.push(zoneNode);
+    zonesByTeam.set(zone.teamId, bucket);
+  }
+
+  const teams: AdminOperationsTeamNode[] = structure.teams.map((team) => ({
+    id: team.id,
+    memberCount: memberCountByTeam.get(team.id) ?? 0,
+    name: team.name,
+    summary: counterToSummary(teamCounters.get(team.id) ?? createCounter()),
+    zones: zonesByTeam.get(team.id) ?? [],
+  }));
+
+  return {
+    dateKey,
+    members,
+    scope: {
+      memberCount: visibleUsers.length,
+      name: resolveScopeName(actor, orgContext),
+      role: actor.role,
+      roleLabel: ROLE_LABELS[actor.role],
+    },
+    selectionDefaults: buildSelectionDefaults(actor, structure),
+    summary: counterToSummary(rootCounter),
+    tree: {
+      teams,
+    },
+  };
+}
+
+async function fetchStructureForOperations(
+  actor: SessionUser,
+  visibleUsers: SerializedUser[],
+) {
+  const scopedSnapshot = await getStructureSnapshot(actor);
+  const visibleTeamIds = new Set(
+    visibleUsers.map((user) => user.teamId).filter((id): id is string => !!id),
+  );
+  const visibleZoneIds = new Set(
+    visibleUsers.map((user) => user.zoneId).filter((id): id is string => !!id),
+  );
+  const visibleRegionIds = new Set(
+    visibleUsers.map((user) => user.regionId).filter((id): id is string => !!id),
+  );
+
+  const teams = scopedSnapshot.teams
+    .filter(
+      (team) =>
+        actor.role === "ADMIN" ||
+        actor.role === "TEAM_LEAD" ||
+        visibleTeamIds.has(team.id) ||
+        scopedSnapshot.zones.some((zone) => zone.teamId === team.id) ||
+        scopedSnapshot.regions.some((region) => region.teamId === team.id),
+    )
+    .map((team) => ({ id: team.id, name: team.name }));
+
+  const zones = scopedSnapshot.zones
+    .filter(
+      (zone) =>
+        actor.role === "ADMIN" ||
+        actor.role === "TEAM_LEAD" ||
+        actor.role === "ZONE_LEAD" ||
+        visibleZoneIds.has(zone.id) ||
+        scopedSnapshot.regions.some((region) => region.zoneId === zone.id),
+    )
+    .map((zone) => ({
+      id: zone.id,
+      name: zone.name,
+      teamId: zone.teamId,
+    }));
+
+  const regions = scopedSnapshot.regions
+    .filter(
+      (region) =>
+        actor.role === "ADMIN" ||
+        actor.role === "TEAM_LEAD" ||
+        actor.role === "ZONE_LEAD" ||
+        actor.role === "REGIONAL_LEAD" ||
+        visibleRegionIds.has(region.id),
+    )
+    .map((region) => ({
+      id: region.id,
+      name: region.name,
+      teamId: region.teamId,
+      zoneId: region.zoneId,
+    }));
+
+  return { teams, zones, regions };
 }
 
 export async function buildAdminOperationsView(
@@ -157,30 +489,8 @@ export async function buildAdminOperationsView(
     listVisibleUsersForActor(actor),
     getUserOrgContext(actor),
   ]);
-  const periodDates = getAdminOperationsPeriodDateKeys(dateKey);
-  const allDates = Array.from(
-    new Set(Object.values(periodDates).flat()),
-  ).sort();
-
-  const emptyPeriods = {
-    day: emptySummary(),
-    week: emptySummary(),
-    month: emptySummary(),
-  };
-
-  if (visibleUsers.length === 0) {
-    return {
-      scope: {
-        role: actor.role,
-        roleLabel: ROLE_LABELS[actor.role],
-        name: resolveScopeName(actor, visibleUsers, orgContext),
-        memberCount: 0,
-      },
-      periods: emptyPeriods,
-      members: [],
-      todayTasks: [],
-    };
-  }
+  const structure = await fetchStructureForOperations(actor, visibleUsers);
+  const monthDates = getAdminOperationsMonthDateKeys(dateKey);
 
   const teamIds = uniqueObjectIds(visibleUsers.map((user) => user.teamId));
   const zoneIds = uniqueObjectIds(visibleUsers.map((user) => user.zoneId));
@@ -209,15 +519,15 @@ export async function buildAdminOperationsView(
 
   const scheduledTaskIds = new Set<string>();
   for (const task of tasks) {
-    if (allDates.some((date) => isTaskScheduledForDate(task, date))) {
+    if (monthDates.some((date) => isTaskScheduledForDate(task, date))) {
       scheduledTaskIds.add(task._id.toString());
     }
   }
 
   const submissions =
-    scheduledTaskIds.size > 0
+    visibleUsers.length > 0 && scheduledTaskIds.size > 0
       ? ((await SubmissionModel.find({
-          date: { $in: allDates },
+          date: { $in: monthDates },
           subjectUserId: { $in: visibleUsers.map((user) => toObjectId(user.id)) },
           taskId: {
             $in: Array.from(scheduledTaskIds).map((id) => toObjectId(id)),
@@ -225,185 +535,13 @@ export async function buildAdminOperationsView(
         }).lean()) as SubmissionRecordModel[])
       : [];
 
-  const completedSlots = new Set(
-    submissions
-      .filter((submission) => (submission.completionCount ?? 0) > 0)
-      .map((submission) =>
-        submissionKey(
-          submission.taskId.toString(),
-          submission.subjectUserId.toString(),
-          submission.date,
-        ),
-      ),
-  );
-
-  const slotsByPeriod: Record<AdminOperationsPeriod, ProgressSlot[]> = {
-    day: [],
-    week: [],
-    month: [],
-  };
-  const slotsByMember = new Map<
-    string,
-    Record<AdminOperationsPeriod, ProgressSlot[]>
-  >();
-  const completionTasksByMemberDate = new Map<
-    string,
-    Map<string, AdminOperationsCompletionTask[]>
-  >();
-  const todayTaskSlots = new Map<string, ProgressSlot[]>();
-
-  for (const user of visibleUsers) {
-    slotsByMember.set(user.id, {
-      day: [],
-      week: [],
-      month: [],
-    });
-  }
-
-  const taskById = new Map(tasks.map((task) => [task._id.toString(), task]));
-  const userById = new Map(visibleUsers.map((user) => [user.id, user]));
-
-  for (const submission of submissions) {
-    if ((submission.completionCount ?? 0) <= 0) continue;
-
-    const taskId = submission.taskId.toString();
-    const userId = submission.subjectUserId.toString();
-    const task = taskById.get(taskId);
-    const user = userById.get(userId);
-
-    if (!task || !user) continue;
-    if (!isTaskScheduledForDate(task, submission.date)) continue;
-    if (!appliesToUser(taskToScope(task), userShape(user))) continue;
-
-    const byDate =
-      completionTasksByMemberDate.get(userId) ??
-      new Map<string, AdminOperationsCompletionTask[]>();
-    const tasksForDate = byDate.get(submission.date) ?? [];
-    tasksForDate.push({
-      id: taskId,
-      title: task.title,
-      taskType: normalizeTaskType(task.taskType),
-      completionCount: submission.completionCount,
-      submittedAt: submission.submittedAt.toISOString(),
-    });
-    tasksForDate.sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
-    byDate.set(submission.date, tasksForDate);
-    completionTasksByMemberDate.set(userId, byDate);
-  }
-
-  for (const task of tasks) {
-    const taskId = task._id.toString();
-    const scope = taskToScope(task);
-
-    for (const period of Object.keys(periodDates) as AdminOperationsPeriod[]) {
-      for (const currentDate of periodDates[period]) {
-        if (!isTaskScheduledForDate(task, currentDate)) continue;
-
-        for (const user of visibleUsers) {
-          if (!appliesToUser(scope, userShape(user))) continue;
-
-          const slot = {
-            assigned: true,
-            completed: completedSlots.has(
-              submissionKey(taskId, user.id, currentDate),
-            ),
-          };
-          slotsByPeriod[period].push(slot);
-          slotsByMember.get(user.id)?.[period].push(slot);
-
-          if (period === "day") {
-            const taskSlots = todayTaskSlots.get(taskId) ?? [];
-            taskSlots.push(slot);
-            todayTaskSlots.set(taskId, taskSlots);
-          }
-        }
-      }
-    }
-  }
-
-  const members = visibleUsers
-    .map((user) => {
-      const memberSlots = slotsByMember.get(user.id) ?? {
-        day: [],
-        week: [],
-        month: [],
-      };
-      const periods = {
-        day: summarizeProgressSlots(memberSlots.day),
-        week: summarizeProgressSlots(memberSlots.week),
-        month: summarizeProgressSlots(memberSlots.month),
-      };
-      const memberCompletionTasks = completionTasksByMemberDate.get(user.id);
-      const completions = {
-        day: periodDates.day.map((date) =>
-          buildCompletionDay(date, memberCompletionTasks?.get(date) ?? []),
-        ),
-        week: periodDates.week.map((date) =>
-          buildCompletionDay(date, memberCompletionTasks?.get(date) ?? []),
-        ),
-        month: periodDates.month.map((date) =>
-          buildCompletionDay(date, memberCompletionTasks?.get(date) ?? []),
-        ),
-      };
-
-      return {
-        id: user.id,
-        fullName: user.fullName,
-        role: user.role,
-        roleLabel: ROLE_LABELS[user.role],
-        todayPending: periods.day.pending,
-        status: resolveMemberStatus(periods.day),
-        periods,
-        completions,
-      };
-    })
-    .sort((a, b) => {
-      const statusWeight = (status: AdminOperationsMember["status"]) =>
-        status === "needs_attention" ? 0 : status === "in_progress" ? 1 : 2;
-      const statusDiff = statusWeight(a.status) - statusWeight(b.status);
-      if (statusDiff !== 0) return statusDiff;
-      const pendingDiff = b.todayPending - a.todayPending;
-      if (pendingDiff !== 0) return pendingDiff;
-      const percentDiff =
-        a.periods.day.completionPercent - b.periods.day.completionPercent;
-      if (percentDiff !== 0) return percentDiff;
-      return a.fullName.localeCompare(b.fullName, "vi");
-    });
-
-  const todayTasks = tasks
-    .map((task) => {
-      const taskId = task._id.toString();
-      const summary = summarizeProgressSlots(todayTaskSlots.get(taskId) ?? []);
-      return {
-        id: taskId,
-        title: task.title,
-        deadlineAt: `${dateKey}T${task.deadlineTime}:00`,
-        assigned: summary.assigned,
-        completed: summary.completed,
-        pending: summary.pending,
-        completionPercent: summary.completionPercent,
-      };
-    })
-    .filter((task) => task.assigned > 0)
-    .sort((a, b) => {
-      const pendingDiff = b.pending - a.pending;
-      if (pendingDiff !== 0) return pendingDiff;
-      return a.deadlineAt.localeCompare(b.deadlineAt);
-    });
-
-  return {
-    scope: {
-      role: actor.role,
-      roleLabel: ROLE_LABELS[actor.role],
-      name: resolveScopeName(actor, visibleUsers, orgContext),
-      memberCount: visibleUsers.length,
-    },
-    periods: {
-      day: summarizeProgressSlots(slotsByPeriod.day),
-      week: summarizeProgressSlots(slotsByPeriod.week),
-      month: summarizeProgressSlots(slotsByPeriod.month),
-    },
-    members,
-    todayTasks,
-  };
+  return buildAdminOperationsViewModel({
+    actor,
+    dateKey,
+    orgContext,
+    structure,
+    submissions,
+    tasks,
+    visibleUsers,
+  });
 }

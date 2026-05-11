@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
-import { MapPin, Pencil, Users, X } from "lucide-react";
+import { ChevronRight, MapPin, Pencil, Users, X } from "lucide-react";
 
 import { deleteRegionAction, updateRegionAction } from "@/app/(app)/actions";
 import { ConfirmDeleteButton, FormError } from "./_shared";
@@ -43,22 +44,31 @@ export function RegionSection({ regions }: { regions: Region[] }) {
             key={region.id}
             className="flex items-center justify-between px-4 py-3"
           >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <p className="truncate text-sm font-medium">{region.name}</p>
+            <Link
+              href={`/admin/regions/${encodeURIComponent(region.id)}`}
+              className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg pr-2 transition-colors hover:text-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+              aria-label={`Xem tiến độ thành viên khu vực ${region.name}`}
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <p className="truncate text-sm font-medium">{region.name}</p>
+                </div>
+                <p className="ml-5.5 text-[11px] text-muted-foreground">
+                  {region.code}
+                  {region.zoneName && ` · ${region.zoneName}`}
+                  {region.teamName && ` · ${region.teamName}`}
+                </p>
               </div>
-              <p className="ml-5.5 text-[11px] text-muted-foreground">
-                {region.code}
-                {region.zoneName && ` · ${region.zoneName}`}
-                {region.teamName && ` · ${region.teamName}`}
-              </p>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {region.memberCount}
-              </span>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {region.memberCount}
+                </span>
+                <ChevronRight className="h-4 w-4" />
+              </div>
+            </Link>
+            <div className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
               <button
                 type="button"
                 onClick={() => setEditingId(region.id)}
@@ -103,7 +113,7 @@ function EditRegionRow({
   return (
     <form action={handleSubmit} className="space-y-3 px-4 py-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-xs font-semibold text-muted-foreground">
           Sửa khu vực
         </p>
         <button

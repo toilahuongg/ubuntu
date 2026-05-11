@@ -659,6 +659,60 @@
     @apply ring-2 ring-primary/25;
     border-color: var(--primary);
   }
+
+  .admin-shell {
+    --admin-border: rgba(125, 190, 229, 0.58);
+    --admin-muted-border: rgba(125, 190, 229, 0.32);
+    --admin-blue: #0b8fd8;
+    color: #16324a;
+  }
+
+  .admin-shell .glass-card {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: 1px solid var(--admin-border);
+    border-radius: 0.625rem;
+    box-shadow: 0 1px 2px rgba(12, 92, 140, 0.05);
+  }
+
+  .admin-shell .glass-card:hover {
+    box-shadow: 0 1px 2px rgba(12, 92, 140, 0.06);
+  }
+
+  .admin-shell .btn-gradient {
+    background: var(--primary);
+    border-radius: 0.625rem;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .admin-shell .btn-gradient:hover {
+    box-shadow: none;
+    transform: none;
+    opacity: 0.92;
+  }
+
+  .admin-shell .form-select {
+    border-color: var(--admin-border);
+    border-radius: 0.625rem;
+    background-color: var(--card);
+  }
+
+  .admin-shell input:not([type="checkbox"]):not([type="radio"]),
+  .admin-shell textarea,
+  .admin-shell select {
+    border-color: var(--admin-border);
+    border-radius: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.9);
+  }
+
+  .admin-shell input:not([type="checkbox"]):not([type="radio"]):focus,
+  .admin-shell textarea:focus,
+  .admin-shell select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+  }
 }
 
 @media (min-width: 376px) and (max-width: 559px) {

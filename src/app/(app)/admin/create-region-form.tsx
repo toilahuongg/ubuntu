@@ -6,8 +6,10 @@ import { createRegionAction } from "@/app/(app)/actions";
 import { FormError, FormSuccess } from "./_shared";
 
 export function CreateRegionForm({
+  defaultZoneId,
   zones,
 }: {
+  defaultZoneId?: string;
   zones: { id: string; name: string; teamName?: string }[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -76,7 +78,12 @@ export function CreateRegionForm({
           placeholder="Mã (VD: kv-01)"
           className="h-10 rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
         />
-        <select name="zoneId" required className="form-select">
+        <select
+          name="zoneId"
+          required
+          defaultValue={defaultZoneId ?? ""}
+          className="form-select"
+        >
           <option value="">Chọn địa vực</option>
           {zones.map((zone) => (
             <option key={zone.id} value={zone.id}>

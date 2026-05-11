@@ -28,8 +28,8 @@ export default async function AdminCosmeticsPage() {
   return (
     <>
       <AdminSubHeader
-        title={`Trang bị tên (${cosmetics.length})`}
-        description="Tạo, chỉnh sửa, cấp trang bị cho người dùng"
+        title={`Cửa hàng (${cosmetics.length})`}
+        description="Quản lý vật phẩm, giá bán, trạng thái bán và cấp cho người dùng"
       />
       <CosmeticsManager cosmetics={serialized} />
     </>
