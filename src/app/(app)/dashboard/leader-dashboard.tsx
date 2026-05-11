@@ -19,10 +19,6 @@ export function LeaderDashboard({
   activities: ActivityEntry[];
   userId: string;
 }) {
-  const progressPercent =
-    data.nextLevelXp > 0
-      ? Math.min(100, Math.round((data.progressXp / data.nextLevelXp) * 100))
-      : 0;
   const monthlyCards = data.cards.filter(
     (card) => card.taskType === "MONTHLY_PER_MEMBER",
   );
@@ -54,13 +50,13 @@ export function LeaderDashboard({
 
       <LevelProgressCard
         completedCount={completedCount}
+        currentLevelXp={data.currentLevelXp}
         dailyScripture={data.dailyScripture}
         level={data.level}
         levelIcon={data.levelIcon}
         levelName={data.levelName}
         nextLevelXp={data.nextLevelXp}
         pendingCount={pendingCount}
-        progressPercent={progressPercent}
         progressXp={data.progressXp}
         totalXp={data.totalXp}
       />

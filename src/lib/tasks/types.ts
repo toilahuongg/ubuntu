@@ -161,6 +161,7 @@ export type DashboardView = {
 export type ScopeLabel = "TEAM" | "ZONE" | "REGION";
 
 type DashboardLevelSummary = {
+  currentLevelXp: number;
   dailyScripture: DailyScripture;
   totalXp: number;
   level: number;

@@ -4,29 +4,35 @@ import type { DailyScripture } from "@/lib/daily-scripture";
 
 type LevelProgressCardProps = {
   completedCount: number;
+  currentLevelXp: number;
   dailyScripture: DailyScripture;
   level: number;
   levelIcon: string;
   levelName: string;
   nextLevelXp: number;
   pendingCount: number;
-  progressPercent: number;
   progressXp: number;
   totalXp: number;
 };
 
 export function LevelProgressCard({
   completedCount,
+  currentLevelXp,
   dailyScripture,
   level,
   levelIcon,
   levelName,
   nextLevelXp,
   pendingCount,
-  progressPercent,
   progressXp,
   totalXp,
 }: LevelProgressCardProps) {
+  const levelSpanXp = Math.max(nextLevelXp - currentLevelXp, 0);
+  const progressPercent =
+    levelSpanXp > 0
+      ? Math.min(100, Math.max(0, Math.round((progressXp / levelSpanXp) * 100)))
+      : 100;
+
   return (
     <section className="glass-card overflow-hidden">
       <div
@@ -112,7 +118,7 @@ export function LevelProgressCard({
           </div>
           <p className="text-[11px] text-muted-foreground">
             {progressXp.toLocaleString("vi-VN")} /{" "}
-            {nextLevelXp.toLocaleString("vi-VN")} XP cho cấp kế tiếp
+            {levelSpanXp.toLocaleString("vi-VN")} XP cho cấp kế tiếp
           </p>
         </div>
       </div>
