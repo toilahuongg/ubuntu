@@ -489,6 +489,7 @@ export async function saveSubmission(
       subject: {
         id: subjectSession.id,
         fullName: decoratedSubjectName,
+        role: subjectSession.role,
         teamId: subjectSession.teamId,
         zoneId: subjectSession.zoneId,
         regionId: subjectSession.regionId,
@@ -503,7 +504,9 @@ export async function saveSubmission(
 
     if (result.taskJustCompleted && taskRaw.targetCount) {
       void notifyTaskCompletionToGroups({
+        excludeUserId: subjectSession.id,
         scope: {
+          scope: taskRaw.scope,
           teamId: taskRaw.teamId.toString(),
           zoneId: taskRaw.zoneId?.toString() ?? null,
           regionId: taskRaw.regionId?.toString() ?? null,
