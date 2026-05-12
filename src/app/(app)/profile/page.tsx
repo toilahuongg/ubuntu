@@ -58,40 +58,44 @@ export default async function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 animate-slide-up">
-      <section className="glass-card overflow-hidden">
-        <div className="flex items-center gap-4 p-4 sm:p-5">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full">
+      <section className="glass-card overflow-hidden border-0">
+        <div className="flex flex-col gap-4 p-4 min-[430px]:flex-row min-[430px]:items-start min-[430px]:gap-5 sm:p-6">
+          <div className="flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-2xl bg-overlay-subtle min-[430px]:h-24 min-[430px]:w-24 sm:h-28 sm:w-28">
             <Image
               src={progress.levelInfo.icon}
               alt={progress.levelInfo.nameVi}
-              width={68}
-              height={68}
-              className="rounded-full object-cover"
+              width={96}
+              height={96}
+              className="h-[72px] w-[72px] rounded-xl object-cover min-[430px]:h-20 min-[430px]:w-20 sm:h-24 sm:w-24"
               priority
             />
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate font-display text-xl font-bold tracking-tight">
+              <h1 className="min-w-0 truncate font-display text-xl font-bold tracking-tight sm:text-2xl">
                 {session.fullName}
               </h1>
-              <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary ring-1 ring-primary/20">
+              <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
                 {ROLE_LABELS[session.role]}
               </span>
             </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-overlay-subtle px-2.5 py-1 ring-1 ring-border">
-                <Trophy className="h-3.5 w-3.5 text-primary" />
-                Lv.{progress.level} - {progress.levelInfo.nameVi}
+            <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-muted-foreground min-[360px]:grid-cols-2 min-[560px]:flex min-[560px]:flex-wrap">
+              <span className="inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-overlay-subtle px-3 py-1.5">
+                <Trophy className="h-4 w-4 text-primary" />
+                <span className="min-w-0 truncate">
+                  Lv.{progress.level} - {progress.levelInfo.nameVi}
+                </span>
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-overlay-subtle px-2.5 py-1 ring-1 ring-border">
-                <Zap className="h-3.5 w-3.5 text-[color:var(--reward)]" />
-                {formatNumber(progress.totalXp)} XP
+              <span className="inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-overlay-subtle px-3 py-1.5">
+                <Zap className="h-4 w-4 text-[color:var(--reward)]" />
+                <span className="min-w-0 truncate">
+                  {formatNumber(progress.totalXp)} XP
+                </span>
               </span>
             </div>
-            <p className="mt-2 max-w-[28rem] text-xs leading-5 text-muted-foreground">
+            <p className="mt-3 max-w-[30rem] text-xs leading-5 text-muted-foreground sm:text-sm sm:leading-6">
               {progress.levelInfo.description}
             </p>
 
@@ -100,7 +104,7 @@ export default async function ProfilePage() {
                 <span>Tiến độ lên cấp</span>
                 <span>{progressPercent}%</span>
               </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-overlay-medium ring-1 ring-border">
+              <div className="h-3 overflow-hidden rounded-full bg-overlay-medium">
                 <div
                   className="progress-glow h-full rounded-full transition-all duration-500"
                   style={{

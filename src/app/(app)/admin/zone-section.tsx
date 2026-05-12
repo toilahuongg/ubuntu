@@ -45,7 +45,7 @@ export function ZoneSection({ zones }: { zones: Zone[] }) {
           >
             <Link
               href={`/admin/regions?zoneId=${encodeURIComponent(zone.id)}`}
-              className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg pr-2 transition-colors hover:text-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
+              className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-lg pr-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25"
               aria-label={`Xem khu vực của địa vực ${zone.name}`}
             >
               <div className="min-w-0">

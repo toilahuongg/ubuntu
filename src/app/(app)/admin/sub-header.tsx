@@ -16,7 +16,7 @@ export function AdminSubHeader({
         <Link
           href={backHref}
           aria-label="Quay lại"
-          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sky-50 hover:text-foreground"
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent/35 hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>

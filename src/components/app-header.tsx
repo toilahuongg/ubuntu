@@ -23,12 +23,12 @@ export function AppHeader({
       />
       <div className="relative mx-auto flex h-full max-w-2xl items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-overlay-medium">
+          <div className="flex h-8 w-8 items-center justify-center">
             <Image
-              src="/icons/logo.svg"
+              src="/icons/logo.png"
               alt="Ubuntu"
-              width={20}
-              height={20}
+              width={32}
+              height={32}
               priority
             />
           </div>

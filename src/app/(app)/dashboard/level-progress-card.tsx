@@ -43,45 +43,51 @@ export function LevelProgressCard({
     : `${totalXp.toLocaleString("vi-VN")} / ${nextLevelXp.toLocaleString("vi-VN")} XP`;
 
   return (
-    <section className="glass-card overflow-hidden p-4 sm:p-5">
-      <div className="flex items-start gap-4">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-overlay-subtle ring-1 ring-border">
+    <section className="glass-card overflow-hidden border-0 p-4 sm:p-6">
+      <div className="flex flex-col gap-4 min-[430px]:flex-row min-[430px]:items-start min-[430px]:gap-5">
+        <div className="flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-2xl bg-overlay-subtle min-[430px]:h-24 min-[430px]:w-24 sm:h-28 sm:w-28">
           <Image
             src={levelIcon}
             alt={levelName}
-            width={68}
-            height={68}
+            width={96}
+            height={96}
             priority
-            className="shrink-0 rounded-xl object-cover"
+            className="h-[72px] w-[72px] shrink-0 rounded-xl object-cover min-[430px]:h-20 min-[430px]:w-20 sm:h-24 sm:w-24"
           />
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="min-w-0 truncate font-display text-xl font-bold tracking-tight">
+            <h1 className="min-w-0 truncate font-display text-xl font-bold tracking-tight sm:text-2xl">
               {user.fullName}
             </h1>
-            <span className="rounded-lg bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary ring-1 ring-primary/20">
+            <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
               {ROLE_LABELS[user.role]}
             </span>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-overlay-subtle px-2.5 py-1 ring-1 ring-border">
-              <Trophy className="h-3.5 w-3.5 text-primary" />
-              Lv.{level} - {levelName}
+          <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-muted-foreground min-[360px]:grid-cols-2 min-[560px]:flex min-[560px]:flex-wrap">
+            <span className="inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-overlay-subtle px-3 py-1.5">
+              <Trophy className="h-4 w-4 text-primary" />
+              <span className="min-w-0 truncate">
+                Lv.{level} - {levelName}
+              </span>
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-overlay-subtle px-2.5 py-1 ring-1 ring-border">
-              <Zap className="h-3.5 w-3.5 text-[color:var(--reward)]" />
-              {totalXp.toLocaleString("vi-VN")} XP
+            <span className="inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-overlay-subtle px-3 py-1.5">
+              <Zap className="h-4 w-4 text-[color:var(--reward)]" />
+              <span className="min-w-0 truncate">
+                {totalXp.toLocaleString("vi-VN")} XP
+              </span>
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-overlay-subtle px-2.5 py-1 ring-1 ring-border">
-              <CheckCircle2 className="h-3.5 w-3.5 text-[color:var(--success)]" />
-              {completedCount} xong, {pendingCount} còn lại
+            <span className="inline-flex min-w-0 items-center gap-1.5 rounded-lg bg-overlay-subtle px-3 py-1.5 min-[360px]:col-span-2 min-[560px]:col-span-1">
+              <CheckCircle2 className="h-4 w-4 text-[color:var(--success)]" />
+              <span className="min-w-0 truncate">
+                {completedCount} xong, {pendingCount} còn lại
+              </span>
             </span>
           </div>
 
-          <p className="mt-2 max-w-[28rem] text-xs leading-5 text-muted-foreground">
+          <p className="mt-3 max-w-[30rem] text-xs leading-5 text-muted-foreground sm:text-sm sm:leading-6">
             {levelDescription}
           </p>
 
@@ -90,7 +96,7 @@ export function LevelProgressCard({
               <span>Tiến độ lên cấp</span>
               <span>{progressPercent}%</span>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-overlay-medium ring-1 ring-border">
+            <div className="h-3 w-full overflow-hidden rounded-full bg-overlay-medium">
               <div
                 className="progress-glow h-full rounded-full transition-all duration-500"
                 style={{
@@ -106,8 +112,8 @@ export function LevelProgressCard({
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-border bg-overlay-subtle p-3 sm:p-4">
-        <div className="mb-2 flex items-center justify-between gap-3">
+      <div className="mt-4 rounded-2xl bg-overlay-subtle p-3 sm:mt-5 sm:p-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <span className="inline-flex items-center gap-2 text-xs font-semibold text-foreground">
             <BookOpen className="h-4 w-4 text-primary" />
             Lời hôm nay

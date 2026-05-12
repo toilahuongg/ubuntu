@@ -68,14 +68,14 @@ export function RegionDetailActions({ region }: { region: RegionDetail }) {
           required
           defaultValue={region.name}
           placeholder="Tên khu vực"
-          className="h-10 w-full rounded-lg border border-sky-100 bg-white px-3 text-sm outline-none transition-colors focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+          className="h-10 w-full rounded-lg border border-border/60 bg-card px-3 text-sm outline-none transition-colors focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
         />
         <input
           name="code"
           required
           defaultValue={region.code}
           placeholder="Mã"
-          className="h-10 w-full rounded-lg border border-sky-100 bg-white px-3 text-sm outline-none transition-colors focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+          className="h-10 w-full rounded-lg border border-border/60 bg-card px-3 text-sm outline-none transition-colors focus:border-primary/60 focus:ring-2 focus:ring-primary/20"
         />
         {(region.zoneName || region.teamName) && (
           <p className="text-[11px] text-muted-foreground">

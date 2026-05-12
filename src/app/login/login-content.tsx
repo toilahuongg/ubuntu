@@ -131,12 +131,12 @@ export function LoginContent() {
       <div className="relative z-10 w-full max-w-sm animate-slide-up">
         {/* Logo */}
         <div className="mb-10 flex flex-col items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-overlay-medium backdrop-blur-sm">
+          <div className="flex h-16 w-16 items-center justify-center">
             <Image
-              src="/icons/logo.svg"
+              src="/icons/logo.png"
               alt="Ubuntu"
-              width={40}
-              height={40}
+              width={64}
+              height={64}
               priority
             />
           </div>

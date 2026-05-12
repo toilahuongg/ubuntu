@@ -59,6 +59,7 @@ function buildMonthlyPointsPipeline(yearMonth: string) {
         monthlyXp: { $sum: { $ifNull: ["$task.pointReward", 0] } },
       },
     },
+    { $match: { monthlyXp: { $gt: 0 } } },
   ];
 }
 
@@ -148,6 +149,7 @@ export async function getTopRegions(
         totalXp: { $sum: "$monthlyXp" },
       },
     },
+    { $match: { totalXp: { $gt: 0 } } },
     { $sort: { totalXp: -1 } },
     { $limit: limit },
   ])) as { _id: unknown; totalXp: number; memberCount: number }[];

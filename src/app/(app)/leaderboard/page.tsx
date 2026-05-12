@@ -15,68 +15,101 @@ import {
 import type { LeaderboardEntry } from "@/lib/services/gamification-service";
 import { CosmeticName } from "@/components/cosmetic-name";
 import { ResponsiveNameTicker } from "./responsive-name-ticker";
+import { LeaderboardBoardSelect } from "./leaderboard-board-select";
 
-export default async function LeaderboardPage() {
+const LEADERBOARD_BOARDS = [
+  {
+    value: "regions",
+    label: "Top Khu vực",
+    description: "Tổng điểm theo khu vực",
+    icon: <MapPin className="h-4 w-4" />,
+  },
+  {
+    value: "tdm",
+    label: "Top TĐM",
+    description: "Thành viên TĐM nổi bật",
+    icon: <Users className="h-4 w-4" />,
+  },
+  {
+    value: "members",
+    label: "Top TĐ",
+    description: "Thành viên TĐ nổi bật",
+    icon: <Users className="h-4 w-4" />,
+  },
+  {
+    value: "ngv",
+    label: "Top NTĐ",
+    description: "Thành viên NTĐ nổi bật",
+    icon: <Users className="h-4 w-4" />,
+  },
+  {
+    value: "leads",
+    label: "Top KVT",
+    description: "Khu vực trưởng nổi bật",
+    icon: <Crown className="h-4 w-4" />,
+  },
+] as const;
+
+const LEADERBOARD_LIMIT = 10;
+
+type LeaderboardBoard = (typeof LEADERBOARD_BOARDS)[number]["value"];
+
+function normalizeBoard(value?: string | string[]): LeaderboardBoard {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return LEADERBOARD_BOARDS.some((board) => board.value === candidate)
+    ? (candidate as LeaderboardBoard)
+    : "regions";
+}
+
+export default async function LeaderboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ board?: string | string[] | undefined }>;
+}) {
   const session = await getSessionUser();
   if (!session) redirect("/login");
 
-  const [topRegions, topMembers, topNgv, topTdm, topLeads] = await Promise.all([
-    getTopRegions(3),
-    getTopMembers(5),
-    getTopNgv(5),
-    getTopTdm(5),
-    getTopRegionalLeads(3),
-  ]);
-
+  const boardParam = await searchParams;
+  const activeBoard = normalizeBoard(boardParam.board);
+  const activeBoardMeta =
+    LEADERBOARD_BOARDS.find((board) => board.value === activeBoard) ??
+    LEADERBOARD_BOARDS[0];
   const monthLabel = getLeaderboardMonthLabel();
+  const entries =
+    activeBoard === "regions"
+      ? await getTopRegions(LEADERBOARD_LIMIT)
+      : activeBoard === "tdm"
+        ? await getTopTdm(LEADERBOARD_LIMIT)
+        : activeBoard === "members"
+          ? await getTopMembers(LEADERBOARD_LIMIT)
+          : activeBoard === "ngv"
+            ? await getTopNgv(LEADERBOARD_LIMIT)
+            : await getTopRegionalLeads(LEADERBOARD_LIMIT);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
-      <div>
-        <h1 className="font-display text-xl font-bold">Bảng Xếp Hạng</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Tháng {monthLabel} — tính từ ngày 1 hàng tháng
-        </p>
+      <div className="space-y-3">
+        <div>
+          <h1 className="font-display text-xl font-bold">Bảng Xếp Hạng</h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Tháng {monthLabel} — tính từ ngày 1 hàng tháng
+          </p>
+        </div>
+
+        <LeaderboardBoardSelect
+          activeBoard={activeBoard}
+          boards={LEADERBOARD_BOARDS.map(({ label, value }) => ({ label, value }))}
+        />
       </div>
 
-      <Section title="Top Khu vực" icon={<MapPin className="h-4 w-4" />}>
-        {topRegions.length === 0 ? (
-          <EmptyRow />
-        ) : (
-          <RegionPodium regions={topRegions} />
-        )}
-      </Section>
-
-      <Section title="Top TĐM" icon={<Users className="h-4 w-4" />}>
-        {topTdm.length === 0 ? (
-          <EmptyRow />
-        ) : (
-          <UserPodium entries={topTdm} selfId={session.id} />
-        )}
-      </Section>
-
-      <Section title="Top TĐ" icon={<Users className="h-4 w-4" />}>
-        {topMembers.length === 0 ? (
-          <EmptyRow />
-        ) : (
-          <UserPodium entries={topMembers} selfId={session.id} />
-        )}
-      </Section>
-
-      <Section title="Top NTĐ" icon={<Users className="h-4 w-4" />}>
-        {topNgv.length === 0 ? (
-          <EmptyRow />
-        ) : (
-          <UserPodium entries={topNgv} selfId={session.id} />
-        )}
-      </Section>
-
-      <Section title="Top KVT" icon={<Crown className="h-4 w-4" />}>
-        {topLeads.length === 0 ? (
-          <EmptyRow />
-        ) : (
-          <UserPodium entries={topLeads} selfId={session.id} />
-        )}
+      <Section title={activeBoardMeta.label} icon={activeBoardMeta.icon}>
+        {entries.length === 0 ? <EmptyRow /> : null}
+        {entries.length > 0 && activeBoard === "regions" ? (
+          <RegionPodium regions={entries as RegionLeaderboardEntry[]} />
+        ) : null}
+        {entries.length > 0 && activeBoard !== "regions" ? (
+          <UserPodium entries={entries as LeaderboardEntry[]} selfId={session.id} />
+        ) : null}
       </Section>
     </div>
   );
@@ -134,8 +167,8 @@ function regionToPodiumItem(region: RegionLeaderboardEntry): PodiumItem {
     name: region.name,
     subtitle: `${region.code} — ${region.memberCount} thành viên`,
     score: region.totalXp,
-    icon: <Trophy className="h-7 w-7 text-current" />,
-    iconLg: <Trophy className="h-9 w-9 text-current" />,
+    icon: <Trophy className="h-9 w-9 text-current" />,
+    iconLg: <Trophy className="h-12 w-12 text-current" />,
   };
 }
 
@@ -160,18 +193,18 @@ function userToPodiumItem(
       <Image
         src={entry.levelInfo.icon}
         alt={entry.levelInfo.nameVi}
-        width={48}
-        height={48}
-        className="h-12 w-12 shrink-0 rounded-full object-cover"
+        width={64}
+        height={64}
+        className="h-16 w-16 shrink-0 rounded-full object-cover"
       />
     ),
     iconLg: (
       <Image
         src={entry.levelInfo.icon}
         alt={entry.levelInfo.nameVi}
-        width={64}
-        height={64}
-        className="h-14 w-14 shrink-0 rounded-full object-cover sm:h-16 sm:w-16"
+        width={88}
+        height={88}
+        className="h-20 w-20 shrink-0 rounded-full object-cover sm:h-[88px] sm:w-[88px]"
       />
     ),
   };
@@ -249,7 +282,7 @@ function Podium({ items }: { items: PodiumItem[] }) {
   return (
     <div className="py-4 min-[375px]:py-5">
       <div className="hidden min-[375px]:block">
-        <div className="relative mx-auto h-[300px] max-w-xl">
+        <div className="relative mx-auto h-[328px] max-w-xl">
           <div className="absolute inset-x-6 bottom-6 z-10 grid grid-cols-3 items-end gap-6">
             {desktopRanks.map((rank) => {
               const item = topByRank.get(rank);
@@ -302,7 +335,7 @@ function Podium({ items }: { items: PodiumItem[] }) {
                 #{item.rank}
               </span>
               <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center ${style.iconColor}`}
+                className={`flex h-16 w-16 shrink-0 items-center justify-center ${style.iconColor}`}
               >
                 {item.podiumRank === 1 && item.iconLg ? item.iconLg : item.icon}
               </div>

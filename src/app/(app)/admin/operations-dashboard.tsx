@@ -32,31 +32,31 @@ const COMPLETION_HEAT_LEVELS: Array<{
   max: number;
 }> = [
   {
-    cellClassName: "bg-overlay-medium",
+    cellClassName: "bg-muted text-muted-foreground",
     label: "0 lượt",
     legendLabel: "0",
     max: 0,
   },
   {
-    cellClassName: "bg-sky-100 text-sky-800",
+    cellClassName: "bg-primary/10 text-primary",
     label: "1 lượt",
     legendLabel: "1",
     max: 1,
   },
   {
-    cellClassName: "bg-sky-200 text-sky-900",
+    cellClassName: "bg-primary/20 text-primary",
     label: "2 lượt",
     legendLabel: "2",
     max: 2,
   },
   {
-    cellClassName: "bg-sky-300 text-sky-950",
+    cellClassName: "bg-primary/35 text-foreground",
     label: "3 lượt",
     legendLabel: "3",
     max: 3,
   },
   {
-    cellClassName: "bg-sky-500 text-white",
+    cellClassName: "bg-primary text-primary-foreground",
     label: "4+ lượt",
     legendLabel: "4+",
     max: Infinity,
@@ -176,10 +176,10 @@ export function OperationsDashboard({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="rounded-md border border-sky-100 bg-white px-2.5 py-1 text-[11px] font-semibold text-foreground">
+              <span className="rounded-md border border-border/60 bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground">
                 {activeMembers.length} người
               </span>
-              <span className="rounded-md border border-sky-100 bg-white px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+              <span className="rounded-md border border-border/60 bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                 Tháng
               </span>
             </div>
@@ -188,7 +188,7 @@ export function OperationsDashboard({
           {emptyState ? (
             <EmptyCard text={emptyState} />
           ) : (
-            <div className="glass-card divide-y divide-sky-100 overflow-hidden">
+            <div className="glass-card divide-y divide-border/60 overflow-hidden">
               {activeMembers.map((member) => {
                 const isOpen = openMemberId === member.id;
 
@@ -207,7 +207,7 @@ export function OperationsDashboard({
                           );
                         }
                       }}
-                      className="grid w-full gap-3 px-3 py-3 text-left transition-colors hover:bg-sky-50/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 sm:grid-cols-[minmax(0,1fr)_auto]"
+                      className="grid w-full gap-3 px-3 py-3 text-left transition-colors hover:bg-accent/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 sm:grid-cols-[minmax(0,1fr)_auto]"
                       aria-expanded={isOpen}
                     >
                       <div className="min-w-0">
@@ -215,7 +215,7 @@ export function OperationsDashboard({
                           <p className="truncate text-sm font-semibold text-foreground">
                             {member.fullName}
                           </p>
-                          <span className="rounded-md border border-sky-100 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
+                          <span className="rounded-md border border-border/60 bg-muted px-2 py-0.5 text-[10px] font-semibold text-primary">
                             {member.roleLabel}
                           </span>
                         </div>
@@ -286,29 +286,29 @@ function MemberCompletionCalendar({
   );
 
   return (
-    <div className="border-t border-sky-100 bg-sky-50/35 px-3 py-3">
+    <div className="border-t border-border/60 bg-muted/35 px-3 py-3">
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-          <CalendarDays className="h-4 w-4 text-sky-600" />
+          <CalendarDays className="h-4 w-4 text-primary" />
           Thống kê từng ngày trong tháng
         </div>
         <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
           {COMPLETION_HEAT_LEVELS.map((level) => (
             <span key={level.label} className="inline-flex items-center gap-1">
               <span
-                className={`h-2.5 w-2.5 rounded-[3px] ring-1 ring-sky-100 ${level.cellClassName}`}
+                className={`h-2.5 w-2.5 rounded-[3px] ring-1 ring-border/60 ${level.cellClassName}`}
               />
               {level.legendLabel}
             </span>
           ))}
-          <span className="rounded-md border border-sky-100 bg-white px-2 py-0.5 font-medium text-foreground">
+          <span className="rounded-md border border-border/60 bg-card px-2 py-0.5 font-medium text-foreground">
             {totalCompletionCount} lượt
           </span>
         </div>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.55fr)]">
-        <div className="rounded-lg border border-sky-100 bg-white p-2">
+        <div className="rounded-lg border border-border/60 bg-card p-2">
           <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase text-muted-foreground">
             {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((day) => (
               <span key={day} className="py-1">
@@ -322,7 +322,7 @@ function MemberCompletionCalendar({
                 return (
                   <span
                     key={`blank-${index}`}
-                    className="aspect-square rounded-md bg-slate-50"
+                    className="aspect-square rounded-md bg-muted/45"
                     aria-hidden="true"
                   />
                 );
@@ -337,14 +337,14 @@ function MemberCompletionCalendar({
                   key={day.date}
                   type="button"
                   onClick={() => onSelectDate(day.date)}
-                  className={`relative aspect-square rounded-md border text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 ${
+                  className={`relative aspect-square rounded-md border text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
                     day.completionCount > 0
                       ? heat.cellClassName
-                      : "bg-white text-muted-foreground"
+                      : "bg-card text-muted-foreground"
                   } ${
                     isSelected
-                      ? "border-sky-500 ring-2 ring-sky-200"
-                      : "border-sky-100 hover:border-sky-300"
+                      ? "border-primary ring-2 ring-primary/20"
+                      : "border-border/60 hover:border-primary/35"
                   }`}
                   title={`${formatDateLabel(day.date)}: ${day.completionCount} lượt hoàn thành (${heat.label})`}
                   aria-label={`${formatDateLabel(day.date)}: ${day.completionCount} lượt hoàn thành (${heat.label})`}
@@ -354,12 +354,12 @@ function MemberCompletionCalendar({
                   </span>
                   {isToday ? (
                     <span
-                      className="absolute bottom-1 left-1.5 h-1.5 w-1.5 rounded-full bg-sky-600 ring-1 ring-white"
+                      className="absolute bottom-1 left-1.5 h-1.5 w-1.5 rounded-full bg-primary ring-1 ring-background"
                       aria-hidden="true"
                     />
                   ) : null}
                   {day.completionCount > 0 ? (
-                    <span className="absolute right-1 top-1 rounded bg-white/85 px-1 text-[9px] font-bold text-sky-700 ring-1 ring-sky-100">
+                    <span className="absolute right-1 top-1 rounded bg-background/85 px-1 text-[9px] font-bold text-primary ring-1 ring-border/60">
                       {day.completionCount}
                     </span>
                   ) : null}
@@ -369,7 +369,7 @@ function MemberCompletionCalendar({
           </div>
         </div>
 
-        <div className="rounded-lg border border-sky-100 bg-white p-3">
+        <div className="rounded-lg border border-border/60 bg-card p-3">
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-sm font-semibold text-foreground">
@@ -380,7 +380,7 @@ function MemberCompletionCalendar({
               </p>
             </div>
             {selectedDay?.date === todayDate ? (
-              <span className="rounded-md border border-sky-100 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">
+              <span className="rounded-md border border-border/60 bg-muted px-2 py-0.5 text-[10px] font-semibold text-primary">
                 Hôm nay
               </span>
             ) : null}
@@ -391,7 +391,7 @@ function MemberCompletionCalendar({
               {selectedDay.tasks.map((task) => (
                 <li
                   key={`${task.id}-${task.submittedAt}`}
-                  className="rounded-md border border-sky-100 bg-sky-50/60 px-2.5 py-2"
+                  className="rounded-md border border-border/60 bg-muted/45 px-2.5 py-2"
                 >
                   <p className="text-xs font-semibold text-foreground">
                     {task.title}
@@ -403,7 +403,7 @@ function MemberCompletionCalendar({
               ))}
             </ul>
           ) : (
-            <div className="mt-3 rounded-md border border-dashed border-sky-100 bg-sky-50/50 px-3 py-5 text-center text-xs text-muted-foreground">
+            <div className="mt-3 rounded-md border border-dashed border-border/70 bg-muted/35 px-3 py-5 text-center text-xs text-muted-foreground">
               Chưa có task hoàn thành trong ngày này.
             </div>
           )}

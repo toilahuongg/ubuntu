@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import {
   Building2,
   ChevronRight,
+  ClipboardList,
   Layers,
-  ListChecks,
   MapPin,
   MessageCircle,
   ShoppingBag,
@@ -19,6 +19,7 @@ import { getOptionalEnv } from "@/lib/env";
 import {
   canAccessManagement,
   canAccessRegionManagement,
+  canAccessUserManagement,
   canAccessZoneManagement,
 } from "@/lib/permissions";
 import { buildAdminOperationsView } from "@/lib/services/admin-operations-service";
@@ -56,6 +57,7 @@ export default async function AdminPage() {
   if (!session) redirect("/login");
 
   const canManageStructure = canAccessManagement(session);
+  const canManageUsers = canAccessUserManagement(session);
   const isZoneLead = canAccessZoneManagement(session);
   const isRegionalLead = canAccessRegionManagement(session);
   const telegramEnabled = getOptionalEnv().telegramNotificationsEnabled;
@@ -91,12 +93,18 @@ export default async function AdminPage() {
           </nav>
         )}
         <nav className="grid gap-2" aria-label="Công cụ vận hành">
-          <AdminNavLink
-            href="/templates"
-            icon={ListChecks}
-            label="Nhiệm vụ"
-            description="Quản lý mẫu nhiệm vụ trong phạm vi"
-          />
+          {canManageUsers && (
+            <AdminNavLink
+              href="/admin/users"
+              icon={Users}
+              label="Thành viên"
+              description={
+                isRegionalLead
+                  ? "Quản lý thành viên trong khu vực"
+                  : "Quản lý thành viên trong phạm vi"
+              }
+            />
+          )}
           {telegramEnabled && (
             <AdminNavLink
               href="/admin/telegram"
@@ -172,7 +180,7 @@ function AdminTitle({
         </h1>
         <p className="text-sm leading-5 text-muted-foreground">{description}</p>
       </div>
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-sky-200 bg-white text-sky-600">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-card text-primary">
         <Shield className="h-5 w-5" />
       </div>
     </div>
@@ -195,7 +203,7 @@ function ManagementHome({
   const operationItems: NavItem[] = [
     {
       href: "/templates",
-      icon: ListChecks,
+      icon: ClipboardList,
       label: "Nhiệm vụ",
       description: isAdmin
         ? "Quản lý mẫu nhiệm vụ toàn hệ thống"
@@ -344,7 +352,7 @@ function StatCard({
   return (
     <Link
       href={href}
-      className={`glass-card group min-h-[6.25rem] p-2.5 text-left transition-colors duration-150 hover:border-sky-300 hover:bg-sky-50/40 ${
+      className={`glass-card group min-h-[6.25rem] p-2.5 text-left transition-colors duration-150 hover:border-primary/35 hover:bg-accent/35 ${
         tone === "alert" ? "ring-1 ring-destructive/20" : ""
       }`}
     >
@@ -353,7 +361,7 @@ function StatCard({
           className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border ${
             tone === "alert"
               ? "border-destructive/25 bg-destructive/10 text-destructive"
-              : "border-sky-100 bg-sky-50 text-sky-600"
+              : "border-border/50 bg-muted text-primary"
           }`}
         >
           <Icon className="h-4 w-4" />

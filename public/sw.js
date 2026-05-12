@@ -1,9 +1,9 @@
-const CACHE_NAME = "ubuntu-v6";
+const CACHE_NAME = "ubuntu-v7";
 const OFFLINE_URL = "/offline";
 
 const PRECACHE = [
   "/manifest.json",
-  "/icons/logo.svg",
+  "/icons/logo.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   OFFLINE_URL,
