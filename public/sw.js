@@ -1,8 +1,10 @@
-const CACHE_NAME = "ubuntu-v7";
+const CACHE_NAME = "ubuntu-v8";
 const OFFLINE_URL = "/offline";
 
 const PRECACHE = [
   "/manifest.json",
+  "/apple-touch-icon.png",
+  "/apple-touch-icon-precomposed.png",
   "/icons/logo.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -63,6 +65,8 @@ self.addEventListener("fetch", (event) => {
   // Cache-first for static assets (icons, badges, cosmetics)
   if (
     url.pathname.startsWith("/icons/") ||
+    url.pathname === "/apple-touch-icon.png" ||
+    url.pathname === "/apple-touch-icon-precomposed.png" ||
     url.pathname.startsWith("/badges/") ||
     url.pathname.startsWith("/cosmetics/")
   ) {

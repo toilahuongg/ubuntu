@@ -62,8 +62,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png" />
-        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png" />
         <link rel="icon" type="image/png" sizes="512x512" href="/icons/logo.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
         <meta name="mobile-web-app-capable" content="yes" />
