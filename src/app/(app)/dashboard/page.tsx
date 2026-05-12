@@ -25,6 +25,7 @@ export default async function DashboardPage() {
       <MemberDashboard
         data={data}
         activities={activities}
+        user={session}
         userId={session.id}
       />
     );
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
     <LeaderDashboard
       data={data}
       activities={activities}
+      user={session}
       userId={session.id}
     />
   );

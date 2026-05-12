@@ -17,7 +17,6 @@ type PodiumRank = 1 | 2 | 3;
 type PodiumStyle = {
   stand: string;
   badge: string;
-  avatarRing: string;
   iconColor: string;
   name: string;
   profile: string;
@@ -29,8 +28,6 @@ const PODIUM_STYLES = {
       "h-[104px] border-amber-200 bg-gradient-to-b from-amber-100 via-amber-200 to-amber-300 text-amber-950 shadow-amber-200/70",
     badge:
       "border-amber-300 bg-gradient-to-b from-amber-300 to-amber-500 text-white shadow-amber-200/80",
-    avatarRing:
-      "border-amber-200 bg-amber-50 shadow-[0_0_30px_rgba(251,191,36,0.28)]",
     iconColor: "text-amber-600",
     name: "text-foreground",
     profile: "mb-3",
@@ -40,7 +37,6 @@ const PODIUM_STYLES = {
       "h-[86px] border-slate-200 bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 text-slate-900 shadow-slate-200/70",
     badge:
       "border-slate-200 bg-gradient-to-b from-slate-200 to-slate-400 text-white shadow-slate-200/80",
-    avatarRing: "border-slate-200 bg-slate-50",
     iconColor: "text-slate-500",
     name: "text-foreground",
     profile: "mb-2",
@@ -50,7 +46,6 @@ const PODIUM_STYLES = {
       "h-[64px] border-orange-200 bg-gradient-to-b from-orange-100 via-orange-200 to-orange-300 text-orange-950 shadow-orange-200/70",
     badge:
       "border-orange-200 bg-gradient-to-b from-orange-200 to-orange-500 text-white shadow-orange-200/80",
-    avatarRing: "border-orange-200 bg-orange-50",
     iconColor: "text-orange-700",
     name: "text-foreground",
     profile: "mb-2",
@@ -63,8 +58,6 @@ const NEON_PODIUM_STYLES = {
       "h-[104px] border-lime-300/60 bg-gradient-to-b from-lime-300 via-lime-400 to-lime-500 text-black shadow-[0_16px_36px_-18px_rgba(50,255,0,0.9)]",
     badge:
       "border-lime-200/70 bg-gradient-to-b from-lime-300 to-lime-500 text-black shadow-[0_10px_30px_-18px_rgba(50,255,0,0.9)]",
-    avatarRing:
-      "border-lime-300/60 bg-lime-100/10 shadow-[0_0_30px_rgba(50,255,0,0.34)]",
     iconColor: "text-lime-200",
     name: "text-lime-50",
     profile: "mb-3",
@@ -74,7 +67,6 @@ const NEON_PODIUM_STYLES = {
       "h-[86px] border-zinc-500 bg-gradient-to-b from-zinc-400 via-zinc-500 to-zinc-700 text-white shadow-black/50",
     badge:
       "border-zinc-300 bg-gradient-to-b from-zinc-300 to-zinc-600 text-white shadow-black/50",
-    avatarRing: "border-zinc-500 bg-zinc-200/10",
     iconColor: "text-zinc-100",
     name: "text-white",
     profile: "mb-2",
@@ -84,7 +76,6 @@ const NEON_PODIUM_STYLES = {
       "h-[64px] border-emerald-400/65 bg-gradient-to-b from-emerald-400 to-emerald-700 text-white shadow-emerald-900/50",
     badge:
       "border-emerald-300/80 bg-gradient-to-b from-emerald-300 to-emerald-600 text-white shadow-emerald-900/50",
-    avatarRing: "border-emerald-400/60 bg-emerald-100/10",
     iconColor: "text-emerald-100",
     name: "text-lime-50",
     profile: "mb-2",
@@ -325,18 +316,12 @@ function PodiumProfile({
 
       <div className="mt-3 flex justify-center">
         <div
-          className={`relative flex items-center justify-center rounded-full border shadow-sm ${style.avatarRing} ${style.iconColor} ${
+          className={`relative flex items-center justify-center rounded-full ${style.iconColor} ${
             isFirst
-              ? "h-28 w-28 p-3 sm:h-32 sm:w-32"
-              : "h-24 w-24 p-2 sm:h-[104px] sm:w-[104px]"
+              ? "h-16 w-16 sm:h-20 sm:w-20"
+              : "h-14 w-14 sm:h-16 sm:w-16"
           }`}
         >
-          <AvatarRankFrame
-            rank={podiumRank}
-            variant={variant}
-            className="pointer-events-none absolute inset-0 h-full w-full"
-          />
-          <AvatarSideOrnaments rank={podiumRank} variant={variant} />
           <div className="relative z-10">
             {isFirst && item.iconLg ? item.iconLg : item.icon}
           </div>
@@ -371,13 +356,8 @@ function MobilePodiumCard({
           #{item.rank}
         </span>
         <div
-          className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border p-1 ${style.avatarRing} ${style.iconColor}`}
+          className={`relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${style.iconColor}`}
         >
-          <AvatarRankFrame
-            rank={podiumRank}
-            variant={variant}
-            className="pointer-events-none absolute inset-0 h-full w-full"
-          />
           <div className="relative z-10">
             {podiumRank === 1 && item.iconLg ? item.iconLg : item.icon}
           </div>
@@ -447,41 +427,6 @@ function RankSparkles({
   );
 }
 
-function AvatarSideOrnaments({
-  rank,
-  variant,
-}: {
-  rank: PodiumRank;
-  variant: PodiumDesignVariant;
-}) {
-  if (variant === "royal" && rank === 1) {
-    return (
-      <>
-        <span className="absolute -left-8 top-7 h-16 w-5 rounded-full border-l-4 border-amber-300/80" />
-        <span className="absolute -right-8 top-7 h-16 w-5 rounded-full border-r-4 border-amber-300/80" />
-      </>
-    );
-  }
-
-  if (variant === "medal") {
-    return (
-      <span className="absolute -bottom-1 left-1/2 h-5 w-20 -translate-x-1/2 rounded-full border border-sky-200/60 bg-sky-100/40 dark:border-cyan-300/20 dark:bg-cyan-300/10" />
-    );
-  }
-
-  if (variant === "circuit") {
-    return (
-      <>
-        <span className="absolute -left-4 top-1/2 h-px w-5 bg-cyan-200/80 dark:bg-cyan-300/35" />
-        <span className="absolute -right-4 top-1/2 h-px w-5 bg-cyan-200/80 dark:bg-cyan-300/35" />
-        <span className="absolute -top-3 left-1/2 h-4 w-px -translate-x-1/2 bg-amber-200/80 dark:bg-amber-300/35" />
-      </>
-    );
-  }
-
-  return null;
-}
-
 function ScoreStandOrnament({
   rank,
   variant,
@@ -534,120 +479,4 @@ function MobileCardOrnament({
   return rank === 1 ? (
     <span className="absolute -right-8 top-1/2 h-20 w-20 -translate-y-1/2 rounded-full bg-amber-200/28 dark:bg-amber-300/10" />
   ) : null;
-}
-
-function AvatarRankFrame({
-  rank,
-  variant,
-  className,
-}: {
-  rank: PodiumRank;
-  variant: PodiumDesignVariant;
-  className?: string;
-}) {
-  const palette = getAvatarPalette(rank, variant);
-
-  return (
-    <svg
-      aria-hidden="true"
-      className={className}
-      viewBox="0 0 128 128"
-      fill="none"
-    >
-      <circle cx="64" cy="64" r="56" fill={palette.glow} opacity="0.34" />
-      <circle
-        cx="64"
-        cy="64"
-        r="48"
-        stroke={palette.outer}
-        strokeWidth={variant === "royal" && rank === 1 ? 6 : 5}
-      />
-      <circle
-        cx="64"
-        cy="64"
-        r="42"
-        stroke={palette.inner}
-        strokeOpacity="0.82"
-        strokeWidth="1.5"
-      />
-      {variant === "royal" && rank === 1 ? (
-        <>
-          <path
-            d="M21 72C23 62 26 56 31 53"
-            stroke="#FCD34D"
-            strokeLinecap="round"
-            strokeWidth="3.2"
-          />
-          <path
-            d="M31 53C27 53 23 55.5 20.5 59.5"
-            stroke="#FDE68A"
-            strokeLinecap="round"
-            strokeWidth="2.4"
-          />
-          <path
-            d="M107 72C105 62 102 56 97 53"
-            stroke="#FCD34D"
-            strokeLinecap="round"
-            strokeWidth="3.2"
-          />
-          <path
-            d="M97 53C101 53 105 55.5 107.5 59.5"
-            stroke="#FDE68A"
-            strokeLinecap="round"
-            strokeWidth="2.4"
-          />
-          <path
-            d="M49 18L56 27L64 20L72 27L79 18L75 34H53L49 18Z"
-            fill="#FACC15"
-            stroke="#F59E0B"
-            strokeLinejoin="round"
-            strokeWidth="2.2"
-          />
-        </>
-      ) : null}
-      {variant === "medal" ? (
-        <path
-          d="M42 21H86L78 38H50L42 21Z"
-          fill={palette.inner}
-          opacity="0.56"
-        />
-      ) : null}
-      {variant === "circuit" ? (
-        <>
-          <path
-            d="M28 64H12M116 64H100M64 28V12M64 116V100"
-            stroke={palette.inner}
-            strokeLinecap="round"
-            strokeWidth="2.4"
-          />
-          <circle cx="64" cy="12" r="2.5" fill={palette.outer} />
-          <circle cx="116" cy="64" r="2.5" fill={palette.outer} />
-        </>
-      ) : null}
-    </svg>
-  );
-}
-
-function getAvatarPalette(rank: PodiumRank, variant: PodiumDesignVariant) {
-  if (variant === "circuit") {
-    return rank === 1
-      ? { glow: "#FDE68A", outer: "#FBBF24", inner: "#67E8F9" }
-      : rank === 2
-        ? { glow: "#7DD3FC", outer: "#38BDF8", inner: "#E0F2FE" }
-        : { glow: "#FDBA74", outer: "#FB923C", inner: "#BAE6FD" };
-  }
-
-  if (variant === "medal") {
-    return rank === 1
-      ? { glow: "#FDE68A", outer: "#F59E0B", inner: "#FEF3C7" }
-      : rank === 2
-        ? { glow: "#E2E8F0", outer: "#94A3B8", inner: "#F8FAFC" }
-        : { glow: "#FDBA74", outer: "#EA580C", inner: "#FFEDD5" };
-  }
-
-  return rank === 1
-    ? { glow: "#FDE68A", outer: "#FBBF24", inner: "#FEF3C7" }
-    : rank === 2
-      ? { glow: "#E2E8F0", outer: "#CBD5E1", inner: "#FFFFFF" }
-      : { glow: "#FDBA74", outer: "#FB923C", inner: "#FFEDD5" };
 }

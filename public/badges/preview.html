@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Level Card Preview</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f5f4ef;
+        --ink: #171a22;
+        --muted: #59606f;
+        --paper: #fffdf8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 12% 8%, rgba(255, 206, 111, 0.3), transparent 28rem),
+          radial-gradient(circle at 92% 10%, rgba(116, 154, 218, 0.22), transparent 30rem),
+          linear-gradient(180deg, #fbf8ef 0%, var(--page) 100%);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+
+      main {
+        margin: 0 auto;
+        max-width: 1420px;
+        padding: 28px 14px 44px;
+      }
+
+      .hero {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 0 0 18px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1;
+        letter-spacing: 0;
+      }
+
+      .hero p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .meta {
+        border: 1px solid rgba(54, 61, 74, 0.12);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.68);
+        padding: 8px 12px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .gender-block {
+        display: grid;
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .level-card {
+        --accent: #6f55bf;
+        --accent-dark: #5843a5;
+        --glow: rgba(111, 85, 191, 0.18);
+        position: relative;
+        overflow: hidden;
+        min-height: 300px;
+        border: 2px solid color-mix(in srgb, var(--accent) 54%, white 46%);
+        border-radius: 9px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.96)),
+          var(--paper);
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.9) inset,
+          0 14px 32px rgba(30, 35, 48, 0.08);
+      }
+
+      .level-card::before {
+        content: "";
+        position: absolute;
+        inset: 4px;
+        z-index: 0;
+        border: 1px solid rgba(255, 255, 255, 0.76);
+        border-radius: 6px;
+        pointer-events: none;
+      }
+
+      .art {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        place-items: end center;
+        height: 288px;
+        margin: 6px;
+        overflow: hidden;
+        border-radius: 6px;
+        background:
+          radial-gradient(circle at 50% 22%, rgba(255, 255, 255, 0.92), transparent 18%),
+          radial-gradient(circle at 22% 28%, rgba(255, 255, 255, 0.9), transparent 3px),
+          radial-gradient(circle at 76% 24%, rgba(255, 255, 255, 0.85), transparent 4px),
+          radial-gradient(circle at 84% 46%, rgba(255, 255, 255, 0.68), transparent 3px),
+          linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, white 84%), rgba(255, 255, 255, 0.72) 54%, color-mix(in srgb, var(--accent) 25%, white 75%));
+      }
+
+      .art::before,
+      .art::after {
+        content: "";
+        position: absolute;
+        inset: auto auto 34px 20px;
+        width: 54px;
+        height: 54px;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 13%, transparent 14%),
+          conic-gradient(from 18deg, transparent 0 9%, rgba(255, 255, 255, 0.72) 10% 13%, transparent 14% 100%);
+        opacity: 0.78;
+        transform: rotate(-18deg);
+      }
+
+      .art::after {
+        inset: 42px 20px auto auto;
+        width: 42px;
+        height: 42px;
+        opacity: 0.55;
+        transform: rotate(22deg);
+      }
+
+      .badge {
+        position: relative;
+        z-index: 2;
+        width: min(98%, 288px);
+        height: 276px;
+        object-fit: contain;
+        object-position: bottom center;
+        filter: drop-shadow(0 14px 10px rgba(65, 48, 30, 0.16));
+      }
+
+      @media (max-width: 1100px) {
+        .grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 820px) {
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 540px) {
+        main {
+          padding: 20px 8px 32px;
+        }
+
+        .grid {
+          gap: 8px;
+        }
+
+        .level-card {
+          min-height: 220px;
+          border-radius: 8px;
+        }
+
+        .art {
+          height: 208px;
+          margin-inline: 6px;
+        }
+
+        .badge {
+          width: min(100%, 205px);
+          height: 198px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="hero">
+        <div>
+          <h1>Level Card Preview</h1>
+          <p>Card chỉ giữ khung viền, background pastel và nhân vật. Không có tiêu đề cấp hay mô tả trong từng card.</p>
+        </div>
+        <div class="meta">Border + background + PNG art</div>
+      </div>
+
+      <section class="gender-block">
+        <div class="section-title">
+          <h2>Male</h2>
+          <span class="meta">badge-{level}-male.png</span>
+        </div>
+        <div class="grid" id="male-grid"></div>
+      </section>
+
+      <section class="gender-block">
+        <div class="section-title">
+          <h2>Female</h2>
+          <span class="meta">badge-{level}-female.png</span>
+        </div>
+        <div class="grid" id="female-grid"></div>
+      </section>
+    </main>
+
+    <script>
+      const levels = [
+        {
+          name: "Người Tập Sự",
+          desc: "Mới được huấn luyện, học cách phục vụ và vâng lời.",
+          accent: "#7b5bc8",
+          dark: "#6948b4",
+        },
+        {
+          name: "Người Hầu Sự",
+          desc: "Thực hiện các nhiệm vụ đơn giản, hỗ trợ những việc được giao.",
+          accent: "#4d86d7",
+          dark: "#3e70bd",
+        },
+        {
+          name: "Sứ Giả Tân Binh",
+          desc: "Bắt đầu truyền đạt các thông điệp nhỏ.",
+          accent: "#2ea7b8",
+          dark: "#198da1",
+        },
+        {
+          name: "Hộ Vệ Tập Sự",
+          desc: "Bắt đầu bảo vệ cá nhân hoặc gia đình được giao.",
+          accent: "#4b9d45",
+          dark: "#3d8739",
+        },
+        {
+          name: "Thiên Sứ Sơ Cấp",
+          desc: "Chính thức được công nhận và phục vụ trong thiên giới.",
+          accent: "#f3bd45",
+          dark: "#e3a82e",
+        },
+        {
+          name: "Thiên Sứ Hộ Mệnh",
+          desc: "Bảo vệ con người và đồng hành, hướng dẫn họ.",
+          accent: "#f09a48",
+          dark: "#dc7d2f",
+        },
+        {
+          name: "Thiên Sứ Truyền Tin",
+          desc: "Mang các thông điệp quan trọng từ Thiên Đàng đến nhân gian.",
+          accent: "#e76689",
+          dark: "#d24f76",
+        },
+        {
+          name: "Thiên Sứ Chữa Lành",
+          desc: "Mang đến sự an ủi, chữa lành và hy vọng cho mọi người.",
+          accent: "#8b65c8",
+          dark: "#7655b4",
+        },
+        {
+          name: "Thiên Sứ Chiến Binh",
+          desc: "Chiến đấu chống lại thế lực tăm tối, bảo vệ sự bình an.",
+          accent: "#d9575c",
+          dark: "#c6464d",
+        },
+        {
+          name: "Đội Trưởng Thiên Sứ",
+          desc: "Chỉ huy một nhóm thiên sứ nhỏ, hoàn thành nhiệm vụ được giao.",
+          accent: "#4d78bd",
+          dark: "#3d64a7",
+        },
+        {
+          name: "Chỉ Huy Thiên Quân",
+          desc: "Lãnh đạo nhiều đội thiên sứ, điều phối các nhiệm vụ lớn hơn.",
+          accent: "#7b5bc8",
+          dark: "#6849b2",
+        },
+        {
+          name: "Tổng Quản Thiên Giới",
+          desc: "Quản lý và điều phối các công việc trong thiên giới.",
+          accent: "#c69232",
+          dark: "#ae7d24",
+        },
+      ];
+
+      function renderGrid(gender) {
+        const grid = document.getElementById(`${gender}-grid`);
+        grid.innerHTML = levels
+          .map((levelInfo, index) => {
+            const level = index + 1;
+            const file = `badge-${level}-${gender}.png`;
+            return `
+              <article
+                class="level-card"
+                style="--accent: ${levelInfo.accent}; --accent-dark: ${levelInfo.dark}; --glow: ${levelInfo.accent}33"
+              >
+                <div class="art">
+                  <img class="badge" src="./${file}" alt="Cấp ${level} ${gender}" loading="lazy" />
+                </div>
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      renderGrid("male");
+      renderGrid("female");
+    </script>
+  </body>
+</html>

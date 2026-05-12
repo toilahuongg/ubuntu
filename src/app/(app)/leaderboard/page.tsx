@@ -213,8 +213,6 @@ const PODIUM_STYLES = {
       "h-[104px] border-amber-200 bg-gradient-to-b from-amber-100 via-amber-200 to-amber-300 text-amber-950 shadow-amber-200/70",
     badge:
       "border-amber-300 bg-gradient-to-b from-amber-300 to-amber-500 text-white shadow-amber-200/80",
-    avatarRing:
-      "border-amber-200 bg-amber-50 shadow-[0_0_30px_rgba(251,191,36,0.28)]",
     iconColor: "text-amber-600",
     name: "text-foreground",
     profile: "mb-3",
@@ -224,7 +222,6 @@ const PODIUM_STYLES = {
       "h-[86px] border-slate-200 bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 text-slate-900 shadow-slate-200/70",
     badge:
       "border-slate-200 bg-gradient-to-b from-slate-200 to-slate-400 text-white shadow-slate-200/80",
-    avatarRing: "border-slate-200 bg-slate-50",
     iconColor: "text-slate-500",
     name: "text-foreground",
     profile: "mb-2",
@@ -234,7 +231,6 @@ const PODIUM_STYLES = {
       "h-[64px] border-orange-200 bg-gradient-to-b from-orange-100 via-orange-200 to-orange-300 text-orange-950 shadow-orange-200/70",
     badge:
       "border-orange-200 bg-gradient-to-b from-orange-200 to-orange-500 text-white shadow-orange-200/80",
-    avatarRing: "border-orange-200 bg-orange-50",
     iconColor: "text-orange-700",
     name: "text-foreground",
     profile: "mb-2",
@@ -388,9 +384,7 @@ function PodiumProfile({
 
       <div className="mt-3 flex justify-center">
         <div
-          className={`relative flex rounded-full border p-2 shadow-sm ${style.avatarRing} ${style.iconColor} ${
-            isFirst ? "p-3" : ""
-          }`}
+          className={`relative flex items-center justify-center rounded-full ${style.iconColor}`}
         >
           {isFirst && item.iconLg ? item.iconLg : item.icon}
         </div>

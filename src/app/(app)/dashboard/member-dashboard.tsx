@@ -1,6 +1,7 @@
 import { Calendar, CheckCircle2 } from "lucide-react";
 
 import { formatDateLabel } from "@/lib/dates";
+import type { SessionUser } from "@/lib/domain";
 import type { ActivityEntry } from "@/lib/tasks/activity-service";
 import type { MemberDashboardView } from "@/lib/tasks/types";
 import { ActivityFeed } from "./activity-feed";
@@ -11,10 +12,12 @@ import { TaskCardSection } from "./task-card-sections";
 export function MemberDashboard({
   data,
   activities,
+  user,
   userId,
 }: {
   data: MemberDashboardView;
   activities: ActivityEntry[];
+  user: Pick<SessionUser, "fullName" | "role">;
   userId: string;
 }) {
   const monthlyCards = data.cards.filter(
@@ -60,15 +63,15 @@ export function MemberDashboard({
 
       <LevelProgressCard
         completedCount={completedCount}
-        currentLevelXp={data.currentLevelXp}
         dailyScripture={data.dailyScripture}
         level={data.level}
+        levelDescription={data.levelDescription}
         levelIcon={data.levelIcon}
         levelName={data.levelName}
         nextLevelXp={data.nextLevelXp}
         pendingCount={pendingCount}
-        progressXp={data.progressXp}
         totalXp={data.totalXp}
+        user={user}
       />
 
       <GoalNoticeBanner notice={data.goalNotice} />

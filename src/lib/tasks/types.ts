@@ -168,6 +168,7 @@ type DashboardLevelSummary = {
   progressXp: number;
   nextLevelXp: number;
   levelName: string;
+  levelDescription: string;
   levelIcon: string;
 };
 

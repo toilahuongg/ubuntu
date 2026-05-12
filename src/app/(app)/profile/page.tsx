@@ -53,19 +53,20 @@ export default async function ProfilePage() {
   ]);
 
   const levelSpan = Math.max(progress.nextLevelXp - progress.currentLevelXp, 0);
+  const isMaxLevel = levelSpan === 0;
   const progressPercent = getProgressPercent(progress);
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 animate-slide-up">
       <section className="glass-card overflow-hidden">
         <div className="flex items-center gap-4 p-4 sm:p-5">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-overlay-medium ring-1 ring-border">
+          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full">
             <Image
               src={progress.levelInfo.icon}
               alt={progress.levelInfo.nameVi}
               width={68}
               height={68}
-              className="drop-shadow-md"
+              className="rounded-full object-cover"
               priority
             />
           </div>
@@ -90,6 +91,9 @@ export default async function ProfilePage() {
                 {formatNumber(progress.totalXp)} XP
               </span>
             </div>
+            <p className="mt-2 max-w-[28rem] text-xs leading-5 text-muted-foreground">
+              {progress.levelInfo.description}
+            </p>
 
             <div className="mt-4 space-y-1.5">
               <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
@@ -106,7 +110,9 @@ export default async function ProfilePage() {
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                {formatNumber(progress.progressXp)} / {formatNumber(levelSpan)} XP
+                {isMaxLevel
+                  ? "Đã đạt cấp tối đa"
+                  : `${formatNumber(progress.progressXp)} / ${formatNumber(levelSpan)} XP`}
               </p>
             </div>
           </div>

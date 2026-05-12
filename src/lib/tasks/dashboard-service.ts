@@ -499,6 +499,7 @@ export async function buildLeaderDashboard(
     progressXp: progress.progressXp,
     nextLevelXp: progress.nextLevelXp,
     levelName: progress.levelInfo.nameVi,
+    levelDescription: progress.levelInfo.description,
     levelIcon: progress.levelInfo.icon,
   };
 }
@@ -581,6 +582,7 @@ export async function buildMemberDashboard(
     progressXp: progress.progressXp,
     nextLevelXp: progress.nextLevelXp,
     levelName: progress.levelInfo.nameVi,
+    levelDescription: progress.levelInfo.description,
     levelIcon: progress.levelInfo.icon,
   };
 }
