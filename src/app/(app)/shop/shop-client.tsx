@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { VersionedImage as Image } from "@/components/VersionedImage";
 import { useMemo, useState, useTransition } from "react";
 import { Coins, Lock, Sparkles, Check } from "lucide-react";
 

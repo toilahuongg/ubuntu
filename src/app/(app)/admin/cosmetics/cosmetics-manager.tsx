@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { VersionedImage as Image } from "@/components/VersionedImage";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Pencil, Plus, UserPlus } from "lucide-react";

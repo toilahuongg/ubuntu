@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Image from "next/image";
+import { VersionedImage as Image } from "@/components/VersionedImage";
 import { Pencil, X } from "lucide-react";
 
 import { updateProfileAction } from "@/app/(app)/profile/actions";

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { VersionedImage as Image } from "@/components/VersionedImage";
 import type { SessionUser } from "@/lib/domain";
 import { ROLE_LABELS } from "@/lib/domain";
 import { CosmeticName } from "@/components/cosmetic-name";

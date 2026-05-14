@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import Image from "next/image";
+import { VersionedImage as Image } from "@/components/VersionedImage";
 
 import { InstallAppButton } from "@/components/install-app-button";
 

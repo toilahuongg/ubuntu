@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { VersionedImage as Image } from "@/components/VersionedImage";
 
 import { getCosmeticImageIcon } from "@/lib/cosmetics/icon";
 import type { EquippedView } from "@/lib/cosmetics/serialize";
