@@ -23,6 +23,7 @@ const userSchema = new Schema(
         suffix: null,
         color: null,
         effect: null,
+        avatarFrame: null,
       }),
       type: {
         prefix: {
@@ -41,6 +42,11 @@ const userSchema = new Schema(
           type: Schema.Types.ObjectId,
         },
         effect: {
+          default: null,
+          ref: "Cosmetic",
+          type: Schema.Types.ObjectId,
+        },
+        avatarFrame: {
           default: null,
           ref: "Cosmetic",
           type: Schema.Types.ObjectId,

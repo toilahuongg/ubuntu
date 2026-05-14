@@ -6,6 +6,7 @@ import { Types } from "mongoose";
 import { getCosmeticTextIcon } from "@/lib/cosmetics/icon";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
+  COSMETIC_SLOTS,
   type CosmeticRecord,
   CosmeticModel,
   type CosmeticSlot,
@@ -100,7 +101,7 @@ async function loadUserContext(userId: string): Promise<{
     equippedCosmetics?: Record<CosmeticSlot, Types.ObjectId | null>;
   }).equippedCosmetics;
   if (eq) {
-    for (const slot of ["prefix", "suffix", "color", "effect"] as const) {
+    for (const slot of COSMETIC_SLOTS) {
       const v = eq[slot];
       if (v) equippedIds.add(v.toString());
     }
@@ -138,7 +139,7 @@ export async function getInventory(userId: string): Promise<InventoryView> {
     equippedCosmetics?: Record<CosmeticSlot, Types.ObjectId | null>;
   }).equippedCosmetics;
   const equipped: EquippedCosmeticsMap = {};
-  for (const slot of ["prefix", "suffix", "color", "effect"] as const) {
+  for (const slot of COSMETIC_SLOTS) {
     const ref = eq?.[slot];
     equipped[slot] = ref ? cosmeticMap.get(ref.toString()) ?? null : null;
   }
@@ -232,7 +233,7 @@ export async function equip(
   cosmeticId: string | null,
 ): Promise<void> {
   await connectToDatabase();
-  if (!["prefix", "suffix", "color", "effect"].includes(slot)) {
+  if (!COSMETIC_SLOTS.includes(slot)) {
     throw new Error("Slot không hợp lệ.");
   }
 
@@ -338,7 +339,7 @@ export async function getEquippedPayloadsForUsers(
   users.forEach((u) => {
     const eq = u.equippedCosmetics;
     if (!eq) return;
-    for (const slot of ["prefix", "suffix", "color", "effect"] as const) {
+    for (const slot of COSMETIC_SLOTS) {
       const v = eq[slot];
       if (v) allIds.add(v.toString());
     }
@@ -353,7 +354,7 @@ export async function getEquippedPayloadsForUsers(
   users.forEach((u) => {
     const eq = u.equippedCosmetics;
     const map: EquippedCosmeticsMap = {};
-    for (const slot of ["prefix", "suffix", "color", "effect"] as const) {
+    for (const slot of COSMETIC_SLOTS) {
       const v = eq?.[slot];
       map[slot] = v ? cosmeticMap.get(v.toString()) ?? null : null;
     }

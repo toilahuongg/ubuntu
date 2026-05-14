@@ -1,4 +1,8 @@
-import type { CosmeticRecord, CosmeticSlot } from "@/lib/models";
+import {
+  COSMETIC_SLOTS,
+  type CosmeticSlot,
+} from "@/lib/models/cosmetic-types";
+import type { CosmeticRecord } from "@/lib/models/cosmetic";
 import type { EquippedCosmeticsMap } from "@/lib/services/cosmetics-service";
 
 export type CosmeticView = {
@@ -29,7 +33,7 @@ export function serializeCosmetic(cosmetic: CosmeticRecord): CosmeticView {
 
 export function serializeEquipped(map: EquippedCosmeticsMap): EquippedView {
   const out: EquippedView = {};
-  for (const slot of ["prefix", "suffix", "color", "effect"] as const) {
+  for (const slot of COSMETIC_SLOTS) {
     const c = map[slot];
     out[slot] = c ? serializeCosmetic(c) : null;
   }

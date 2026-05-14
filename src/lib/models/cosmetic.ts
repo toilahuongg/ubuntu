@@ -1,6 +1,12 @@
 import { InferSchemaType, model, models, Schema, Types } from "mongoose";
 
-export const COSMETIC_SLOTS = ["prefix", "suffix", "color", "effect"] as const;
+export const COSMETIC_SLOTS = [
+  "prefix",
+  "suffix",
+  "color",
+  "effect",
+  "avatarFrame",
+] as const;
 export type CosmeticSlot = (typeof COSMETIC_SLOTS)[number];
 
 export const COSMETIC_RARITIES = [

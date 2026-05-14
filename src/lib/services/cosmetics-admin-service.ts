@@ -50,7 +50,9 @@ function validate(input: CosmeticInput): void {
   const normalizedIcon = input.icon?.trim() || null;
   if (
     normalizedIcon &&
-    (input.slot === "prefix" || input.slot === "suffix") &&
+    (input.slot === "prefix" ||
+      input.slot === "suffix" ||
+      input.slot === "avatarFrame") &&
     isCosmeticImageIcon(normalizedIcon) &&
     !normalizedIcon.startsWith("/cosmetics/")
   ) {

@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import { Coins, Lock, Sparkles, Check } from "lucide-react";
 
 import { CosmeticName } from "@/components/cosmetic-name";
+import { LevelAvatar } from "@/components/level-avatar";
 import {
   getCosmeticImageIcon,
   getCosmeticTextIcon,
@@ -14,11 +15,20 @@ import type {
   EquippedView,
 } from "@/lib/cosmetics/serialize";
 import type { ShopItem } from "@/lib/services/cosmetics-service";
-import type { CosmeticSlot } from "@/lib/models";
+import type { CosmeticSlot } from "@/lib/models/cosmetic-types";
 
 type Tab = "shop" | "inventory";
 
+const DISPLAY_SLOTS = [
+  "avatarFrame",
+  "prefix",
+  "suffix",
+  "color",
+  "effect",
+] as const satisfies readonly CosmeticSlot[];
+
 const SLOT_LABELS: Record<CosmeticSlot, string> = {
+  avatarFrame: "Khung avatar",
   prefix: "Biểu tượng trước",
   suffix: "Biểu tượng sau",
   color: "Màu sắc",
@@ -85,7 +95,7 @@ export function ShopClient({
 
   const equippedIdSet = useMemo(() => {
     const ids = new Set<string>();
-    for (const slot of ["prefix", "suffix", "color", "effect"] as const) {
+    for (const slot of DISPLAY_SLOTS) {
       const v = equipped[slot];
       if (v) ids.add(v.id);
     }
@@ -192,9 +202,19 @@ export function ShopClient({
         <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
           Xem trước tên của bạn
         </p>
-        <p className="text-lg font-semibold">
-          <CosmeticName fullName={fullName} equipped={equipped} />
-        </p>
+        <div className="flex items-center gap-3">
+          <LevelAvatar
+            src="/badges/badge-6-male.png"
+            alt="Avatar mẫu"
+            equipped={equipped}
+            size={56}
+            className="h-14 w-14"
+            imageClassName="rounded-full"
+          />
+          <p className="min-w-0 text-lg font-semibold">
+            <CosmeticName fullName={fullName} equipped={equipped} />
+          </p>
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -216,7 +236,7 @@ export function ShopClient({
         >
           Tất cả
         </FilterChip>
-        {(["prefix", "suffix", "color", "effect"] as const).map((s) => (
+        {DISPLAY_SLOTS.map((s) => (
           <FilterChip
             key={s}
             active={slotFilter === s}
@@ -355,9 +375,22 @@ function ItemCard({
         </span>
       </div>
 
-      <div className="rounded-xl bg-overlay-subtle px-3 py-3 text-center text-base font-semibold">
-        <CosmeticName fullName={fullName} equipped={previewEquipped} />
-      </div>
+      {item.slot === "avatarFrame" ? (
+        <div className="flex items-center justify-center py-2">
+          <LevelAvatar
+            src="/badges/badge-6-male.png"
+            alt=""
+            equipped={previewEquipped}
+            size={72}
+            className="h-18 w-18"
+            imageClassName="rounded-full"
+          />
+        </div>
+      ) : (
+        <div className="rounded-xl bg-overlay-subtle px-3 py-3 text-center text-base font-semibold">
+          <CosmeticName fullName={fullName} equipped={previewEquipped} />
+        </div>
+      )}
 
       {item.description ? (
         <p className="text-[11px] text-muted-foreground">{item.description}</p>
@@ -439,6 +472,21 @@ function ItemCard({
 function CosmeticArtwork({ item }: { item: ShopItem }) {
   const imageIcon = getCosmeticImageIcon(item.payload.icon);
   const textIcon = getCosmeticTextIcon(item.payload.icon);
+
+  if (item.slot === "avatarFrame" && imageIcon) {
+    return (
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/60 shadow-sm shadow-sky-500/10 dark:border-white/10 dark:bg-white/5">
+        <LevelAvatar
+          src="/badges/badge-6-male.png"
+          alt=""
+          equipped={{ avatarFrame: itemToView(item) }}
+          size={48}
+          className="h-12 w-12"
+          imageClassName="rounded-full"
+        />
+      </span>
+    );
+  }
 
   if (imageIcon) {
     return (

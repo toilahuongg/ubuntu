@@ -6,12 +6,13 @@ import { useState, useTransition } from "react";
 import { Pencil, Plus, UserPlus } from "lucide-react";
 
 import { CosmeticName } from "@/components/cosmetic-name";
+import { LevelAvatar } from "@/components/level-avatar";
 import {
   getCosmeticImageIcon,
   getCosmeticTextIcon,
 } from "@/lib/cosmetics/icon";
 import type { CosmeticView, EquippedView } from "@/lib/cosmetics/serialize";
-import type { CosmeticSlot } from "@/lib/models";
+import type { CosmeticSlot } from "@/lib/models/cosmetic-types";
 
 import { toggleCosmeticActiveAction } from "./actions";
 
@@ -27,6 +28,7 @@ const SLOT_LABELS: Record<CosmeticSlot, string> = {
   suffix: "Sau",
   color: "Màu",
   effect: "Hiệu ứng",
+  avatarFrame: "Khung avatar",
 };
 
 export function CosmeticsManager({
@@ -100,12 +102,25 @@ export function CosmeticsManager({
                 </div>
               </div>
 
-              <div className="rounded-lg bg-overlay-subtle px-3 py-2 text-sm">
-                <CosmeticName
-                  fullName="Tên hiển thị"
-                  equipped={{ [row.slot]: row } as EquippedView}
-                />
-              </div>
+              {row.slot === "avatarFrame" ? (
+                <div className="flex items-center justify-center py-1">
+                  <LevelAvatar
+                    src="/badges/badge-6-male.png"
+                    alt=""
+                    equipped={{ avatarFrame: row }}
+                    size={48}
+                    className="h-12 w-12"
+                    imageClassName="rounded-full"
+                  />
+                </div>
+              ) : (
+                <div className="rounded-lg bg-overlay-subtle px-3 py-2 text-sm">
+                  <CosmeticName
+                    fullName="Tên hiển thị"
+                    equipped={{ [row.slot]: row } as EquippedView}
+                  />
+                </div>
+              )}
 
               <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                 <span>
@@ -135,6 +150,21 @@ export function CosmeticsManager({
 function CosmeticArtwork({ row }: { row: CosmeticRow }) {
   const imageIcon = getCosmeticImageIcon(row.icon);
   const textIcon = getCosmeticTextIcon(row.icon);
+
+  if (row.slot === "avatarFrame" && imageIcon) {
+    return (
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-overlay-subtle">
+        <LevelAvatar
+          src="/badges/badge-6-male.png"
+          alt=""
+          equipped={{ avatarFrame: row }}
+          size={36}
+          className="h-9 w-9"
+          imageClassName="rounded-full"
+        />
+      </span>
+    );
+  }
 
   if (imageIcon) {
     return (
