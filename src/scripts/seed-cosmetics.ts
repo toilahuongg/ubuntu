@@ -12,7 +12,7 @@ type SeedItem = {
   code: string;
   name: string;
   description: string;
-  slot: "prefix" | "suffix" | "color" | "effect";
+  slot: "prefix" | "suffix" | "color" | "effect" | "avatarFrame";
   rarity: "common" | "rare" | "epic" | "legendary";
   payload: {
     icon?: string | null;
