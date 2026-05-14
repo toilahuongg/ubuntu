@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { VersionedImage as Image } from "@/components/VersionedImage";
+import { LevelAvatar } from "@/components/level-avatar";
 import { PushToggle } from "@/components/push-toggle";
 import { getCurrentUser } from "@/lib/current-user";
 import { ROLE_LABELS } from "@/lib/domain";
@@ -61,12 +61,13 @@ export default async function ProfilePage() {
       <section className="glass-card overflow-hidden border-0">
         <div className="flex flex-col gap-4 p-4 min-[430px]:flex-row min-[430px]:items-start min-[430px]:gap-5 sm:p-6">
           <div className="flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-2xl bg-overlay-subtle min-[430px]:h-24 min-[430px]:w-24 sm:h-28 sm:w-28">
-            <Image
+            <LevelAvatar
               src={progress.levelInfo.icon}
               alt={progress.levelInfo.nameVi}
-              width={96}
-              height={96}
+              equipped={progress.equipped}
+              size={96}
               className="h-[72px] w-[72px] rounded-xl object-cover min-[430px]:h-20 min-[430px]:w-20 sm:h-24 sm:w-24"
+              imageClassName="rounded-xl"
               priority
             />
           </div>

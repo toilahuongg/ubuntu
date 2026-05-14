@@ -1,6 +1,18 @@
 import { describe, expect, it } from "vitest";
 
-import { versionedImageUrl } from "./VersionedImage";
+import { imageVersion, versionedImageUrl } from "./VersionedImage";
+
+describe("imageVersion", () => {
+  it("uses the public asset version when available", () => {
+    expect(
+      imageVersion({
+        NEXT_PUBLIC_ASSET_VERSION: "abc123",
+        NEXT_PUBLIC_APP_VERSION: "0.1.0",
+        npm_package_version: "1.0.0",
+      }),
+    ).toBe("abc123");
+  });
+});
 
 describe("versionedImageUrl", () => {
   it("adds the app version to local public image paths", () => {

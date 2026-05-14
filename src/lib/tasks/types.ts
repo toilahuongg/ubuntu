@@ -8,6 +8,7 @@ import type {
 } from "@/lib/domain";
 import type { TaskType } from "@/lib/tasks/constants";
 import type { TaskScheduleType } from "@/lib/tasks/schedule";
+import type { EquippedView } from "@/lib/cosmetics/serialize";
 
 export type TaskStatus = "OPEN" | "LOCKED" | "COMPLETED";
 export type TaskMoveDirection = "up" | "down";
@@ -163,6 +164,7 @@ export type ScopeLabel = "TEAM" | "ZONE" | "REGION";
 type DashboardLevelSummary = {
   currentLevelXp: number;
   dailyScripture: DailyScripture;
+  equipped?: EquippedView;
   totalXp: number;
   level: number;
   progressXp: number;

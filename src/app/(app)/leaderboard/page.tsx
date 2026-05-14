@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Crown, MapPin, Sparkles, Trophy, Users } from "lucide-react";
 
-import { VersionedImage as Image } from "@/components/VersionedImage";
+import { LevelAvatar } from "@/components/level-avatar";
 import { getSessionUser } from "@/lib/auth/session";
 import {
   getLeaderboardMonthLabel,
@@ -190,21 +190,23 @@ function userToPodiumItem(
     subtitle: `Lv.${entry.level} — ${entry.levelInfo.nameVi}`,
     score: entry.totalXp,
     icon: (
-      <Image
+      <LevelAvatar
         src={entry.levelInfo.icon}
         alt={entry.levelInfo.nameVi}
-        width={64}
-        height={64}
+        equipped={entry.equipped}
+        size={64}
         className="h-16 w-16 shrink-0 rounded-full object-cover"
+        imageClassName="rounded-full"
       />
     ),
     iconLg: (
-      <Image
+      <LevelAvatar
         src={entry.levelInfo.icon}
         alt={entry.levelInfo.nameVi}
-        width={88}
-        height={88}
+        equipped={entry.equipped}
+        size={88}
         className="h-20 w-20 shrink-0 rounded-full object-cover sm:h-[88px] sm:w-[88px]"
+        imageClassName="rounded-full"
       />
     ),
   };

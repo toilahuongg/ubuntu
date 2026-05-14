@@ -1,6 +1,7 @@
 import { BookOpen, CheckCircle2, Trophy, Zap } from "lucide-react";
 
-import { VersionedImage as Image } from "@/components/VersionedImage";
+import { LevelAvatar } from "@/components/level-avatar";
+import type { EquippedView } from "@/lib/cosmetics/serialize";
 import type { DailyScripture } from "@/lib/daily-scripture";
 import type { Role } from "@/lib/domain";
 import { ROLE_LABELS } from "@/lib/domain";
@@ -8,6 +9,7 @@ import { ROLE_LABELS } from "@/lib/domain";
 type LevelProgressCardProps = {
   completedCount: number;
   dailyScripture: DailyScripture;
+  equipped?: EquippedView | null;
   level: number;
   levelDescription: string;
   levelIcon: string;
@@ -24,6 +26,7 @@ type LevelProgressCardProps = {
 export function LevelProgressCard({
   completedCount,
   dailyScripture,
+  equipped,
   level,
   levelDescription,
   levelIcon,
@@ -46,13 +49,14 @@ export function LevelProgressCard({
     <section className="glass-card overflow-hidden border-0 p-4 sm:p-6">
       <div className="flex flex-col gap-4 min-[430px]:flex-row min-[430px]:items-start min-[430px]:gap-5">
         <div className="flex h-[88px] w-[88px] shrink-0 items-center justify-center rounded-2xl bg-overlay-subtle min-[430px]:h-24 min-[430px]:w-24 sm:h-28 sm:w-28">
-          <Image
+          <LevelAvatar
             src={levelIcon}
             alt={levelName}
-            width={96}
-            height={96}
+            equipped={equipped}
+            size={96}
             priority
-            className="h-[72px] w-[72px] shrink-0 rounded-xl object-cover min-[430px]:h-20 min-[430px]:w-20 sm:h-24 sm:w-24"
+            className="h-[72px] w-[72px] min-[430px]:h-20 min-[430px]:w-20 sm:h-24 sm:w-24"
+            imageClassName="rounded-xl"
           />
         </div>
 

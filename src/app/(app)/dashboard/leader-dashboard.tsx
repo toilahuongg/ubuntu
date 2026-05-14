@@ -53,6 +53,7 @@ export function LeaderDashboard({
       <LevelProgressCard
         completedCount={completedCount}
         dailyScripture={data.dailyScripture}
+        equipped={data.equipped}
         level={data.level}
         levelDescription={data.levelDescription}
         levelIcon={data.levelIcon}

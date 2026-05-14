@@ -10,10 +10,12 @@ import {
 import { toObjectId } from "@/lib/utils/ids";
 import { getLevelInfo, type LevelInfo } from "@/lib/level-utils";
 import { getProgressToNextLevel } from "@/lib/xp";
-import type { EquippedView } from "@/lib/cosmetics/serialize";
+import { serializeEquipped, type EquippedView } from "@/lib/cosmetics/serialize";
+import { getEquippedPayloadsForUsers } from "@/lib/services/cosmetics-service";
 
 export type UserProgress = {
   currentLevelXp: number;
+  equipped?: EquippedView;
   level: number;
   levelInfo: LevelInfo;
   nextLevelXp: number;
@@ -47,9 +49,16 @@ export async function getUserProgress(userId: string): Promise<UserProgress> {
   const gender = user?.gender ?? "male";
   const progress = getProgressToNextLevel(totalXp);
   const levelInfo = getLevelInfo(progress.currentLevel, gender);
+  const equippedMap = user
+    ? await getEquippedPayloadsForUsers([user._id.toString()])
+    : new Map();
+  const equipped = user
+    ? equippedMap.get(user._id.toString())
+    : undefined;
 
   return {
     currentLevelXp: progress.currentLevelXp,
+    equipped: equipped ? serializeEquipped(equipped) : undefined,
     level: progress.currentLevel,
     levelInfo,
     nextLevelXp: progress.nextLevelXp,

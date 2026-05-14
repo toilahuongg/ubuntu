@@ -491,6 +491,7 @@ export async function buildLeaderDashboard(
   return {
     ...view,
     dailyScripture: getDailyScripture(dateKey),
+    equipped: progress.equipped,
     scopeLabel: resolveScopeLabel(actor),
     trends,
     currentLevelXp: progress.currentLevelXp,
@@ -576,6 +577,7 @@ export async function buildMemberDashboard(
     cards,
     goalNotice,
     dailyScripture: getDailyScripture(dateKey),
+    equipped: progress.equipped,
     currentLevelXp: progress.currentLevelXp,
     totalXp: progress.totalXp,
     level: progress.level,
