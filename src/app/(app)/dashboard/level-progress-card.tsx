@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { BookOpen, CheckCircle2, Trophy, Zap } from "lucide-react";
 
+import { VersionedImage as Image } from "@/components/VersionedImage";
 import type { DailyScripture } from "@/lib/daily-scripture";
 import type { Role } from "@/lib/domain";
 import { ROLE_LABELS } from "@/lib/domain";

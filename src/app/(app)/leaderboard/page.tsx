@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import Image from "next/image";
 import { Crown, MapPin, Sparkles, Trophy, Users } from "lucide-react";
 
+import { VersionedImage as Image } from "@/components/VersionedImage";
 import { getSessionUser } from "@/lib/auth/session";
 import {
   getLeaderboardMonthLabel,

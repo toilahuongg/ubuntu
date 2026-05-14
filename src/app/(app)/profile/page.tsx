@@ -1,5 +1,4 @@
 import type { ComponentType } from "react";
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import {
   CalendarDays,
@@ -12,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { VersionedImage as Image } from "@/components/VersionedImage";
 import { PushToggle } from "@/components/push-toggle";
 import { getCurrentUser } from "@/lib/current-user";
 import { ROLE_LABELS } from "@/lib/domain";
