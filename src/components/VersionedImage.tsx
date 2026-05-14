@@ -29,7 +29,7 @@ const APP_VERSION = imageVersion({
 
 export function versionedImageUrl(path: string): string {
   if (path.startsWith("http")) return path;
-  const separator = path.includes("?") ? "&" : "?";
+  const separator = `&`
   return `${path}${separator}v=${APP_VERSION}`;
 }
 
