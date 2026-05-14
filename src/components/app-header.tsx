@@ -29,6 +29,7 @@ export function AppHeader({
               alt="Ubuntu"
               width={32}
               height={32}
+              className="rounded-full"
               priority
             />
           </div>

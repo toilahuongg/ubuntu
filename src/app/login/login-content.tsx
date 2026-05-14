@@ -137,6 +137,7 @@ export function LoginContent() {
               alt="Ubuntu"
               width={64}
               height={64}
+              className="rounded-full"
               priority
             />
           </div>

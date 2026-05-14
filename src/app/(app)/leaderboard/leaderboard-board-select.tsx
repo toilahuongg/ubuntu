@@ -21,6 +21,8 @@ export function LeaderboardBoardSelect({
   const [isPending, startTransition] = useTransition();
 
   function handleChange(nextBoard: string) {
+    if (nextBoard === activeBoard) return;
+
     const params = new URLSearchParams(searchParams.toString());
     params.set("board", nextBoard);
 
@@ -30,26 +32,31 @@ export function LeaderboardBoardSelect({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <label
-        className="shrink-0 text-xs font-medium text-muted-foreground"
-        htmlFor="leaderboard-board"
-      >
-        Loại bảng
-      </label>
-      <select
+    <div className="-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div
         aria-busy={isPending}
-        className="h-9 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 pr-8 text-sm font-medium outline-none transition focus:ring-2 focus:ring-primary/30"
-        id="leaderboard-board"
-        onChange={(event) => handleChange(event.target.value)}
-        value={activeBoard}
+        aria-label="Loại bảng xếp hạng"
+        className="inline-flex min-w-max items-center gap-1 rounded-lg border border-border bg-muted/30 p-1"
+        role="tablist"
       >
         {boards.map((board) => (
-          <option key={board.value} value={board.value}>
+          <button
+            aria-selected={board.value === activeBoard}
+            className={`h-8 shrink-0 rounded-md border px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-wait ${
+              board.value === activeBoard
+                ? "border-border bg-background text-foreground shadow-sm"
+                : "border-transparent text-muted-foreground hover:bg-background/70 hover:text-foreground"
+            }`}
+            disabled={isPending}
+            key={board.value}
+            onClick={() => handleChange(board.value)}
+            role="tab"
+            type="button"
+          >
             {board.label}
-          </option>
+          </button>
         ))}
-      </select>
+      </div>
     </div>
   );
 }

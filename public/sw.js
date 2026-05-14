@@ -1,5 +1,6 @@
-const CACHE_NAME = "ubuntu-v8";
+const CACHE_NAME = "ubuntu-v9";
 const OFFLINE_URL = "/offline";
+const DEFAULT_NOTIFICATION_ICON = "/icons/logo.png";
 
 const PRECACHE = [
   "/manifest.json",
@@ -117,8 +118,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Thông báo";
   const options = {
     body: data.body || "",
-    icon: data.icon || "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    icon: data.icon || DEFAULT_NOTIFICATION_ICON,
+    badge: DEFAULT_NOTIFICATION_ICON,
     tag: data.tag,
     data: { url: data.url || "/" },
     actions: data.actions || [],
