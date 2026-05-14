@@ -14,5 +14,5 @@ export function VersionedImage(props: ImageProps) {
     typeof props.src === "string" && props.src.startsWith("/")
       ? versionedImageUrl(props.src)
       : props.src;
-  return <Image {...props} src={src} />;
+  return <Image {...props} alt={props.alt} src={src} />;
 }
