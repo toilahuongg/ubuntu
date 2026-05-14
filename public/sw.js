@@ -1,4 +1,4 @@
-const CACHE_NAME = "ubuntu-v10";
+const CACHE_NAME = "ubuntu-v11";
 const OFFLINE_URL = "/offline";
 const DEFAULT_NOTIFICATION_ICON = "/icons/logo.png";
 
@@ -38,6 +38,31 @@ function isNavigation(request) {
   return request.mode === "navigate";
 }
 
+function isMutableStaticAsset(pathname) {
+  return (
+    pathname.startsWith("/icons/") ||
+    pathname === "/apple-touch-icon.png" ||
+    pathname === "/apple-touch-icon-precomposed.png" ||
+    pathname.startsWith("/badges/") ||
+    pathname.startsWith("/cosmetics/")
+  );
+}
+
+function networkFirst(request) {
+  return fetch(request)
+    .then((response) => {
+      if (response.ok) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+      }
+      return response;
+    })
+    .catch(async () => {
+      const cached = await caches.match(request);
+      return cached || Response.error();
+    });
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
@@ -63,24 +88,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first for static assets (icons, badges, cosmetics)
-  if (
-    url.pathname.startsWith("/icons/") ||
-    url.pathname === "/apple-touch-icon.png" ||
-    url.pathname === "/apple-touch-icon-precomposed.png" ||
-    url.pathname.startsWith("/badges/") ||
-    url.pathname.startsWith("/cosmetics/")
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        });
-      })
-    );
+  // Network-first for mutable static assets (icons, badges, cosmetics)
+  if (isMutableStaticAsset(url.pathname)) {
+    event.respondWith(networkFirst(request));
     return;
   }
 
