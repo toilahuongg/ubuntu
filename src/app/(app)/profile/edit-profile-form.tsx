@@ -16,7 +16,7 @@ type Props = {
 };
 
 function badgeSrc(level: number, gender: "male" | "female") {
-  const capped = level > 18 ? 18 : level < 1 ? 1 : level;
+  const capped = level > 12 ? 12 : level < 1 ? 1 : level;
   return `/badges/badge-${capped}-${gender}.png`;
 }
 
