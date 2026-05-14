@@ -1,9 +1,14 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState, useTransition } from "react";
 import { Coins, Lock, Sparkles, Check } from "lucide-react";
 
 import { CosmeticName } from "@/components/cosmetic-name";
+import {
+  getCosmeticImageIcon,
+  getCosmeticTextIcon,
+} from "@/lib/cosmetics/icon";
 import type {
   CosmeticView,
   EquippedView,
@@ -167,7 +172,7 @@ export function ShopClient({
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 animate-slide-up">
+    <div className="mx-auto max-w-3xl space-y-4 animate-slide-up">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-xl font-bold">Cửa hàng trang bị</h1>
@@ -331,12 +336,15 @@ function ItemCard({
 
   return (
     <div className="glass-card space-y-3 p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{item.name}</p>
-          <p className="text-[11px] text-muted-foreground">
-            {SLOT_LABELS[item.slot]}
-          </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <CosmeticArtwork item={item} />
+          <div className="min-w-0 pt-0.5">
+            <p className="truncate text-sm font-semibold">{item.name}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {SLOT_LABELS[item.slot]}
+            </p>
+          </div>
         </div>
         <span
           className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -425,5 +433,50 @@ function ItemCard({
         )}
       </div>
     </div>
+  );
+}
+
+function CosmeticArtwork({ item }: { item: ShopItem }) {
+  const imageIcon = getCosmeticImageIcon(item.payload.icon);
+  const textIcon = getCosmeticTextIcon(item.payload.icon);
+
+  if (imageIcon) {
+    return (
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/60 shadow-sm shadow-sky-500/10 dark:border-white/10 dark:bg-white/5">
+        <Image
+          src={imageIcon}
+          alt=""
+          aria-hidden
+          width={56}
+          height={56}
+          className="h-12 w-12 object-contain"
+        />
+      </span>
+    );
+  }
+
+  if (textIcon) {
+    return (
+      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/60 text-3xl shadow-sm shadow-sky-500/10 dark:border-white/10 dark:bg-white/5">
+        {textIcon}
+      </span>
+    );
+  }
+
+  const gradient =
+    item.payload.gradient && item.payload.gradient.length > 1
+      ? `linear-gradient(135deg, ${item.payload.gradient.join(", ")})`
+      : undefined;
+
+  return (
+    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/70 bg-white/60 shadow-sm shadow-sky-500/10 dark:border-white/10 dark:bg-white/5">
+      <span
+        className={`h-9 w-9 rounded-full ${
+          gradient ? "" : "bg-gradient-to-br from-sky-300 via-cyan-300 to-emerald-300"
+        }`}
+        style={gradient ? { backgroundImage: gradient } : undefined}
+        aria-hidden
+      />
+    </span>
   );
 }

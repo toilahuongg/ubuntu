@@ -1,10 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Pencil, Plus, UserPlus } from "lucide-react";
 
 import { CosmeticName } from "@/components/cosmetic-name";
+import {
+  getCosmeticImageIcon,
+  getCosmeticTextIcon,
+} from "@/lib/cosmetics/icon";
 import type { CosmeticView, EquippedView } from "@/lib/cosmetics/serialize";
 import type { CosmeticSlot } from "@/lib/models";
 
@@ -64,13 +69,16 @@ export function CosmeticsManager({
           cosmetics.map((row) => (
             <div key={row.id} className="glass-card space-y-2 p-3">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{row.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    <span className="font-mono">{row.code}</span>
-                    {" · "}
-                    {SLOT_LABELS[row.slot]} · {row.rarity}
-                  </p>
+                <div className="flex min-w-0 items-start gap-3">
+                  <CosmeticArtwork row={row} />
+                  <div className="min-w-0 pt-0.5">
+                    <p className="text-sm font-semibold">{row.name}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      <span className="font-mono">{row.code}</span>
+                      {" · "}
+                      {SLOT_LABELS[row.slot]} · {row.rarity}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   <Link
@@ -121,5 +129,50 @@ export function CosmeticsManager({
         )}
       </div>
     </div>
+  );
+}
+
+function CosmeticArtwork({ row }: { row: CosmeticRow }) {
+  const imageIcon = getCosmeticImageIcon(row.icon);
+  const textIcon = getCosmeticTextIcon(row.icon);
+
+  if (imageIcon) {
+    return (
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-overlay-subtle">
+        <Image
+          src={imageIcon}
+          alt=""
+          aria-hidden
+          width={44}
+          height={44}
+          className="h-9 w-9 object-contain"
+        />
+      </span>
+    );
+  }
+
+  if (textIcon) {
+    return (
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-overlay-subtle text-2xl">
+        {textIcon}
+      </span>
+    );
+  }
+
+  const gradient =
+    row.gradient && row.gradient.length > 1
+      ? `linear-gradient(135deg, ${row.gradient.join(", ")})`
+      : undefined;
+
+  return (
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-overlay-subtle">
+      <span
+        className={`h-7 w-7 rounded-full ${
+          gradient ? "" : "bg-gradient-to-br from-sky-300 via-cyan-300 to-emerald-300"
+        }`}
+        style={gradient ? { backgroundImage: gradient } : undefined}
+        aria-hidden
+      />
+    </span>
   );
 }

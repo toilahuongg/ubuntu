@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "cron:reminders": "tsx src/scripts/reminder-cron.ts",
+    "convert:cosmetic-icons": "tsx src/scripts/convert-cosmetic-icons.ts",
     "convert:levels": "tsx src/scripts/convert-levels-from-xp.ts",
     "lint": "eslint",
     "seed": "tsx src/scripts/seed.ts",
