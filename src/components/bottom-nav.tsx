@@ -31,6 +31,7 @@ const NAV_ITEMS: NavItem[] = [
     href: "/customers",
     label: "Học viên",
     icon: Heart,
+    roles: ["ADMIN", "TEAM_LEAD", "ZONE_LEAD", "REGIONAL_LEAD", "NGV"],
   },
   {
     href: "/prayer",
