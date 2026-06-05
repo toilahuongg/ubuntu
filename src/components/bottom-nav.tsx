@@ -8,6 +8,7 @@ import {
   Heart,
   LayoutDashboard,
   Settings,
+  Sparkles,
   Trophy,
   User,
 } from "lucide-react";
@@ -32,6 +33,11 @@ const NAV_ITEMS: NavItem[] = [
     icon: Heart,
   },
   {
+    href: "/prayer",
+    label: "CN",
+    icon: Sparkles,
+  },
+  {
     href: "/leaderboard",
     label: "Xếp hạng",
     icon: Trophy,
@@ -49,7 +55,7 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-const CORE_HREFS = ["/dashboard", "/customers", "/leaderboard", "/profile"];
+const CORE_HREFS = ["/dashboard", "/customers", "/prayer", "/leaderboard", "/profile"];
 const EXTRA_PRIORITIES = ["/admin"];
 
 export function BottomNav({ role }: { role: Role }) {
