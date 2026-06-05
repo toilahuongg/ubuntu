@@ -498,6 +498,7 @@ export async function saveSubmission(
       xpAwarded: result.xpAwarded,
       completionCount: result.completionCount,
       template: taskRaw.submissionMessage || undefined,
+      taskType,
     }).catch((err) => {
       console.error("[submission-notifier]", err);
     });
@@ -514,6 +515,7 @@ export async function saveSubmission(
         taskTitle: taskRaw.title,
         targetCount: taskRaw.targetCount,
         template: taskRaw.completionMessage || undefined,
+        taskType,
       }).catch((err) => {
         console.error("[submission-notifier]", err);
       });
