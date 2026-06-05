@@ -372,6 +372,24 @@ describe("admin operations view model", () => {
         },
       ],
     });
+
+    // Verify taskProgresses and tasks
+    expect(view.tasks).toHaveLength(3);
+    expect(view.tasks.map((t) => t.title)).toContain("team-daily-a");
+    expect(view.tasks.map((t) => t.title)).toContain("zone-a1-monthly");
+    expect(view.tasks.map((t) => t.title)).toContain("region-a2-monthly");
+
+    expect(memberA1?.taskProgresses).toContainEqual({
+      taskId: objectId("team-daily-a").toString(),
+      assigned: 30,
+      completed: 2,
+    });
+    expect(memberA1?.taskProgresses).toContainEqual({
+      taskId: objectId("zone-a1-monthly").toString(),
+      assigned: 1,
+      completed: 1,
+    });
+    expect(memberA1?.taskProgresses).toHaveLength(2);
   });
 
   it("scopes default selections to the actor role", () => {

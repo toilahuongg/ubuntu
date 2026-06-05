@@ -49,6 +49,18 @@ export type AdminOperationsTeamNode = AdminOperationsNodeSummary & {
   zones: AdminOperationsZoneNode[];
 };
 
+export type AdminOperationsTaskProgress = {
+  taskId: string;
+  assigned: number;
+  completed: number;
+};
+
+export type AdminOperationsTaskSummary = {
+  id: string;
+  title: string;
+  taskType: TaskType;
+};
+
 export type AdminOperationsMember = {
   completionDays: AdminOperationsCompletionDay[];
   id: string;
@@ -60,6 +72,7 @@ export type AdminOperationsMember = {
   summary: AdminOperationsSummary;
   teamId: string | null;
   zoneId: string | null;
+  taskProgresses: AdminOperationsTaskProgress[];
 };
 
 export type AdminOperationsView = {
@@ -76,4 +89,6 @@ export type AdminOperationsView = {
   tree: {
     teams: AdminOperationsTeamNode[];
   };
+  tasks: AdminOperationsTaskSummary[];
 };
+

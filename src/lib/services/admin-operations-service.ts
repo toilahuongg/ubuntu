@@ -262,9 +262,11 @@ export function buildAdminOperationsViewModel({
 
   const rootCounter = createCounter();
   const memberCounters = new Map<string, ProgressCounter>();
+  const memberTaskCounters = new Map<string, Map<string, ProgressCounter>>();
 
   for (const user of visibleUsers) {
     memberCounters.set(user.id, createCounter());
+    memberTaskCounters.set(user.id, new Map<string, ProgressCounter>());
   }
 
   for (const task of tasks) {
@@ -281,14 +283,27 @@ export function buildAdminOperationsViewModel({
         if (!appliesToUser(scope, userShape(user))) continue;
 
         const counter = memberCounters.get(user.id);
-        if (!counter) continue;
+        if (counter) {
+          counter.assigned += 1;
+          rootCounter.assigned += 1;
 
-        counter.assigned += 1;
-        rootCounter.assigned += 1;
+          if (completedSlots.has(submissionKey(taskId, user.id, currentDate))) {
+            counter.completed += 1;
+            rootCounter.completed += 1;
+          }
+        }
 
-        if (completedSlots.has(submissionKey(taskId, user.id, currentDate))) {
-          counter.completed += 1;
-          rootCounter.completed += 1;
+        const taskCounters = memberTaskCounters.get(user.id);
+        if (taskCounters) {
+          let taskCounter = taskCounters.get(taskId);
+          if (!taskCounter) {
+            taskCounter = createCounter();
+            taskCounters.set(taskId, taskCounter);
+          }
+          taskCounter.assigned += 1;
+          if (completedSlots.has(submissionKey(taskId, user.id, currentDate))) {
+            taskCounter.completed += 1;
+          }
         }
       }
     }
@@ -298,6 +313,15 @@ export function buildAdminOperationsViewModel({
     .map((user) => {
       const summary = counterToSummary(memberCounters.get(user.id) ?? createCounter());
       const memberCompletionTasks = completionTasksByMemberDate.get(user.id);
+      const taskCounters = memberTaskCounters.get(user.id);
+      const taskProgresses = Array.from(taskCounters?.entries() ?? []).map(
+        ([taskId, counter]) => ({
+          taskId,
+          assigned: counter.assigned,
+          completed: counter.completed,
+        }),
+      );
+
       return {
         completionDays: monthDates.map((date) =>
           buildCompletionDay(date, memberCompletionTasks?.get(date) ?? []),
@@ -311,6 +335,7 @@ export function buildAdminOperationsViewModel({
         summary,
         teamId: user.teamId ?? null,
         zoneId: user.zoneId ?? null,
+        taskProgresses,
       } satisfies AdminOperationsMember;
     })
     .sort((a, b) => {
@@ -402,6 +427,21 @@ export function buildAdminOperationsViewModel({
     zones: zonesByTeam.get(team.id) ?? [],
   }));
 
+  const scheduledTaskIds = new Set<string>();
+  for (const task of tasks) {
+    if (monthDates.some((date) => isTaskScheduledForDate(task, date))) {
+      scheduledTaskIds.add(task._id.toString());
+    }
+  }
+
+  const activeTasks = tasks
+    .filter((task) => scheduledTaskIds.has(task._id.toString()))
+    .map((task) => ({
+      id: task._id.toString(),
+      title: task.title,
+      taskType: normalizeTaskType(task.taskType),
+    }));
+
   return {
     dateKey,
     members,
@@ -416,6 +456,7 @@ export function buildAdminOperationsViewModel({
     tree: {
       teams,
     },
+    tasks: activeTasks,
   };
 }
 

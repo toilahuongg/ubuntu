@@ -142,6 +142,7 @@ export function OperationsDashboard({
     completionTrend.find((point) => point.date === data.dateKey)?.completed ?? 0;
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
   const [selectedCompletionDate, setSelectedCompletionDate] = useState(data.dateKey);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   return (
     <div className="space-y-4">
@@ -176,10 +177,25 @@ export function OperationsDashboard({
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="rounded-md border border-border/60 bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground">
+              {data.tasks && data.tasks.length > 0 && (
+                <select
+                  value={selectedTaskId ?? ""}
+                  onChange={(e) => setSelectedTaskId(e.target.value || null)}
+                  className="form-select h-8 py-0 pl-2 pr-7 text-[11px] font-medium rounded-md w-[150px] sm:w-[180px] bg-card border-border/60 hover:border-primary/35"
+                  aria-label="Chọn nhiệm vụ"
+                >
+                  <option value="">Tất cả nhiệm vụ</option>
+                  {data.tasks.map((task) => (
+                    <option key={task.id} value={task.id}>
+                      {task.title}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <span className="rounded-md border border-border/60 bg-card px-2.5 py-1 text-[11px] font-semibold text-foreground shrink-0">
                 {activeMembers.length} người
               </span>
-              <span className="rounded-md border border-border/60 bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+              <span className="rounded-md border border-border/60 bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground shrink-0">
                 Tháng
               </span>
             </div>
@@ -191,6 +207,31 @@ export function OperationsDashboard({
             <div className="glass-card divide-y divide-border/60 overflow-hidden">
               {activeMembers.map((member) => {
                 const isOpen = openMemberId === member.id;
+
+                let assigned = member.summary.assigned;
+                let completed = member.summary.completed;
+                let completionPercent = member.summary.completionPercent;
+                let status = member.status;
+
+                if (selectedTaskId) {
+                  const progress = member.taskProgresses?.find(
+                    (p) => p.taskId === selectedTaskId,
+                  ) ?? { assigned: 0, completed: 0 };
+                  assigned = progress.assigned;
+                  completed = progress.completed;
+                  completionPercent =
+                    assigned > 0 ? Math.round((completed / assigned) * 100) : 0;
+
+                  if (assigned === 0) {
+                    status = "idle";
+                  } else if (completed >= assigned) {
+                    status = "complete";
+                  } else if (completed === 0) {
+                    status = "needs_attention";
+                  } else {
+                    status = "in_progress";
+                  }
+                }
 
                 return (
                   <div key={member.id}>
@@ -222,18 +263,17 @@ export function OperationsDashboard({
                         <div className="mt-3 h-2 rounded-full bg-muted">
                           <div
                             className={`h-full rounded-full ${
-                              member.status === "needs_attention"
+                              status === "needs_attention"
                                 ? "bg-amber-500"
-                                : member.status === "complete"
+                                : status === "complete"
                                   ? "bg-emerald-500"
                                   : "bg-primary"
                             }`}
-                            style={{ width: `${member.summary.completionPercent}%` }}
+                            style={{ width: `${completionPercent}%` }}
                           />
                         </div>
                         <p className="mt-2 text-[11px] text-muted-foreground">
-                          {member.summary.completed}/{member.summary.assigned} task
-                          slot hoàn thành trong tháng
+                          {completed}/{assigned} task slot hoàn thành trong tháng
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center justify-end">
@@ -251,6 +291,7 @@ export function OperationsDashboard({
                         selectedDate={selectedCompletionDate}
                         todayDate={data.dateKey}
                         onSelectDate={setSelectedCompletionDate}
+                        selectedTaskId={selectedTaskId}
                       />
                     ) : null}
                   </div>
@@ -264,23 +305,41 @@ export function OperationsDashboard({
   );
 }
 
+
 function MemberCompletionCalendar({
   days,
   selectedDate,
   todayDate,
   onSelectDate,
+  selectedTaskId = null,
 }: {
   days: AdminOperationsCompletionDay[];
   onSelectDate: (date: string) => void;
   selectedDate: string;
   todayDate: string;
+  selectedTaskId?: string | null;
 }) {
+  const filteredDays = days.map((day) => {
+    if (!selectedTaskId) return day;
+
+    const filteredTasks = day.tasks.filter((t) => t.id === selectedTaskId);
+    const completionCount = filteredTasks.reduce(
+      (sum, t) => sum + t.completionCount,
+      0,
+    );
+    return {
+      ...day,
+      completionCount,
+      tasks: filteredTasks,
+    };
+  });
+
   const selectedDay =
-    days.find((day) => day.date === selectedDate) ??
-    days.find((day) => day.date === todayDate) ??
-    days[0];
-  const calendarCells = buildCalendarCells(days);
-  const totalCompletionCount = days.reduce(
+    filteredDays.find((day) => day.date === selectedDate) ??
+    filteredDays.find((day) => day.date === todayDate) ??
+    filteredDays[0];
+  const calendarCells = buildCalendarCells(filteredDays);
+  const totalCompletionCount = filteredDays.reduce(
     (total, day) => total + day.completionCount,
     0,
   );

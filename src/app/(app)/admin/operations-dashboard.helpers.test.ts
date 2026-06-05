@@ -27,6 +27,7 @@ const view: AdminOperationsView = {
       },
       teamId: "team-a",
       zoneId: "zone-a1",
+      taskProgresses: [],
     },
     {
       completionDays: [],
@@ -44,6 +45,7 @@ const view: AdminOperationsView = {
       },
       teamId: "team-a",
       zoneId: "zone-a2",
+      taskProgresses: [],
     },
   ],
   scope: {
@@ -63,6 +65,7 @@ const view: AdminOperationsView = {
     pending: 33,
     completionPercent: 20,
   },
+  tasks: [],
   tree: {
     teams: [
       {
