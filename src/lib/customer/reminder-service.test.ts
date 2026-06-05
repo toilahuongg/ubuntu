@@ -78,7 +78,7 @@ describe("customer reminder service", () => {
 
   it("builds reminder text with day count", () => {
     expect(buildCustomerReminderText("Chị Lan", 5)).toBe(
-      'Nhắc nhở: Khách hàng "Chị Lan" đã 5 ngày chưa được chăm sóc. Mở app để xem chi tiết.',
+      'Nhắc nhở: Học viên "Chị Lan" đã 5 ngày chưa được chăm sóc. Mở app để xem chi tiết.',
     );
   });
 

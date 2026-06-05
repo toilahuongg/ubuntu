@@ -79,6 +79,15 @@ export default async function AdminPage() {
             description: "Quản lý các khu vực trong địa vực",
           },
         ]
+      : isRegionalLead && session.regionId
+      ? [
+          {
+            href: `/admin/regions/${encodeURIComponent(session.regionId)}`,
+            icon: MapPin,
+            label: "Tiến độ khu vực",
+            description: "Xem tiến độ thành viên trong khu vực quản lý",
+          },
+        ]
       : [];
 
     return (

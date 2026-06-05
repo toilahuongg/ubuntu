@@ -181,10 +181,10 @@ describe("user management permissions", () => {
       "ZONE_LEAD",
       "REGIONAL_LEAD",
       "NGV",
-      "TDM",
       "MEMBER",
+      "TDM",
     ]);
-    expect(getAssignableUserRoles(regionalLead)).toEqual(["NGV", "TDM", "MEMBER"]);
+    expect(getAssignableUserRoles(regionalLead)).toEqual(["NGV", "MEMBER", "TDM"]);
   });
 });
 
