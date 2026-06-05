@@ -384,7 +384,14 @@ export async function buildDashboardView(
   const { visibleUsers, relevantTasks, allTasks, submissions } =
     await loadVisibleTasksAndSubs(actor, dateKey);
 
-  const sortedTasks = sortTasksForDisplay(relevantTasks);
+  const filteredRelevantTasks = relevantTasks.filter(
+    (t) => normalizeTaskType(t.taskType) !== "COUNT_TOTAL",
+  );
+  const filteredAllTasks = allTasks.filter(
+    (t) => normalizeTaskType(t.taskType) !== "COUNT_TOTAL",
+  );
+
+  const sortedTasks = sortTasksForDisplay(filteredRelevantTasks);
   const taskObjectIds = sortedTasks.map((t) => t._id);
   const reminderPreferences =
     taskObjectIds.length > 0
@@ -474,7 +481,7 @@ export async function buildDashboardView(
     cards,
     goalNotice,
     roster,
-    tasks: sortTasksForDisplay(allTasks).map(mapTask),
+    tasks: sortTasksForDisplay(filteredAllTasks).map(mapTask),
   };
 }
 
@@ -520,8 +527,10 @@ export async function buildMemberDashboard(
     regionId: actor.regionId ?? null,
     role: actor.role,
   };
-  const personalTasks = relevantTasks.filter((t) =>
-    appliesToUser(taskToScope(t), actorShape),
+  const personalTasks = relevantTasks.filter(
+    (t) =>
+      appliesToUser(taskToScope(t), actorShape) &&
+      normalizeTaskType(t.taskType) !== "COUNT_TOTAL",
   );
 
   const sortedPersonal = sortTasksForDisplay(personalTasks);
@@ -578,6 +587,220 @@ export async function buildMemberDashboard(
     goalNotice,
     dailyScripture: getDailyScripture(dateKey),
     equipped: progress.equipped,
+    currentLevelXp: progress.currentLevelXp,
+    totalXp: progress.totalXp,
+    level: progress.level,
+    progressXp: progress.progressXp,
+    nextLevelXp: progress.nextLevelXp,
+    levelName: progress.levelInfo.nameVi,
+    levelDescription: progress.levelInfo.description,
+    levelIcon: progress.levelInfo.icon,
+  };
+}
+
+export async function buildMemberPrayerDashboard(
+  actor: SessionUser,
+  dateKey: string,
+): Promise<MemberDashboardView> {
+  const [{ relevantTasks, submissions }, progress] = await Promise.all([
+    loadVisibleTasksAndSubs(actor, dateKey),
+    getUserProgress(actor.id),
+  ]);
+
+  const actorShape = {
+    teamId: actor.teamId ?? null,
+    zoneId: actor.zoneId ?? null,
+    regionId: actor.regionId ?? null,
+    role: actor.role,
+  };
+  const prayerTasks = relevantTasks.filter(
+    (t) =>
+      appliesToUser(taskToScope(t), actorShape) &&
+      normalizeTaskType(t.taskType) === "COUNT_TOTAL",
+  );
+
+  const sortedPersonal = sortTasksForDisplay(prayerTasks);
+  const personalTaskObjectIds = sortedPersonal.map((t) => t._id);
+  const reminderPreferences =
+    personalTaskObjectIds.length > 0
+      ? await TaskReminderPreferenceModel.find({
+          taskId: { $in: personalTaskObjectIds },
+          userId: toObjectId(actor.id),
+        })
+          .select({ enabled: 1, reminderTime: 1, taskId: 1 })
+          .lean()
+      : [];
+  const reminderByTaskId = new Map(
+    reminderPreferences.map((p) => [
+      p.taskId.toString(),
+      { enabled: p.enabled, reminderTime: p.reminderTime },
+    ]),
+  );
+
+  const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
+    await loadProgressAggregates(sortedPersonal, [actor.id], dateKey);
+  const lookup = buildDashboardLookup(
+    sortedPersonal,
+    [
+      {
+        id: actor.id,
+        teamId: actor.teamId ?? null,
+        zoneId: actor.zoneId ?? null,
+        regionId: actor.regionId ?? null,
+        role: actor.role,
+      },
+    ],
+    submissions,
+  );
+
+  const cards: TaskCard[] = sortedPersonal.map((t) =>
+    buildTaskCard(t, {
+      actorId: actor.id,
+      actorShape,
+      dateKey,
+      lookup,
+      totalByTask,
+      monthlyByTaskUser,
+      goalByTaskUser,
+      reminderByTaskId,
+    }),
+  );
+  const goalNotice = buildDashboardGoalNotice(cards);
+
+  return {
+    date: dateKey,
+    cards,
+    goalNotice,
+    dailyScripture: getDailyScripture(dateKey),
+    currentLevelXp: progress.currentLevelXp,
+    totalXp: progress.totalXp,
+    level: progress.level,
+    progressXp: progress.progressXp,
+    nextLevelXp: progress.nextLevelXp,
+    levelName: progress.levelInfo.nameVi,
+    levelDescription: progress.levelInfo.description,
+    levelIcon: progress.levelInfo.icon,
+  };
+}
+
+export async function buildLeaderPrayerDashboard(
+  actor: SessionUser,
+  dateKey: string,
+): Promise<LeaderDashboardView> {
+  const [progress, trends] = await Promise.all([
+    getUserProgress(actor.id),
+    getCompletionTrend(actor, 14, "SELF"),
+  ]);
+
+  const { visibleUsers, relevantTasks, allTasks, submissions } =
+    await loadVisibleTasksAndSubs(actor, dateKey);
+
+  const prayerRelevantTasks = relevantTasks.filter(
+    (t) => normalizeTaskType(t.taskType) === "COUNT_TOTAL",
+  );
+  const prayerAllTasks = allTasks.filter(
+    (t) => normalizeTaskType(t.taskType) === "COUNT_TOTAL",
+  );
+
+  const sortedTasks = sortTasksForDisplay(prayerRelevantTasks);
+  const taskObjectIds = sortedTasks.map((t) => t._id);
+  const reminderPreferences =
+    taskObjectIds.length > 0
+      ? await TaskReminderPreferenceModel.find({
+          taskId: { $in: taskObjectIds },
+          userId: toObjectId(actor.id),
+        })
+          .select({ enabled: 1, reminderTime: 1, taskId: 1 })
+          .lean()
+      : [];
+  const reminderByTaskId = new Map(
+    reminderPreferences.map((p) => [
+      p.taskId.toString(),
+      { enabled: p.enabled, reminderTime: p.reminderTime },
+    ]),
+  );
+
+  const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
+    await loadProgressAggregates(sortedTasks, [actor.id], dateKey);
+  const actorShape = {
+    teamId: actor.teamId ?? null,
+    zoneId: actor.zoneId ?? null,
+    regionId: actor.regionId ?? null,
+    role: actor.role,
+  };
+  const lookup = buildDashboardLookup(sortedTasks, visibleUsers, submissions);
+
+  const cards: TaskCard[] = sortedTasks.map((t) =>
+    buildTaskCard(t, {
+      actorId: actor.id,
+      actorShape,
+      dateKey,
+      lookup,
+      totalByTask,
+      monthlyByTaskUser,
+      goalByTaskUser,
+      reminderByTaskId,
+    }),
+  );
+  const actorTaskIds = new Set(
+    sortedTasks
+      .filter((t) => appliesToUser(taskToScope(t), actorShape))
+      .map((t) => t._id.toString()),
+  );
+  const goalNotice = buildDashboardGoalNotice(
+    cards.filter((card) => actorTaskIds.has(card.id)),
+  );
+
+  const roster: DashboardRosterEntry[] = visibleUsers.map((user) => {
+    const statuses = sortedTasks.map((t) => {
+      const taskId = t._id.toString();
+      const applicable = Boolean(
+        lookup.applicableUserIdsByTaskId.get(taskId)?.has(user.id),
+      );
+      const sub = lookup.submissionByTaskUser.get(
+        buildSubmissionKey(taskId, user.id),
+      );
+      return {
+        taskId,
+        applicable,
+        completionCount: sub?.completionCount ?? 0,
+      };
+    });
+    const applicableCount = statuses.filter((s) => s.applicable).length;
+    const completed = statuses.filter(
+      (s) => s.applicable && s.completionCount > 0,
+    ).length;
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      role: user.role,
+      completed,
+      pending: Math.max(applicableCount - completed, 0),
+      statuses,
+    };
+  });
+
+  const totalSlots = lookup.applicableCount;
+  const completedSubmissions = lookup.completedSubmissionCount;
+
+  return {
+    date: dateKey,
+    highlights: {
+      visibleUsers: visibleUsers.length,
+      completed: completedSubmissions,
+      pending: Math.max(totalSlots - completedSubmissions, 0),
+      completionPercent:
+        totalSlots > 0
+          ? Math.round((completedSubmissions / totalSlots) * 100)
+          : 0,
+    },
+    cards,
+    goalNotice,
+    roster,
+    tasks: sortTasksForDisplay(prayerAllTasks).map(mapTask),
+    dailyScripture: getDailyScripture(dateKey),
+    scopeLabel: resolveScopeLabel(actor),
+    trends,
     currentLevelXp: progress.currentLevelXp,
     totalXp: progress.totalXp,
     level: progress.level,
