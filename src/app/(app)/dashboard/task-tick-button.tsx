@@ -39,8 +39,7 @@ export function TaskTickButton({
     isPending ||
     isLocked ||
     isGoalComplete ||
-    (isTaskCompleted && !isDone) ||
-    (taskType === "COUNT_TOTAL" && isDone);
+    (isTaskCompleted && !isDone);
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -48,15 +47,18 @@ export function TaskTickButton({
     if (disabled) return;
     setError(null);
     const previousCount = optimisticCount;
-    const nextCount = isDone ? 0 : Math.max(1, previousCount);
+    const isCountTotal = taskType === "COUNT_TOTAL";
+    const nextCount = isCountTotal
+      ? previousCount + 1
+      : isDone ? 0 : Math.max(1, previousCount);
     setOptimisticCount(nextCount);
     setIsPending(true);
     void (async () => {
       const result = await submitTaskViaApi({
         taskId,
         subjectUserId,
-        count: isDone ? 0 : undefined,
-        mode: isDone ? "set" : undefined,
+        count: isCountTotal ? 1 : (isDone ? 0 : undefined),
+        mode: isCountTotal ? "increment" : (isDone ? "set" : undefined),
       });
       if (result.status === "error") {
         setOptimisticCount(previousCount);
@@ -73,7 +75,7 @@ export function TaskTickButton({
 
   const label = isDone
     ? taskType === "COUNT_TOTAL"
-      ? "Đã hoàn thành"
+      ? "Đánh dấu thêm lượt cầu nguyện"
       : "Bỏ hoàn thành"
     : isGoalComplete
       ? "Đã đạt mục tiêu"
