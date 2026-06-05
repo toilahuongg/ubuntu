@@ -78,7 +78,7 @@ export default async function TaskDetailPage({
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <Link
-            href="/dashboard"
+            href={detail.taskType === "COUNT_TOTAL" ? "/prayer" : "/dashboard"}
             className="-ml-2 inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-overlay-subtle hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
