@@ -215,10 +215,16 @@ function TabButton({
 }
 
 function isCardDone(card: TaskCard) {
-  return (
+  if (
     card.taskType === "MONTHLY_PER_MEMBER" ||
     card.taskType === "WEEKLY_PER_MEMBER"
-  )
-    ? card.progress.isGoalComplete
-    : card.myCompletionCount > 0;
+  ) {
+    return card.progress.isGoalComplete;
+  }
+  if (card.taskType === "COUNT_TOTAL") {
+    return card.progress.target !== null
+      ? card.progress.isGoalComplete
+      : card.myCompletionCount > 0;
+  }
+  return card.myCompletionCount > 0;
 }
