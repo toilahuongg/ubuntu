@@ -34,6 +34,7 @@ export function TaskTickButton({
 
   const isLocked = status === "LOCKED";
   const isDone = optimisticCount > 0;
+  const shouldRenderChecked = isDone && taskType !== "COUNT_TOTAL";
   const isTaskCompleted = status === "COMPLETED";
   const disabled =
     isPending ||
@@ -96,7 +97,7 @@ export function TaskTickButton({
         aria-label={label}
         title={error ?? label}
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
-          isDone
+          shouldRenderChecked
             ? "border-primary bg-primary text-background"
             : isLocked || isTaskCompleted
               ? "border-border bg-muted text-muted-foreground"
@@ -105,7 +106,7 @@ export function TaskTickButton({
       >
         {isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-        ) : isDone ? (
+        ) : shouldRenderChecked ? (
           <Check className="h-4 w-4" aria-hidden />
         ) : (
           <span className="h-4 w-4 rounded-full" aria-hidden />
