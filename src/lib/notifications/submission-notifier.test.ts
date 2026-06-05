@@ -122,4 +122,27 @@ describe("resolveNotificationRecipientIds", () => {
     expect(recipientIds).toHaveLength(new Set(recipientIds).size);
     expect(recipientIds).not.toContain("dvt-a1");
   });
+
+  it("sends COUNT_TOTAL (CN) submissions to all team members", () => {
+    const recipientIds = resolveNotificationRecipientIds({
+      excludeUserId: "member-a",
+      scope: {
+        teamId: "team-a",
+        zoneId: "zone-a",
+        regionId: "region-a",
+      },
+      subjectRole: "MEMBER",
+      users,
+      taskType: "COUNT_TOTAL",
+    });
+
+    expect(recipientIds).toEqual([
+      "nt-a",
+      "dvt-a1",
+      "dvt-a2",
+      "kvt-a1",
+      "kvt-a2",
+      "kvt-a3",
+    ]);
+  });
 });

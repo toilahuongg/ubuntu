@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/mongoose";
 import { UserModel } from "@/lib/models";
 import { safeSendWebPush } from "@/lib/notifications/web-push";
 import { toObjectId } from "@/lib/utils/ids";
+import type { TaskType } from "@/lib/tasks/constants";
 
 type NotificationUser = {
   id: string;
@@ -67,66 +68,75 @@ export function resolveNotificationRecipientIds(input: {
   scope: NotificationScope;
   subjectRole?: Role | null;
   users: NotificationUser[];
+  taskType?: TaskType | null;
 }): string[] {
   const recipientIds = new Set<string>();
   const { regionId, scope, teamId, zoneId } = input.scope;
 
-  if (teamId) {
+  if (input.taskType === "COUNT_TOTAL" && teamId) {
     addMatchingUserIds(
       recipientIds,
       input.users,
-      (user) => user.role === "TEAM_LEAD" && user.teamId === teamId,
+      (user) => user.teamId === teamId,
     );
-  }
+  } else {
+    if (teamId) {
+      addMatchingUserIds(
+        recipientIds,
+        input.users,
+        (user) => user.role === "TEAM_LEAD" && user.teamId === teamId,
+      );
+    }
 
-  if (zoneId) {
-    addMatchingUserIds(
-      recipientIds,
-      input.users,
-      (user) => user.role === "ZONE_LEAD" && user.zoneId === zoneId,
-    );
-  }
+    if (zoneId) {
+      addMatchingUserIds(
+        recipientIds,
+        input.users,
+        (user) => user.role === "ZONE_LEAD" && user.zoneId === zoneId,
+      );
+    }
 
-  if (regionId) {
-    addMatchingUserIds(
-      recipientIds,
-      input.users,
-      (user) => user.role === "REGIONAL_LEAD" && user.regionId === regionId,
-    );
-  }
+    if (regionId) {
+      addMatchingUserIds(
+        recipientIds,
+        input.users,
+        (user) => user.role === "REGIONAL_LEAD" && user.regionId === regionId,
+      );
+    }
 
-  const horizontalRole =
-    input.subjectRole ??
-    (scope === "TEAM"
-      ? "TEAM_LEAD"
-      : scope === "ZONE"
-        ? "ZONE_LEAD"
-        : scope === "REGION"
-          ? "REGIONAL_LEAD"
-          : null);
+    const horizontalRole =
+      input.subjectRole ??
+      (scope === "TEAM"
+        ? "TEAM_LEAD"
+        : scope === "ZONE"
+          ? "ZONE_LEAD"
+          : scope === "REGION"
+            ? "REGIONAL_LEAD"
+            : null);
 
-  if (horizontalRole === "TEAM_LEAD" && teamId) {
-    addMatchingUserIds(
-      recipientIds,
-      input.users,
-      (user) => user.role === "TEAM_LEAD" && user.teamId === teamId,
-    );
-  }
+    if (horizontalRole === "TEAM_LEAD" && teamId) {
+      addMatchingUserIds(
+        recipientIds,
+        input.users,
+        (user) => user.role === "TEAM_LEAD" && user.teamId === teamId,
+      );
+    }
 
-  if (horizontalRole === "ZONE_LEAD" && teamId) {
-    addMatchingUserIds(
-      recipientIds,
-      input.users,
-      (user) => user.role === "ZONE_LEAD" && user.teamId === teamId,
-    );
-  }
+    if (horizontalRole === "ZONE_LEAD" && teamId) {
+      addMatchingUserIds(
+        recipientIds,
+        input.users,
+        (user) => user.role === "ZONE_LEAD" && user.teamId === teamId,
+      );
+    }
 
-  if (horizontalRole === "REGIONAL_LEAD" && zoneId) {
-    addMatchingUserIds(
-      recipientIds,
-      input.users,
-      (user) => user.role === "REGIONAL_LEAD" && user.zoneId === zoneId,
-    );
+    if (horizontalRole === "REGIONAL_LEAD" && zoneId) {
+      addMatchingUserIds(
+        recipientIds,
+        input.users,
+        (user) => user.role === "REGIONAL_LEAD" && user.zoneId === zoneId,
+      );
+    }
   }
 
   if (input.excludeUserId) {
@@ -140,6 +150,7 @@ async function findNotificationRecipientUserIds(input: {
   excludeUserId?: string | null;
   scope: NotificationScope;
   subjectRole?: Role | null;
+  taskType?: TaskType | null;
 }): Promise<string[]> {
   const teamId = input.scope.teamId ? toObjectId(input.scope.teamId) : null;
   const zoneId = input.scope.zoneId ? toObjectId(input.scope.zoneId) : null;
@@ -162,6 +173,7 @@ async function findNotificationRecipientUserIds(input: {
     excludeUserId: input.excludeUserId,
     scope: input.scope,
     subjectRole: input.subjectRole,
+    taskType: input.taskType,
     users: (
       users as Array<{
         _id: unknown;
@@ -193,6 +205,7 @@ export async function notifySubmissionToGroups(input: {
   xpAwarded: number;
   completionCount: number;
   template?: string;
+  taskType?: TaskType;
 }): Promise<void> {
   await connectToDatabase();
 
@@ -200,6 +213,7 @@ export async function notifySubmissionToGroups(input: {
     excludeUserId: input.subject.id,
     scope: input.subject,
     subjectRole: input.subject.role,
+    taskType: input.taskType,
   });
   if (userIds.length === 0) return;
 
@@ -234,12 +248,14 @@ export async function notifyTaskCompletionToGroups(input: {
   taskTitle: string;
   targetCount: number;
   template?: string;
+  taskType?: TaskType;
 }): Promise<void> {
   await connectToDatabase();
 
   const userIds = await findNotificationRecipientUserIds({
     excludeUserId: input.excludeUserId,
     scope: input.scope,
+    taskType: input.taskType,
   });
   if (userIds.length === 0) return;
 
