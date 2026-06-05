@@ -6,6 +6,7 @@ import { Check, Loader2 } from "lucide-react";
 
 import { submitTaskViaApi } from "@/lib/tasks/client-submit";
 import type { TaskStatus } from "@/lib/tasks/types";
+import type { TaskType } from "@/lib/tasks/constants";
 
 export function TaskTickButton({
   taskId,
@@ -13,12 +14,14 @@ export function TaskTickButton({
   myCompletionCount,
   status,
   isGoalComplete = false,
+  taskType,
 }: {
   taskId: string;
   subjectUserId: string;
   myCompletionCount: number;
   status: TaskStatus;
   isGoalComplete?: boolean;
+  taskType?: TaskType;
 }) {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
@@ -33,7 +36,11 @@ export function TaskTickButton({
   const isDone = optimisticCount > 0;
   const isTaskCompleted = status === "COMPLETED";
   const disabled =
-    isPending || isLocked || isGoalComplete || (isTaskCompleted && !isDone);
+    isPending ||
+    isLocked ||
+    isGoalComplete ||
+    (isTaskCompleted && !isDone) ||
+    (taskType === "COUNT_TOTAL" && isDone);
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
@@ -65,7 +72,9 @@ export function TaskTickButton({
   }
 
   const label = isDone
-    ? "Bỏ hoàn thành"
+    ? taskType === "COUNT_TOTAL"
+      ? "Đã hoàn thành"
+      : "Bỏ hoàn thành"
     : isGoalComplete
       ? "Đã đạt mục tiêu"
       : isLocked || isTaskCompleted

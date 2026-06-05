@@ -110,6 +110,7 @@ function TaskCardRow({
           myCompletionCount={card.myCompletionCount}
           status={card.status}
           isGoalComplete={isGoalComplete}
+          taskType={card.taskType}
         />
       ) : card.isApplicableToActor ? (
         <TaskTickButton
@@ -118,6 +119,7 @@ function TaskCardRow({
           myCompletionCount={card.myCompletionCount}
           status={card.status}
           isGoalComplete={isGoalComplete}
+          taskType={card.taskType}
         />
       ) : (
         <div className="h-9 w-9 shrink-0" aria-hidden />
