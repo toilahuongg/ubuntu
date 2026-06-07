@@ -14,7 +14,16 @@ export type PushSubscribeResult =
   | { ok: true }
   | {
       ok: false;
-      reason: "unsupported" | "unconfigured" | "denied" | "default" | "server_error" | "error";
+      reason:
+        | "unsupported"
+        | "unconfigured"
+        | "denied"
+        | "default"
+        | "server_error"
+        | "not_allowed"
+        | "invalid_key"
+        | "service_worker"
+        | "error";
     };
 
 type Fetcher = typeof fetch;
@@ -46,6 +55,33 @@ async function getOrRegisterSW() {
     scope: "/",
     updateViaCache: "none",
   });
+}
+
+async function getReadyServiceWorkerRegistration() {
+  await getOrRegisterSW();
+  return navigator.serviceWorker.ready;
+}
+
+export function classifyPushSubscribeError(error: unknown): PushSubscribeResult {
+  const name = error instanceof DOMException ? error.name : "";
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (name === "NotAllowedError" || message.includes("not allowed")) {
+    return { ok: false, reason: "not_allowed" };
+  }
+  if (
+    name === "InvalidCharacterError" ||
+    name === "InvalidAccessError" ||
+    message.includes("applicationserverkey") ||
+    message.includes("vapid")
+  ) {
+    return { ok: false, reason: "invalid_key" };
+  }
+  if (message.includes("service worker") || message.includes("registration")) {
+    return { ok: false, reason: "service_worker" };
+  }
+
+  return { ok: false, reason: "error" };
 }
 
 export async function persistPushSubscription(
@@ -90,7 +126,7 @@ export function useWebPush() {
       return;
     }
     try {
-      const reg = await getOrRegisterSW();
+      const reg = await getReadyServiceWorkerRegistration();
       let sub = await reg.pushManager.getSubscription();
 
       if (Notification.permission === "granted") {
@@ -128,8 +164,7 @@ export function useWebPush() {
         return { ok: false, reason: permission };
       }
 
-      const reg = await getOrRegisterSW();
-      await navigator.serviceWorker.ready;
+      const reg = await getReadyServiceWorkerRegistration();
 
       let sub = await reg.pushManager.getSubscription();
       if (!sub) {
@@ -146,7 +181,7 @@ export function useWebPush() {
       return { ok: true };
     } catch (err) {
       console.error("[push] subscribe failed", err);
-      return { ok: false, reason: "error" };
+      return classifyPushSubscribeError(err);
     } finally {
       setLoading(false);
     }

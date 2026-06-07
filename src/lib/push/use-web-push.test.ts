@@ -1,6 +1,29 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { persistPushSubscription } from "@/lib/push/use-web-push";
+import {
+  classifyPushSubscribeError,
+  persistPushSubscription,
+} from "@/lib/push/use-web-push";
+
+describe("classifyPushSubscribeError", () => {
+  it("identifies iOS/browser permission failures from DOMException names", () => {
+    const error = new DOMException("Registration failed", "NotAllowedError");
+
+    expect(classifyPushSubscribeError(error)).toEqual({
+      ok: false,
+      reason: "not_allowed",
+    });
+  });
+
+  it("identifies service worker readiness failures from error messages", () => {
+    const error = new Error("No active Service Worker");
+
+    expect(classifyPushSubscribeError(error)).toEqual({
+      ok: false,
+      reason: "service_worker",
+    });
+  });
+});
 
 describe("persistPushSubscription", () => {
   it("posts the serialized browser subscription to the subscribe endpoint", async () => {

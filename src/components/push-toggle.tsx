@@ -18,6 +18,15 @@ function getSubscribeErrorMessage(reason?: string) {
   if (reason === "server_error") {
     return "Chưa lưu được thiết bị nhận thông báo. Vui lòng thử lại.";
   }
+  if (reason === "not_allowed") {
+    return "iPhone chưa cho phép đăng ký Web Push. Hãy mở app từ Home Screen rồi bật lại.";
+  }
+  if (reason === "invalid_key") {
+    return "VAPID key của thông báo đẩy chưa hợp lệ. Cần kiểm tra cấu hình server.";
+  }
+  if (reason === "service_worker") {
+    return "Service worker chưa sẵn sàng. Hãy đóng mở lại app rồi bật lại.";
+  }
   return "Chưa thể bật thông báo lúc này. Vui lòng thử lại.";
 }
 
