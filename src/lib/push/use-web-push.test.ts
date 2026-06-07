@@ -2,8 +2,44 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   classifyPushSubscribeError,
+  getIOSWebPushInstallStatus,
   persistPushSubscription,
 } from "@/lib/push/use-web-push";
+
+describe("getIOSWebPushInstallStatus", () => {
+  it("requires iOS Safari users to open the installed Home Screen app", () => {
+    expect(
+      getIOSWebPushInstallStatus({
+        userAgent:
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1",
+        standalone: false,
+        displayModeStandalone: false,
+      }),
+    ).toBe("needs_home_screen");
+  });
+
+  it("allows iOS Safari users when the PWA is running standalone", () => {
+    expect(
+      getIOSWebPushInstallStatus({
+        userAgent:
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1",
+        standalone: true,
+        displayModeStandalone: false,
+      }),
+    ).toBe("ready");
+  });
+
+  it("does not block non-iOS browsers", () => {
+    expect(
+      getIOSWebPushInstallStatus({
+        userAgent:
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+        standalone: false,
+        displayModeStandalone: false,
+      }),
+    ).toBe("ready");
+  });
+});
 
 describe("classifyPushSubscribeError", () => {
   it("identifies iOS/browser permission failures from DOMException names", () => {

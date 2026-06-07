@@ -12,6 +12,9 @@ function getSubscribeErrorMessage(reason?: string) {
   if (reason === "unsupported") {
     return "Trên iPhone, hãy mở app đã cài trên Home Screen để bật thông báo.";
   }
+  if (reason === "ios_not_installed") {
+    return "Trên iPhone, hãy mở Ubuntu từ icon Home Screen rồi bật thông báo.";
+  }
   if (reason === "unconfigured") {
     return "Thông báo đẩy chưa được cấu hình trên server.";
   }
@@ -55,6 +58,29 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
           <p className="mt-1 text-xs leading-5">
             Trình duyệt hiện tại không hỗ trợ Web Push. Trên iOS, hãy cài ứng dụng
             lên Home Screen.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "ios_not_installed") {
+    return (
+      <div
+        className={`flex min-h-24 items-start gap-3 p-4 text-sm text-muted-foreground ${
+          compact
+            ? "rounded-2xl border border-sky-400/20 bg-sky-400/10"
+            : "glass-card"
+        }`}
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-400/15 text-primary ring-1 ring-sky-400/25">
+          <BellOff className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-semibold text-foreground">Thông báo đẩy</p>
+          <p className="mt-1 text-xs leading-5">
+            Trên iPhone, thông báo chỉ bật được khi mở Ubuntu từ icon đã cài
+            trên Home Screen.
           </p>
         </div>
       </div>

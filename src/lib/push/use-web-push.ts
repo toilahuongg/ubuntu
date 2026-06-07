@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 export type PushStatus =
   | "checking"
   | "unsupported"
+  | "ios_not_installed"
   | "unconfigured"
   | "denied"
   | "default"
@@ -16,6 +17,7 @@ export type PushSubscribeResult =
       ok: false;
       reason:
         | "unsupported"
+        | "ios_not_installed"
         | "unconfigured"
         | "denied"
         | "default"
@@ -27,6 +29,12 @@ export type PushSubscribeResult =
     };
 
 type Fetcher = typeof fetch;
+
+type IOSWebPushInstallInput = {
+  userAgent: string;
+  standalone: boolean;
+  displayModeStandalone: boolean;
+};
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -46,6 +54,26 @@ function isPushSupported() {
     "PushManager" in window &&
     "Notification" in window
   );
+}
+
+export function getIOSWebPushInstallStatus(input: IOSWebPushInstallInput) {
+  const ua = input.userAgent.toLowerCase();
+  const isIOS = /iphone|ipad|ipod/.test(ua) && !/crios|fxios/.test(ua);
+  if (!isIOS) return "ready";
+
+  return input.standalone || input.displayModeStandalone
+    ? "ready"
+    : "needs_home_screen";
+}
+
+function getCurrentIOSWebPushInstallStatus() {
+  return getIOSWebPushInstallStatus({
+    userAgent: navigator.userAgent,
+    standalone:
+      "standalone" in navigator &&
+      (navigator as Navigator & { standalone?: boolean }).standalone === true,
+    displayModeStandalone: window.matchMedia("(display-mode: standalone)").matches,
+  });
 }
 
 async function getOrRegisterSW() {
@@ -116,6 +144,10 @@ export function useWebPush() {
       setStatus("unsupported");
       return;
     }
+    if (getCurrentIOSWebPushInstallStatus() === "needs_home_screen") {
+      setStatus("ios_not_installed");
+      return;
+    }
     const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!vapidKey) {
       setStatus("unconfigured");
@@ -153,6 +185,10 @@ export function useWebPush() {
 
   const subscribe = useCallback(async () => {
     if (!isPushSupported()) return { ok: false, reason: "unsupported" };
+    if (getCurrentIOSWebPushInstallStatus() === "needs_home_screen") {
+      setStatus("ios_not_installed");
+      return { ok: false, reason: "ios_not_installed" };
+    }
     const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!vapidKey) return { ok: false, reason: "unconfigured" };
 
