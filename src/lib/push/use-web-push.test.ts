@@ -79,6 +79,7 @@ describe("persistPushSubscription", () => {
     expect(result).toEqual({ ok: true });
     expect(fetcher).toHaveBeenCalledWith("/api/push/subscribe", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         endpoint: "https://push.example/subscription-id",
@@ -105,6 +106,30 @@ describe("persistPushSubscription", () => {
 
     await expect(
       persistPushSubscription(subscription, "Test User Agent", fetcher),
-    ).resolves.toEqual({ ok: false, reason: "server_error" });
+    ).resolves.toEqual({ ok: false, reason: "server_error", status: 500 });
+  });
+
+  it("reports an auth error when the subscribe endpoint cannot see the session", async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      Response.json({ error: "Chưa đăng nhập." }, { status: 401 }),
+    );
+    const subscription = {
+      toJSON: () => ({
+        endpoint: "https://push.example/subscription-id",
+        keys: {
+          p256dh: "p256dh-key",
+          auth: "auth-key",
+        },
+      }),
+    } as unknown as PushSubscription;
+
+    await expect(
+      persistPushSubscription(subscription, "Test User Agent", fetcher),
+    ).resolves.toEqual({
+      ok: false,
+      reason: "unauthorized",
+      message: "Chưa đăng nhập.",
+      status: 401,
+    });
   });
 });

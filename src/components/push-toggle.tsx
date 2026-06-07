@@ -3,9 +3,13 @@
 import { useState } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 
-import { useWebPush } from "@/lib/push/use-web-push";
+import { type PushSubscribeResult, useWebPush } from "@/lib/push/use-web-push";
 
-function getSubscribeErrorMessage(reason?: string) {
+function getSubscribeErrorMessage(
+  result: Extract<PushSubscribeResult, { ok: false }>,
+) {
+  const { reason } = result;
+
   if (reason === "denied") {
     return "iPhone đang chặn thông báo cho app này. Hãy bật lại trong Cài đặt.";
   }
@@ -18,8 +22,18 @@ function getSubscribeErrorMessage(reason?: string) {
   if (reason === "unconfigured") {
     return "Thông báo đẩy chưa được cấu hình trên server.";
   }
+  if (reason === "unauthorized") {
+    return "Phiên đăng nhập trong app Home Screen đã hết hạn. Hãy đăng nhập lại trong Ubuntu rồi bật thông báo.";
+  }
+  if (reason === "bad_request") {
+    return result.message
+      ? `Server từ chối subscription: ${result.message}`
+      : "Server từ chối subscription. Vui lòng thử đăng nhập lại rồi bật thông báo.";
+  }
   if (reason === "server_error") {
-    return "Chưa lưu được thiết bị nhận thông báo. Vui lòng thử lại.";
+    return result.message
+      ? `Chưa lưu được thiết bị nhận thông báo: ${result.message}`
+      : "Chưa lưu được thiết bị nhận thông báo. Vui lòng thử lại.";
   }
   if (reason === "not_allowed") {
     return "iPhone chưa cho phép đăng ký Web Push. Hãy mở app từ Home Screen rồi bật lại.";
@@ -105,7 +119,7 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
 
     const result = await subscribe();
     if (!result.ok) {
-      setMessage(getSubscribeErrorMessage(result.reason));
+      setMessage(getSubscribeErrorMessage(result));
     }
   };
 

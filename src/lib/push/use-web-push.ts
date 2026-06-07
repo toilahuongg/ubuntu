@@ -21,11 +21,15 @@ export type PushSubscribeResult =
         | "unconfigured"
         | "denied"
         | "default"
+        | "unauthorized"
+        | "bad_request"
         | "server_error"
         | "not_allowed"
         | "invalid_key"
         | "service_worker"
         | "error";
+      message?: string;
+      status?: number;
     };
 
 type Fetcher = typeof fetch;
@@ -120,6 +124,7 @@ export async function persistPushSubscription(
   const json = subscription.toJSON();
   const res = await fetcher("/api/push/subscribe", {
     method: "POST",
+    credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       endpoint: json.endpoint,
@@ -129,7 +134,37 @@ export async function persistPushSubscription(
   });
 
   if (!res.ok) {
-    return { ok: false, reason: "server_error" };
+    let message: string | undefined;
+    try {
+      const body = (await res.json()) as { error?: string };
+      message = body.error;
+    } catch {
+      message = undefined;
+    }
+
+    if (res.status === 401) {
+      return {
+        ok: false,
+        reason: "unauthorized",
+        ...(message ? { message } : {}),
+        status: res.status,
+      };
+    }
+    if (res.status >= 400 && res.status < 500) {
+      return {
+        ok: false,
+        reason: "bad_request",
+        ...(message ? { message } : {}),
+        status: res.status,
+      };
+    }
+
+    return {
+      ok: false,
+      reason: "server_error",
+      ...(message ? { message } : {}),
+      status: res.status,
+    };
   }
 
   return { ok: true };
@@ -183,7 +218,7 @@ export function useWebPush() {
     refresh();
   }, [refresh]);
 
-  const subscribe = useCallback(async () => {
+  const subscribe = useCallback(async (): Promise<PushSubscribeResult> => {
     if (!isPushSupported()) return { ok: false, reason: "unsupported" };
     if (getCurrentIOSWebPushInstallStatus() === "needs_home_screen") {
       setStatus("ios_not_installed");
