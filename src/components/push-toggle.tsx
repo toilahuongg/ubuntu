@@ -1,11 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { Bell, BellOff, Loader2 } from "lucide-react";
 
 import { useWebPush } from "@/lib/push/use-web-push";
 
+function getSubscribeErrorMessage(reason?: string) {
+  if (reason === "denied") {
+    return "iPhone đang chặn thông báo cho app này. Hãy bật lại trong Cài đặt.";
+  }
+  if (reason === "unsupported") {
+    return "Trên iPhone, hãy mở app đã cài trên Home Screen để bật thông báo.";
+  }
+  if (reason === "unconfigured") {
+    return "Thông báo đẩy chưa được cấu hình trên server.";
+  }
+  if (reason === "server_error") {
+    return "Chưa lưu được thiết bị nhận thông báo. Vui lòng thử lại.";
+  }
+  return "Chưa thể bật thông báo lúc này. Vui lòng thử lại.";
+}
+
 export function PushToggle({ compact = false }: { compact?: boolean }) {
   const { status, loading, subscribe, unsubscribe } = useWebPush();
+  const [message, setMessage] = useState<string | null>(null);
 
   if (status === "checking") {
     return null;
@@ -40,9 +58,25 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
 
   const isOn = status === "subscribed";
 
+  const handleToggle = async () => {
+    setMessage(null);
+    if (isOn) {
+      const result = await unsubscribe();
+      if (!result.ok) {
+        setMessage("Chưa thể tắt thông báo lúc này. Vui lòng thử lại.");
+      }
+      return;
+    }
+
+    const result = await subscribe();
+    if (!result.ok) {
+      setMessage(getSubscribeErrorMessage(result.reason));
+    }
+  };
+
   return (
     <div
-      className={`flex min-h-24 items-center justify-between gap-3 p-4 ${
+      className={`flex min-h-24 flex-col justify-center gap-3 p-4 ${
         compact
           ? isOn
             ? "rounded-2xl border border-emerald-400/25 bg-emerald-400/10"
@@ -50,40 +84,47 @@ export function PushToggle({ compact = false }: { compact?: boolean }) {
           : "glass-card"
       }`}
     >
-      <div className="flex min-w-0 items-start gap-3">
-        <span
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${
+      <div className="flex w-full items-center justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 ${
+              isOn
+                ? "bg-emerald-400/15 text-emerald-300 ring-emerald-400/25"
+                : "bg-sky-400/15 text-primary ring-sky-400/25"
+            }`}
+          >
+            {isOn ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Thông báo đẩy</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              {status === "denied"
+                ? "Bạn đã chặn thông báo. Hãy bật lại trong cài đặt trình duyệt."
+                : isOn
+                  ? "Nhận nhắc task và quà tặng ngay trên thiết bị này."
+                  : "Bật để nhận nhắc task và thông báo admin tặng quà."}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          disabled={loading || status === "denied"}
+          onClick={handleToggle}
+          className={`flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
             isOn
-              ? "bg-emerald-400/15 text-emerald-300 ring-emerald-400/25"
-              : "bg-sky-400/15 text-primary ring-sky-400/25"
+              ? "border-emerald-400/30 text-emerald-200 hover:bg-emerald-400/10"
+              : "border-primary/30 text-primary hover:bg-primary/10"
           }`}
         >
-          {isOn ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">Thông báo đẩy</p>
-          <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            {status === "denied"
-              ? "Bạn đã chặn thông báo. Hãy bật lại trong cài đặt trình duyệt."
-              : isOn
-                ? "Nhận nhắc task và quà tặng ngay trên thiết bị này."
-                : "Bật để nhận nhắc task và thông báo admin tặng quà."}
-          </p>
-        </div>
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          {isOn ? "Tắt" : "Bật"}
+        </button>
       </div>
-      <button
-        type="button"
-        disabled={loading || status === "denied"}
-        onClick={() => (isOn ? unsubscribe() : subscribe())}
-        className={`flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          isOn
-            ? "border-emerald-400/30 text-emerald-200 hover:bg-emerald-400/10"
-            : "border-primary/30 text-primary hover:bg-primary/10"
-        }`}
-      >
-        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-        {isOn ? "Tắt" : "Bật"}
-      </button>
+      {message ? (
+        <p className="w-full rounded-xl bg-destructive/10 px-3 py-2 text-xs leading-5 text-destructive">
+          {message}
+        </p>
+      ) : null}
     </div>
   );
 }
