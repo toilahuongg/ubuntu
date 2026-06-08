@@ -3,6 +3,8 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Download, Share } from "lucide-react";
 
+import { isIOSUserAgent } from "@/lib/push/use-web-push";
+
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -32,8 +34,7 @@ export function InstallAppButton() {
     () => {
       if (typeof window === "undefined") return false;
 
-      const ua = window.navigator.userAgent.toLowerCase();
-      return /iphone|ipad|ipod/.test(ua) && !/crios|fxios/.test(ua);
+      return isIOSUserAgent(window.navigator.userAgent);
     },
     () => false,
   );

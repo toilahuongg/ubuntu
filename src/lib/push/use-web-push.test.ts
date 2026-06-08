@@ -29,6 +29,28 @@ describe("getIOSWebPushInstallStatus", () => {
     ).toBe("ready");
   });
 
+  it("requires iOS third-party browser users to open the installed Home Screen app", () => {
+    expect(
+      getIOSWebPushInstallStatus({
+        userAgent:
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/120.0.0.0 Mobile/15E148 Safari/604.1",
+        standalone: false,
+        displayModeStandalone: false,
+      }),
+    ).toBe("needs_home_screen");
+  });
+
+  it("allows iOS third-party browser users when the PWA is running standalone", () => {
+    expect(
+      getIOSWebPushInstallStatus({
+        userAgent:
+          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 FxiOS/120.0 Mobile/15E148 Safari/605.1.15",
+        standalone: false,
+        displayModeStandalone: true,
+      }),
+    ).toBe("ready");
+  });
+
   it("does not block non-iOS browsers", () => {
     expect(
       getIOSWebPushInstallStatus({

@@ -60,10 +60,12 @@ function isPushSupported() {
   );
 }
 
+export function isIOSUserAgent(userAgent: string) {
+  return /iphone|ipad|ipod/.test(userAgent.toLowerCase());
+}
+
 export function getIOSWebPushInstallStatus(input: IOSWebPushInstallInput) {
-  const ua = input.userAgent.toLowerCase();
-  const isIOS = /iphone|ipad|ipod/.test(ua) && !/crios|fxios/.test(ua);
-  if (!isIOS) return "ready";
+  if (!isIOSUserAgent(input.userAgent)) return "ready";
 
   return input.standalone || input.displayModeStandalone
     ? "ready"
