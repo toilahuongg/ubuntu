@@ -21,6 +21,7 @@ import {
   canAccessRegionManagement,
   canAccessUserManagement,
   canAccessZoneManagement,
+  canManageTasks,
 } from "@/lib/permissions";
 import { buildAdminOperationsView } from "@/lib/services/admin-operations-service";
 import {
@@ -102,6 +103,20 @@ export default async function AdminPage() {
           </nav>
         )}
         <nav className="grid gap-2" aria-label="Công cụ vận hành">
+          {canManageTasks(session) && (
+            <AdminNavLink
+              href="/templates"
+              icon={ClipboardList}
+              label="Nhiệm vụ"
+              description={
+                isRegionalLead
+                  ? "Quản lý nhiệm vụ trong khu vực"
+                  : isZoneLead
+                  ? "Quản lý nhiệm vụ trong địa vực"
+                  : "Quản lý mẫu nhiệm vụ"
+              }
+            />
+          )}
           {canManageUsers && (
             <AdminNavLink
               href="/admin/users"
