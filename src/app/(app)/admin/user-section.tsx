@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { AlertTriangle, Filter, Pencil, Search, X } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, ClipboardList, Filter, Pencil, Search, X } from "lucide-react";
 
 import { deleteUserAction, saveUserAction } from "@/app/(app)/actions";
 import { ROLE_LABELS, ROLES, USER_STATUSES } from "@/lib/domain";
@@ -238,6 +239,15 @@ function UserRow({
           >
             <Pencil className="h-4 w-4" aria-hidden />
           </button>
+        )}
+        {canEdit && (user.role === "MEMBER" || user.role === "TDM" || user.role === "NGV") && (
+          <Link
+            href={`/admin/users/${user.id}/tasks`}
+            className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            aria-label={`Cấu hình hiển thị nhiệm vụ cho ${user.fullName}`}
+          >
+            <ClipboardList className="h-4 w-4" aria-hidden />
+          </Link>
         )}
         {canDelete && (
           <ConfirmDeleteButton
