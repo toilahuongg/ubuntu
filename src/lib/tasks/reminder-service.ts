@@ -15,6 +15,7 @@ import {
   type TaskReminderPreferenceRecord,
   UserModel,
   type UserRecord,
+  UserTaskVisibilityModel,
 } from "@/lib/models";
 import {
   DEFAULT_LATE_WINDOW_DAYS,
@@ -189,6 +190,7 @@ export function buildDueTaskReminderCandidatesFromData(input: {
   tasks: TaskRecord[];
   users: ReminderUserLike[];
   windowMinutes?: number;
+  visibilityOverrides?: Map<string, boolean>;
 }): ReminderCandidate[] {
   const openTasks = input.tasks.filter(
     (task) =>
@@ -215,7 +217,9 @@ export function buildDueTaskReminderCandidatesFromData(input: {
       const key = pairKey(taskId, userId);
       if (sentPairs.has(key)) continue;
       if (submittedIds.has(userId)) continue;
-      if (!appliesToUser(scope, recordUserShape(user))) continue;
+      const override = input.visibilityOverrides?.get(key);
+      const isApplicable = override !== undefined ? override : appliesToUser(scope, recordUserShape(user));
+      if (!isApplicable) continue;
 
       const schedule = resolveEffectiveReminderTime({
         defaultReminderTime: task.deadlineTime,
@@ -408,6 +412,14 @@ export async function getReminderCandidates(
     getPreferences(taskIds, userIds),
   ]);
 
+  const visibilities = await UserTaskVisibilityModel.find({
+    userId: { $in: userIds },
+    taskId: { $in: taskIds },
+  }).lean();
+  const visibilityOverrides = new Map<string, boolean>(
+    visibilities.map((v) => [`${v.taskId.toString()}:${v.userId.toString()}`, v.isVisible])
+  );
+
   return buildDueTaskReminderCandidatesFromData({
     dateKey,
     preferences,
@@ -417,6 +429,7 @@ export async function getReminderCandidates(
     tasks,
     users,
     windowMinutes: options.windowMinutes,
+    visibilityOverrides,
   });
 }
 

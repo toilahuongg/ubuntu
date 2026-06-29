@@ -8,6 +8,7 @@ import {
   TaskModel,
   type SubmissionRecordModel,
   type TaskRecord,
+  UserTaskVisibilityModel,
 } from "@/lib/models";
 import { connectToDatabase } from "@/lib/mongoose";
 import type {
@@ -63,6 +64,7 @@ type BuildAdminOperationsViewModelInput = {
   submissions: SubmissionRecordModel[];
   tasks: TaskRecord[];
   visibleUsers: SerializedUser[];
+  visibilityOverrides?: Map<string, boolean>;
 };
 
 function shiftDateKey(dateKey: string, days: number) {
@@ -211,6 +213,7 @@ export function buildAdminOperationsViewModel({
   submissions,
   tasks,
   visibleUsers,
+  visibilityOverrides,
 }: BuildAdminOperationsViewModelInput): AdminOperationsView {
   const monthDates = getAdminOperationsMonthDateKeys(dateKey);
   const completedSlots = new Set(
@@ -242,7 +245,9 @@ export function buildAdminOperationsViewModel({
 
     if (!task || !user) continue;
     if (!isTaskScheduledForDate(task, submission.date)) continue;
-    if (!appliesToUser(taskToScope(task), userShape(user))) continue;
+    const override = visibilityOverrides?.get(`${taskId}:${userId}`);
+    const isApplicable = override !== undefined ? override : appliesToUser(taskToScope(task), userShape(user));
+    if (!isApplicable) continue;
 
     const byDate =
       completionTasksByMemberDate.get(userId) ??
@@ -280,7 +285,9 @@ export function buildAdminOperationsViewModel({
 
     for (const currentDate of scheduledDates) {
       for (const user of visibleUsers) {
-        if (!appliesToUser(scope, userShape(user))) continue;
+        const override = visibilityOverrides?.get(`${taskId}:${user.id}`);
+        const isApplicable = override !== undefined ? override : appliesToUser(scope, userShape(user));
+        if (!isApplicable) continue;
 
         const counter = memberCounters.get(user.id);
         if (counter) {
@@ -576,6 +583,14 @@ export async function buildAdminOperationsView(
         }).lean()) as SubmissionRecordModel[])
       : [];
 
+  const visibilities = await UserTaskVisibilityModel.find({
+    userId: { $in: visibleUsers.map((user) => toObjectId(user.id)) },
+    taskId: { $in: tasks.map((task) => task._id) },
+  }).lean();
+  const visibilityOverrides = new Map<string, boolean>(
+    visibilities.map((v) => [`${v.taskId.toString()}:${v.userId.toString()}`, v.isVisible])
+  );
+
   return buildAdminOperationsViewModel({
     actor,
     dateKey,
@@ -584,5 +599,6 @@ export async function buildAdminOperationsView(
     submissions,
     tasks,
     visibleUsers,
+    visibilityOverrides,
   });
 }

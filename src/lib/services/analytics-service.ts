@@ -10,6 +10,7 @@ import {
   TaskModel,
   type TaskRecord,
   UserModel,
+  UserTaskVisibilityModel,
 } from "@/lib/models";
 import { connectToDatabase } from "@/lib/mongoose";
 import { appliesToUser } from "@/lib/tasks/policy";
@@ -214,10 +215,20 @@ export async function getUserTaskActivityStats(
     $or: orgClauses,
   }).lean()) as TaskRecord[];
 
+  const overrides = await UserTaskVisibilityModel.find({
+    userId: toObjectId(user.id),
+    taskId: { $in: tasks.map((t) => t._id) },
+  }).lean();
+  const overrideByTaskId = new Map<string, boolean>(
+    overrides.map((o) => [o.taskId.toString(), o.isVisible])
+  );
+
   const applicableTasks = sortTasksForDisplay(
-    tasks.filter((task) =>
-      appliesToUser(taskToScope(task), userScopeShape(user)),
-    ),
+    tasks.filter((task) => {
+      const override = overrideByTaskId.get(task._id.toString());
+      if (override !== undefined) return override;
+      return appliesToUser(taskToScope(task), userScopeShape(user));
+    }),
   );
 
   if (applicableTasks.length === 0) {

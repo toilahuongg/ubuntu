@@ -12,6 +12,7 @@ import {
   TaskModel,
   TaskReminderPreferenceModel,
   type TaskRecord,
+  UserTaskVisibilityModel,
 } from "@/lib/models";
 import { listVisibleUsersForActor } from "@/lib/services/organization-service";
 import { getCompletionTrend } from "@/lib/services/analytics-service";
@@ -61,6 +62,7 @@ type VisibleScopeData = {
   relevantTasks: TaskRecord[];
   allTasks: TaskRecord[];
   submissions: SubmissionRecordModel[];
+  visibilityOverrides: Map<string, boolean>;
 };
 
 type DashboardVisibleUser = Pick<
@@ -104,7 +106,9 @@ async function loadScopeDataForVisibleUsers(
     const scope = taskToScope(t);
     return (
       isTaskScheduledForDate(t, dateKey) &&
-      visibleUsers.some((u) => appliesToUser(scope, userShape(u)))
+      visibleUsers.some((u) => {
+        return appliesToUser(scope, userShape(u));
+      })
     );
   });
 
@@ -114,7 +118,15 @@ async function loadScopeDataForVisibleUsers(
     subjectUserId: { $in: visibleUsers.map((u) => toObjectId(u.id)) },
   }).lean()) as SubmissionRecordModel[];
 
-  return { visibleUsers, relevantTasks, allTasks, submissions };
+  const visibilities = await UserTaskVisibilityModel.find({
+    userId: { $in: visibleUsers.map((u) => toObjectId(u.id)) },
+    taskId: { $in: allTasks.map((t) => t._id) },
+  }).lean();
+  const visibilityOverrides = new Map<string, boolean>(
+    visibilities.map((v) => [`${v.taskId.toString()}:${v.userId.toString()}`, v.isVisible])
+  );
+
+  return { visibleUsers, relevantTasks, allTasks, submissions, visibilityOverrides };
 }
 
 function visibleScopesForRole(role: Role): ReadonlySet<TaskScope> {
@@ -165,6 +177,7 @@ function buildDashboardLookup(
   tasks: TaskRecord[],
   visibleUsers: DashboardVisibleUser[],
   submissions: SubmissionRecordModel[],
+  visibilityOverrides?: Map<string, boolean>,
 ): DashboardLookup {
   const applicableUserIdsByTaskId = new Map<string, Set<string>>();
   const applicableUsersByTaskId = new Map<string, DashboardVisibleUser[]>();
@@ -176,9 +189,11 @@ function buildDashboardLookup(
   for (const task of tasks) {
     const taskId = task._id.toString();
     const scope = taskToScope(task);
-    const applicableUsers = visibleUsers.filter((user) =>
-      appliesToUser(scope, userShape(user)),
-    );
+    const applicableUsers = visibleUsers.filter((user) => {
+      const override = visibilityOverrides?.get(`${taskId}:${user.id}`);
+      if (override !== undefined) return override;
+      return appliesToUser(scope, userShape(user));
+    });
     const applicableUserIds = new Set(applicableUsers.map((user) => user.id));
 
     applicableUsersByTaskId.set(taskId, applicableUsers);
@@ -381,7 +396,7 @@ export async function buildDashboardView(
   actor: SessionUser,
   dateKey: string,
 ): Promise<DashboardView> {
-  const { visibleUsers, relevantTasks, allTasks, submissions } =
+  const { visibleUsers, relevantTasks, allTasks, submissions, visibilityOverrides } =
     await loadVisibleTasksAndSubs(actor, dateKey);
 
   const filteredRelevantTasks = relevantTasks.filter(
@@ -412,7 +427,7 @@ export async function buildDashboardView(
   const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(sortedTasks, [actor.id], dateKey);
   const actorShape = userShape(actor);
-  const lookup = buildDashboardLookup(sortedTasks, visibleUsers, submissions);
+  const lookup = buildDashboardLookup(sortedTasks, visibleUsers, submissions, visibilityOverrides);
 
   const cards: TaskCard[] = sortedTasks.map((t) =>
     buildTaskCard(t, {
@@ -428,7 +443,12 @@ export async function buildDashboardView(
   );
   const actorTaskIds = new Set(
     sortedTasks
-      .filter((t) => appliesToUser(taskToScope(t), actorShape))
+      .filter((t) => {
+        const taskId = t._id.toString();
+        const override = visibilityOverrides.get(`${taskId}:${actor.id}`);
+        if (override !== undefined) return override;
+        return appliesToUser(taskToScope(t), actorShape);
+      })
       .map((t) => t._id.toString()),
   );
   const goalNotice = buildDashboardGoalNotice(
@@ -516,7 +536,7 @@ export async function buildMemberDashboard(
   actor: SessionUser,
   dateKey: string,
 ): Promise<MemberDashboardView> {
-  const [{ relevantTasks, submissions }, progress] = await Promise.all([
+  const [{ relevantTasks, submissions, visibilityOverrides }, progress] = await Promise.all([
     loadVisibleTasksAndSubs(actor, dateKey),
     getUserProgress(actor.id),
   ]);
@@ -527,11 +547,12 @@ export async function buildMemberDashboard(
     regionId: actor.regionId ?? null,
     role: actor.role,
   };
-  const personalTasks = relevantTasks.filter(
-    (t) =>
-      appliesToUser(taskToScope(t), actorShape) &&
-      normalizeTaskType(t.taskType) !== "COUNT_TOTAL",
-  );
+  const personalTasks = relevantTasks.filter((t) => {
+    const taskId = t._id.toString();
+    const override = visibilityOverrides.get(`${taskId}:${actor.id}`);
+    const isApplicable = override !== undefined ? override : appliesToUser(taskToScope(t), actorShape);
+    return isApplicable && normalizeTaskType(t.taskType) !== "COUNT_TOTAL";
+  });
 
   const sortedPersonal = sortTasksForDisplay(personalTasks);
   const personalTaskObjectIds = sortedPersonal.map((t) => t._id);
@@ -565,6 +586,7 @@ export async function buildMemberDashboard(
       },
     ],
     submissions,
+    visibilityOverrides,
   );
 
   const cards: TaskCard[] = sortedPersonal.map((t) =>
@@ -602,7 +624,7 @@ export async function buildMemberPrayerDashboard(
   actor: SessionUser,
   dateKey: string,
 ): Promise<MemberDashboardView> {
-  const [{ relevantTasks, submissions }, progress] = await Promise.all([
+  const [{ relevantTasks, submissions, visibilityOverrides }, progress] = await Promise.all([
     loadVisibleTasksAndSubs(actor, dateKey),
     getUserProgress(actor.id),
   ]);
@@ -613,11 +635,12 @@ export async function buildMemberPrayerDashboard(
     regionId: actor.regionId ?? null,
     role: actor.role,
   };
-  const prayerTasks = relevantTasks.filter(
-    (t) =>
-      appliesToUser(taskToScope(t), actorShape) &&
-      normalizeTaskType(t.taskType) === "COUNT_TOTAL",
-  );
+  const prayerTasks = relevantTasks.filter((t) => {
+    const taskId = t._id.toString();
+    const override = visibilityOverrides.get(`${taskId}:${actor.id}`);
+    const isApplicable = override !== undefined ? override : appliesToUser(taskToScope(t), actorShape);
+    return isApplicable && normalizeTaskType(t.taskType) === "COUNT_TOTAL";
+  });
 
   const sortedPersonal = sortTasksForDisplay(prayerTasks);
   const personalTaskObjectIds = sortedPersonal.map((t) => t._id);
@@ -651,6 +674,7 @@ export async function buildMemberPrayerDashboard(
       },
     ],
     submissions,
+    visibilityOverrides,
   );
 
   const cards: TaskCard[] = sortedPersonal.map((t) =>
@@ -692,7 +716,7 @@ export async function buildLeaderPrayerDashboard(
     getCompletionTrend(actor, 14, "SELF"),
   ]);
 
-  const { visibleUsers, relevantTasks, allTasks, submissions } =
+  const { visibleUsers, relevantTasks, allTasks, submissions, visibilityOverrides } =
     await loadVisibleTasksAndSubs(actor, dateKey);
 
   const prayerRelevantTasks = relevantTasks.filter(
@@ -728,7 +752,7 @@ export async function buildLeaderPrayerDashboard(
     regionId: actor.regionId ?? null,
     role: actor.role,
   };
-  const lookup = buildDashboardLookup(sortedTasks, visibleUsers, submissions);
+  const lookup = buildDashboardLookup(sortedTasks, visibleUsers, submissions, visibilityOverrides);
 
   const cards: TaskCard[] = sortedTasks.map((t) =>
     buildTaskCard(t, {
@@ -744,7 +768,12 @@ export async function buildLeaderPrayerDashboard(
   );
   const actorTaskIds = new Set(
     sortedTasks
-      .filter((t) => appliesToUser(taskToScope(t), actorShape))
+      .filter((t) => {
+        const taskId = t._id.toString();
+        const override = visibilityOverrides.get(`${taskId}:${actor.id}`);
+        if (override !== undefined) return override;
+        return appliesToUser(taskToScope(t), actorShape);
+      })
       .map((t) => t._id.toString()),
   );
   const goalNotice = buildDashboardGoalNotice(
@@ -816,9 +845,9 @@ export async function getTemplateCoverageForActor(
   actor: SessionUser,
   dateKey: string,
 ): Promise<TemplateCoverage> {
-  const { visibleUsers, relevantTasks, submissions } =
+  const { visibleUsers, relevantTasks, submissions, visibilityOverrides } =
     await loadVisibleTasksAndSubs(actor, dateKey);
-  const lookup = buildDashboardLookup(relevantTasks, visibleUsers, submissions);
+  const lookup = buildDashboardLookup(relevantTasks, visibleUsers, submissions, visibilityOverrides);
 
   const coverage: TemplateCoverage = {};
   for (const task of relevantTasks) {

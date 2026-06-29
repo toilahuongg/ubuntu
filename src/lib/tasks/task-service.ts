@@ -22,6 +22,7 @@ import {
   TaskModel,
   TaskReminderPreferenceModel,
   type TaskRecord,
+  UserTaskVisibilityModel,
 } from "@/lib/models";
 import {
   listTeamMembersForViewing,
@@ -270,8 +271,6 @@ export async function getTaskDetail(
   const isScheduledForDate = isTaskScheduledForDate(task, dateKey);
   const yearMonth = getYearMonthFromDateKey(dateKey);
   const scope = taskToScope(task);
-  const isApplicableToActor = appliesToUser(scope, userShape(actor));
-
   const [visibleUsers, viewableUsers, submissionsToday, monthlySubmissions] =
     await Promise.all([
       listVisibleUsersForActor(actor),
@@ -290,12 +289,24 @@ export async function getTaskDetail(
         : Promise.resolve([] as SubmissionRecordModel[]),
     ]);
 
-  const rosterMembers = visibleUsers.filter((user) =>
-    appliesToUser(scope, userShape(user)),
+  const visibilities = await UserTaskVisibilityModel.find({
+    taskId: toObjectId(taskId),
+    userId: { $in: [...new Set([...visibleUsers, ...viewableUsers, actor].map((u) => toObjectId(u.id)))] },
+  }).lean();
+  const overridesMap = new Map<string, boolean>(
+    visibilities.map((v) => [v.userId.toString(), v.isVisible])
   );
-  const displayMembers = viewableUsers.filter((user) =>
-    appliesToUser(scope, userShape(user)),
-  );
+
+  const checkVisible = (u: any) => {
+    const override = overridesMap.get(u.id);
+    if (override !== undefined) return override;
+    return appliesToUser(scope, userShape(u));
+  };
+
+  const isApplicableToActor = checkVisible(actor);
+
+  const rosterMembers = visibleUsers.filter(checkVisible);
+  const displayMembers = viewableUsers.filter(checkVisible);
 
   if (rosterMembers.length === 0) {
     throw new Error("Bạn không có quyền xem nhiệm vụ này.");

@@ -15,6 +15,7 @@ import {
   UserModel,
   type UserRecord,
   XpTransactionModel,
+  UserTaskVisibilityModel,
 } from "@/lib/models";
 import { assertCanProxySubmit } from "@/lib/permissions";
 import {
@@ -92,7 +93,12 @@ export async function saveSubmission(
 
   const scope = taskToScope(taskRaw);
 
-  if (!appliesToUser(scope, subjectSession)) {
+  const override = await UserTaskVisibilityModel.findOne({
+    userId: toObjectId(subjectSession.id),
+    taskId: taskRaw._id,
+  }).lean();
+  const isApplicable = override ? override.isVisible : appliesToUser(scope, subjectSession);
+  if (!isApplicable) {
     throw new Error("Nhiệm vụ này không áp dụng cho người dùng đã chọn.");
   }
 
