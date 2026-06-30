@@ -2,14 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { toggleTaskVisibilityAction } from "./actions";
-import { SCOPE_LABELS, ROLE_LABELS } from "@/lib/domain";
+import { SCOPE_LABELS, ROLE_LABELS, type TaskScope, type Role } from "@/lib/domain";
 
 type TaskItem = {
   id: string;
   title: string;
   description: string;
-  scope: string;
-  targetRoles: string[];
+  scope: TaskScope;
+  targetRoles: Role[];
   defaultVisible: boolean;
   currentVisible: boolean;
 };
@@ -28,7 +28,7 @@ export function TaskVisibilityList({
     const newVal = !currentVal;
     startTransition(async () => {
       const result = await toggleTaskVisibilityAction(userId, taskId, newVal);
-      if (result.success) {
+      if (result.ok) {
         setTaskList((prev) =>
           prev.map((t) => (t.id === taskId ? { ...t, currentVisible: newVal } : t))
         );
@@ -45,7 +45,7 @@ export function TaskVisibilityList({
           <div className="mr-4 space-y-1">
             <h3 className="text-sm font-medium">{task.title}</h3>
             <p className="text-[11px] text-muted-foreground">
-              Phạm vi: {SCOPE_LABELS[task.scope as any]} · Vai trò: {task.targetRoles.map(r => ROLE_LABELS[r as any]).join(", ")}
+              Phạm vi: {SCOPE_LABELS[task.scope]} · Vai trò: {task.targetRoles.map((r) => ROLE_LABELS[r]).join(", ")}
             </p>
             {task.defaultVisible !== task.currentVisible && (
               <span className="inline-block text-[9px] bg-yellow-500/10 text-yellow-700 font-medium px-1 rounded">

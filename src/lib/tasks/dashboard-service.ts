@@ -141,7 +141,7 @@ async function loadVisibleTasksAndSubs(
 ): Promise<VisibleScopeData> {
   await connectToDatabase();
   if (actor.role !== "ADMIN" && !actor.teamId) {
-    return { visibleUsers: [], relevantTasks: [], allTasks: [], submissions: [] };
+    return { visibleUsers: [], relevantTasks: [], allTasks: [], submissions: [], visibilityOverrides: new Map() };
   }
   const visibleUsers = await listVisibleUsersForActor(actor);
   const data = await loadScopeDataForVisibleUsers(dateKey, visibleUsers);

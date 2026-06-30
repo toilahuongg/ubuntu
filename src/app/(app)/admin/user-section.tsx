@@ -190,6 +190,7 @@ export function UserSection({
                 }
                 isSelf={user.id === currentUser.id}
                 onEdit={() => setEditingId(user.id)}
+                canPersonalize={canPersonalizeTasks(currentUser, user)}
               />
             ),
           )}
@@ -205,12 +206,14 @@ function UserRow({
   canDelete,
   isSelf,
   onEdit,
+  canPersonalize,
 }: {
   user: SerializedUser;
   canEdit: boolean;
   canDelete: boolean;
   isSelf: boolean;
   onEdit: () => void;
+  canPersonalize: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-3">
@@ -240,7 +243,7 @@ function UserRow({
             <Pencil className="h-4 w-4" aria-hidden />
           </button>
         )}
-        {canPersonalizeTasks(currentUser, user) && (user.role === "MEMBER" || user.role === "TDM" || user.role === "NGV") && (
+        {canPersonalize && (user.role === "MEMBER" || user.role === "TDM" || user.role === "NGV") && (
           <Link
             href={`/admin/users/${user.id}/tasks`}
             className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
