@@ -222,6 +222,12 @@ function ManagementHome({
         : "Quản lý mẫu nhiệm vụ trong nhóm",
     },
     {
+      href: "/admin/dtt",
+      icon: Shield,
+      label: "Trường học ĐTT",
+      description: "Quản lý lớp học, học viên và gán nhanh nhiệm vụ",
+    },
+    {
       href: "/admin/cosmetics",
       icon: ShoppingBag,
       label: "Cửa hàng",

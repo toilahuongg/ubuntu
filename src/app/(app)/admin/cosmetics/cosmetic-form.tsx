@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { CosmeticName } from "@/components/cosmetic-name";
+import { LevelAvatar } from "@/components/level-avatar";
 import type { CosmeticView, EquippedView } from "@/lib/cosmetics/serialize";
 import type { CosmeticSlot } from "@/lib/models";
 
@@ -12,13 +13,11 @@ import {
   createCosmeticAction,
   updateCosmeticAction,
 } from "./actions";
-
-const SLOTS: { value: CosmeticSlot; label: string }[] = [
-  { value: "prefix", label: "Trước (icon trước tên)" },
-  { value: "suffix", label: "Sau (icon sau tên)" },
-  { value: "color", label: "Màu sắc" },
-  { value: "effect", label: "Hiệu ứng" },
-];
+import {
+  COSMETIC_FORM_SLOTS,
+  cosmeticFormPreviewMode,
+  cosmeticSlotUsesImageIcon,
+} from "./cosmetic-form-options";
 
 const RARITIES = [
   { value: "common", label: "Thường" },
@@ -72,6 +71,7 @@ export function CosmeticForm({ initial }: { initial: Initial | null }) {
       .filter(Boolean),
   };
   const previewEquipped: EquippedView = { [slot]: previewView };
+  const previewMode = cosmeticFormPreviewMode(slot);
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -101,9 +101,20 @@ export function CosmeticForm({ initial }: { initial: Initial | null }) {
         <p className="mb-2 text-[11px] font-medium text-muted-foreground">
           Xem trước
         </p>
-        <p className="text-lg font-semibold">
-          <CosmeticName fullName="Tên hiển thị" equipped={previewEquipped} />
-        </p>
+        {previewMode === "avatar" ? (
+          <LevelAvatar
+            src="/badges/badge-6-male.png"
+            alt="Avatar mẫu"
+            equipped={previewEquipped}
+            size={64}
+            className="h-16 w-16"
+            imageClassName="rounded-full"
+          />
+        ) : (
+          <p className="text-lg font-semibold">
+            <CosmeticName fullName="Tên hiển thị" equipped={previewEquipped} />
+          </p>
+        )}
       </div>
 
       <div className="glass-card space-y-3 p-4">
@@ -139,7 +150,7 @@ export function CosmeticForm({ initial }: { initial: Initial | null }) {
               onChange={(e) => setSlot(e.target.value as CosmeticSlot)}
               className={INPUT_CLS}
             >
-              {SLOTS.map((s) => (
+              {COSMETIC_FORM_SLOTS.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
@@ -166,7 +177,7 @@ export function CosmeticForm({ initial }: { initial: Initial | null }) {
         <p className="text-xs font-semibold text-muted-foreground">
           Hình thức hiển thị
         </p>
-        {(slot === "prefix" || slot === "suffix") && (
+        {cosmeticSlotUsesImageIcon(slot) && (
           <Field label="File PNG trong public/cosmetics">
             <input
               name="icon"

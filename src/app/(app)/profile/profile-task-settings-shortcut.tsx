@@ -171,6 +171,7 @@ export function ProfileTaskSettingsShortcut({ settings }: Props) {
                       {selectedSetting && (
                         <>
                           <ReminderSettingsForm
+                            key={`reminder-${selectedSetting.taskId}`}
                             defaultReminderTime={selectedSetting.defaultReminderTime}
                             effectiveReminderTime={selectedSetting.effectiveReminderTime}
                             initialEnabled={selectedSetting.initialEnabled}
@@ -182,6 +183,7 @@ export function ProfileTaskSettingsShortcut({ settings }: Props) {
                           />
                           {selectedSetting.supportsMonthlyGoal && (
                             <MonthlyGoalForm
+                              key={`goal-${selectedSetting.taskId}`}
                               taskId={selectedSetting.taskId}
                               yearMonth={selectedSetting.yearMonth}
                               currentGoal={selectedSetting.currentGoal}

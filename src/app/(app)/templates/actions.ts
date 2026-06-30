@@ -67,6 +67,7 @@ export async function createTaskAction(
       targetRoles: formData.getAll("targetRoles").map(String),
       submissionMessage: (formData.get("submissionMessage") as string) ?? "",
       completionMessage: (formData.get("completionMessage") as string) ?? "",
+      isDtt: formData.get("isDtt") === "true",
     });
     const id = await createTask(session, parsed);
     revalidatePath("/templates");
@@ -109,6 +110,7 @@ export async function updateTaskAction(
       targetRoles: formData.getAll("targetRoles").map(String),
       submissionMessage: (formData.get("submissionMessage") as string) ?? "",
       completionMessage: (formData.get("completionMessage") as string) ?? "",
+      isDtt: formData.get("isDtt") === "true",
     });
     const { taskId, ...rest } = parsed;
     await updateTask(session, taskId, rest);

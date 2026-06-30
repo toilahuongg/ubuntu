@@ -294,6 +294,19 @@ export function EditTemplateForm({
         </div>
       </div>
 
+      <div className="flex items-center gap-2">
+        <label className="relative flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-overlay-subtle px-3 py-2 text-xs font-semibold text-muted-foreground hover:border-foreground/25 hover:text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary">
+          <input
+            type="checkbox"
+            name="isDtt"
+            value="true"
+            defaultChecked={task.isDtt}
+            className="rounded border-border text-primary focus:ring-primary/25"
+          />
+          Nhiệm vụ thuộc Trường học ĐTT
+        </label>
+      </div>
+
       {error && (
         <p role="alert" className="text-xs text-destructive">
           {error}

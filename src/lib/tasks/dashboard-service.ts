@@ -45,15 +45,18 @@ import type {
   TemplateCoverage,
 } from "@/lib/tasks/types";
 import { toObjectId } from "@/lib/utils/ids";
+import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
 
 function userShape(
-  u: Pick<SerializedUser, "teamId" | "zoneId" | "regionId" | "role">,
-): Pick<SerializedUser, "teamId" | "zoneId" | "regionId" | "role"> {
+  u: Pick<SerializedUser, "id" | "teamId" | "zoneId" | "regionId" | "role"> & { isDttUser?: boolean },
+  dttUserIdsSet?: Set<string>,
+) {
   return {
     teamId: u.teamId ?? null,
     zoneId: u.zoneId ?? null,
     regionId: u.regionId ?? null,
     role: u.role,
+    isDttUser: u.isDttUser ?? (dttUserIdsSet ? dttUserIdsSet.has(u.id) : false),
   };
 }
 
@@ -63,6 +66,7 @@ type VisibleScopeData = {
   allTasks: TaskRecord[];
   submissions: SubmissionRecordModel[];
   visibilityOverrides: Map<string, boolean>;
+  dttUserIdsSet: Set<string>;
 };
 
 type DashboardVisibleUser = Pick<
@@ -82,6 +86,7 @@ type DashboardLookup = {
 async function loadScopeDataForVisibleUsers(
   dateKey: string,
   visibleUsers: SerializedUser[],
+  actorId?: string,
 ): Promise<VisibleScopeData> {
   const uniqueIds = (ids: (string | null | undefined)[]) =>
     Array.from(new Set(ids.filter((id): id is string => !!id))).map(toObjectId);
@@ -95,19 +100,31 @@ async function loadScopeDataForVisibleUsers(
     { scope: "REGION", regionId: { $in: regionIds } },
   ];
 
-  const allTasks = (await TaskModel.find({
-    isActive: true,
-    $or: scopeClauses,
-  })
-    .sort({ createdAt: -1 })
-    .lean()) as TaskRecord[];
+  const userIdsToQuery = visibleUsers.map((u) => toObjectId(u.id));
+  if (actorId) {
+    userIdsToQuery.push(toObjectId(actorId));
+  }
+
+  const [allTasks, dttEnrollments] = await Promise.all([
+    TaskModel.find({
+      isActive: true,
+      $or: scopeClauses,
+    })
+      .sort({ createdAt: -1 })
+      .lean() as Promise<TaskRecord[]>,
+    DttEnrollmentModel.find({
+      userId: { $in: userIdsToQuery },
+    }).lean(),
+  ]);
+
+  const dttUserIdsSet = new Set(dttEnrollments.map((e) => e.userId.toString()));
 
   const relevantTasks = allTasks.filter((t) => {
     const scope = taskToScope(t);
     return (
       isTaskScheduledForDate(t, dateKey) &&
       visibleUsers.some((u) => {
-        return appliesToUser(scope, userShape(u));
+        return appliesToUser(scope, userShape(u, dttUserIdsSet));
       })
     );
   });
@@ -126,7 +143,7 @@ async function loadScopeDataForVisibleUsers(
     visibilities.map((v) => [`${v.taskId.toString()}:${v.userId.toString()}`, v.isVisible])
   );
 
-  return { visibleUsers, relevantTasks, allTasks, submissions, visibilityOverrides };
+  return { visibleUsers, relevantTasks, allTasks, submissions, visibilityOverrides, dttUserIdsSet };
 }
 
 function visibleScopesForRole(role: Role): ReadonlySet<TaskScope> {
@@ -141,10 +158,17 @@ async function loadVisibleTasksAndSubs(
 ): Promise<VisibleScopeData> {
   await connectToDatabase();
   if (actor.role !== "ADMIN" && !actor.teamId) {
-    return { visibleUsers: [], relevantTasks: [], allTasks: [], submissions: [], visibilityOverrides: new Map() };
+    return {
+      visibleUsers: [],
+      relevantTasks: [],
+      allTasks: [],
+      submissions: [],
+      visibilityOverrides: new Map(),
+      dttUserIdsSet: new Set(),
+    };
   }
   const visibleUsers = await listVisibleUsersForActor(actor);
-  const data = await loadScopeDataForVisibleUsers(dateKey, visibleUsers);
+  const data = await loadScopeDataForVisibleUsers(dateKey, visibleUsers, actor.id);
   const allowed = visibleScopesForRole(actor.role);
   return {
     ...data,
@@ -173,7 +197,7 @@ function buildSubmissionKey(taskId: string, userId: string) {
   return `${taskId}:${userId}`;
 }
 
-function buildDashboardLookup(
+export function buildDashboardLookup(
   tasks: TaskRecord[],
   visibleUsers: DashboardVisibleUser[],
   submissions: SubmissionRecordModel[],
@@ -328,7 +352,7 @@ async function loadProgressAggregates(
   return { totalByTask, monthlyByTaskUser, goalByTaskUser };
 }
 
-function buildTaskCard(
+export function buildTaskCard(
   t: TaskRecord,
   ctx: {
     actorId: string;
@@ -346,7 +370,8 @@ function buildTaskCard(
   const scope = taskToScope(t);
   const applicable = ctx.lookup.applicableUsersByTaskId.get(taskId) ?? [];
   const taskSubs = ctx.lookup.submissionsByTaskId.get(taskId) ?? [];
-  const isApplicableToActor = appliesToUser(scope, userShape(ctx.actorShape));
+  const isApplicableToActor =
+    ctx.lookup.applicableUserIdsByTaskId.get(taskId)?.has(ctx.actorId) ?? false;
   const mine = ctx.lookup.submissionByTaskUser.get(
     buildSubmissionKey(taskId, ctx.actorId),
   );
@@ -396,7 +421,7 @@ export async function buildDashboardView(
   actor: SessionUser,
   dateKey: string,
 ): Promise<DashboardView> {
-  const { visibleUsers, relevantTasks, allTasks, submissions, visibilityOverrides } =
+  const { visibleUsers, relevantTasks, allTasks, submissions, visibilityOverrides, dttUserIdsSet } =
     await loadVisibleTasksAndSubs(actor, dateKey);
 
   const filteredRelevantTasks = relevantTasks.filter(
@@ -426,8 +451,13 @@ export async function buildDashboardView(
 
   const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(sortedTasks, [actor.id], dateKey);
-  const actorShape = userShape(actor);
-  const lookup = buildDashboardLookup(sortedTasks, visibleUsers, submissions, visibilityOverrides);
+  const actorShape = userShape(actor, dttUserIdsSet);
+  const lookup = buildDashboardLookup(
+    sortedTasks,
+    visibleUsers.map((u) => ({ ...u, isDttUser: dttUserIdsSet.has(u.id) })),
+    submissions,
+    visibilityOverrides,
+  );
 
   const cards: TaskCard[] = sortedTasks.map((t) =>
     buildTaskCard(t, {

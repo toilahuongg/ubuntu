@@ -2,7 +2,7 @@ import { model, models, Schema, Types } from "mongoose";
 
 const dttEnrollmentSchema = new Schema(
   {
-    userId: { ref: "User", required: true, type: Schema.Types.ObjectId, index: true },
+    userId: { ref: "User", required: true, type: Schema.Types.ObjectId },
     classId: { ref: "DttClass", required: true, type: Schema.Types.ObjectId, index: true },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId, index: true },
     enrolledBy: { ref: "User", required: true, type: Schema.Types.ObjectId },

@@ -103,16 +103,7 @@ function TaskCardRow({
         isGoalComplete ? "dashboard-task-goal-complete" : ""
       }`}
     >
-      {variant === "member" ? (
-        <TaskTickButton
-          taskId={card.id}
-          subjectUserId={userId}
-          myCompletionCount={card.myCompletionCount}
-          status={card.status}
-          isGoalComplete={isGoalComplete}
-          taskType={card.taskType}
-        />
-      ) : card.isApplicableToActor ? (
+      {card.isApplicableToActor ? (
         <TaskTickButton
           taskId={card.id}
           subjectUserId={userId}
