@@ -36,6 +36,7 @@ const taskSchema = new Schema(
     },
     sortOrder: { default: null, type: Number },
     isActive: { default: true, type: Boolean },
+    isDtt: { default: false, type: Boolean },
     regionId: { default: null, ref: "Region", type: Schema.Types.ObjectId },
     scope: { default: "TEAM", enum: TASK_SCOPES, type: String },
     taskType: {
@@ -89,6 +90,7 @@ export type TaskRecord = {
   lateWindowDays: number;
   sortOrder: number | null;
   isActive: boolean;
+  isDtt: boolean;
   regionId: Types.ObjectId | null;
   scope: TaskScope;
   scheduleType?: TaskScheduleType | null;
