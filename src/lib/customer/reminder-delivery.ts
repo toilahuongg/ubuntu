@@ -5,6 +5,7 @@ import {
   safeSendTelegramMessage,
 } from "@/lib/telegram-bot";
 import {
+  deleteInactiveCustomers,
   getCustomerReminderCandidates,
   markCustomerReminderSent,
   type CustomerReminderCandidate,
@@ -78,9 +79,15 @@ async function deliverCustomerReminderCandidates(
 
 export async function runCustomerReminderSweep(
   options: { sweepAt?: Date; thresholdDays?: number } = {},
-): Promise<CustomerReminderSweepResult & { dateKey: string }> {
+): Promise<
+  CustomerReminderSweepResult & {
+    dateKey: string;
+    inactiveCustomersDeleted: number;
+  }
+> {
   const sweepAt = options.sweepAt ?? new Date();
   const dateKey = getTodayDateKey(sweepAt);
+  const inactiveCustomers = await deleteInactiveCustomers({ sweepAt });
   const reminders = await getCustomerReminderCandidates({
     sweepAt,
     thresholdDays: options.thresholdDays,
@@ -91,6 +98,7 @@ export async function runCustomerReminderSweep(
   return {
     dateKey,
     failed: result.failed,
+    inactiveCustomersDeleted: inactiveCustomers.deletedCount,
     pushSent: result.pushSent,
     reminderCount: result.reminderCount,
     sent: result.sent,

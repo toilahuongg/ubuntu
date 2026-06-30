@@ -1,12 +1,17 @@
 import { getTodayDateKey } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
+  CustomerHeartLogModel,
+  CustomerInteractionModel,
   CustomerModel,
   CustomerReminderLogModel,
+  PointTransactionModel,
   UserModel,
   type CustomerRecord,
   type UserRecord,
+  XpTransactionModel,
 } from "@/lib/models";
+import { getLevelFromXp } from "@/lib/xp";
 
 export const CUSTOMER_REMINDER_THRESHOLD_DAYS = 3;
 export const CUSTOMER_INACTIVE_MAX_DAYS = 30;
@@ -24,6 +29,33 @@ export type CustomerReminderRecipient = {
   customerId: string;
   userId: string;
 };
+
+export type InactiveCustomerDeletionResult = {
+  deletedCount: number;
+};
+
+export function buildInactiveCustomerDeletionFilter(sweepAt: Date) {
+  const cutoffDate = new Date(sweepAt);
+  cutoffDate.setDate(cutoffDate.getDate() - CUSTOMER_INACTIVE_MAX_DAYS);
+
+  return {
+    $or: [
+      {
+        lastInteractionAt: {
+          $ne: null,
+          $lte: cutoffDate,
+        },
+      },
+      {
+        $or: [
+          { lastInteractionAt: null },
+          { lastInteractionAt: { $exists: false } },
+        ],
+        createdAt: { $lte: cutoffDate },
+      },
+    ],
+  };
+}
 
 export function buildCustomerReminderText(
   customerName: string,
@@ -68,7 +100,7 @@ export function buildCustomerReminderCandidatesFromData(input: {
       (sweepTime - lastInteractionTime) / (1000 * 60 * 60 * 24),
     );
 
-    if (daysSince < threshold || daysSince > CUSTOMER_INACTIVE_MAX_DAYS) continue;
+    if (daysSince < threshold || daysSince >= CUSTOMER_INACTIVE_MAX_DAYS) continue;
 
     const caregiverIds = (customer.caregiverIds ?? []).map((id) =>
       id.toString(),
@@ -93,6 +125,87 @@ export function buildCustomerReminderCandidatesFromData(input: {
   }
 
   return candidates;
+}
+
+async function reverseInactiveCustomerInteractionRewards(customerIds: unknown[]) {
+  const interactions = (await CustomerInteractionModel.find({
+    customerId: { $in: customerIds },
+  }).lean()) as {
+    _id: { toString(): string };
+    caregiverId: { toString(): string };
+    expAwarded: number;
+    pointsAwarded: number;
+  }[];
+
+  if (interactions.length === 0) return;
+
+  const deltas = new Map<string, { exp: number; points: number }>();
+  for (const interaction of interactions) {
+    const caregiverId = interaction.caregiverId.toString();
+    const current = deltas.get(caregiverId) ?? { exp: 0, points: 0 };
+    current.exp -= interaction.expAwarded ?? 0;
+    current.points -= interaction.pointsAwarded ?? 0;
+    deltas.set(caregiverId, current);
+  }
+
+  await Promise.all(
+    Array.from(deltas.entries()).map(async ([caregiverId, delta]) => {
+      const updatedUser = (await UserModel.findByIdAndUpdate(
+        caregiverId,
+        {
+          $inc: {
+            pointBalance: delta.points,
+            totalXp: delta.exp,
+          },
+        },
+        { new: true },
+      ).lean()) as UserRecord | null;
+
+      if (updatedUser) {
+        await UserModel.updateOne(
+          { _id: updatedUser._id },
+          { $set: { level: getLevelFromXp(updatedUser.totalXp) } },
+        );
+      }
+    }),
+  );
+
+  const interactionIds = interactions.map((interaction) => interaction._id);
+  await Promise.all([
+    XpTransactionModel.deleteMany({
+      source: "customer_interaction",
+      sourceId: { $in: interactionIds },
+    }),
+    PointTransactionModel.deleteMany({
+      source: "customer_interaction_reward",
+      sourceId: { $in: interactionIds },
+    }),
+  ]);
+}
+
+export async function deleteInactiveCustomers(
+  options: { sweepAt?: Date } = {},
+): Promise<InactiveCustomerDeletionResult> {
+  await connectToDatabase();
+
+  const sweepAt = options.sweepAt ?? new Date();
+  const customers = (await CustomerModel.find(
+    buildInactiveCustomerDeletionFilter(sweepAt),
+    { _id: 1 },
+  ).lean()) as { _id: unknown }[];
+
+  if (customers.length === 0) return { deletedCount: 0 };
+
+  const customerIds = customers.map((customer) => customer._id);
+  await reverseInactiveCustomerInteractionRewards(customerIds);
+  await Promise.all([
+    CustomerModel.deleteMany({ _id: { $in: customerIds } }),
+    CustomerInteractionModel.deleteMany({ customerId: { $in: customerIds } }),
+    CustomerHeartLogModel.deleteMany({ customerId: { $in: customerIds } }),
+    CustomerReminderLogModel.deleteMany({ customerId: { $in: customerIds } }),
+  ]);
+
+  return { deletedCount: customers.length };
 }
 
 export async function getCustomerReminderCandidates(

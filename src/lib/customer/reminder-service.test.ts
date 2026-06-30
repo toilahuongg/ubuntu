@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { CustomerRecord, UserRecord } from "@/lib/models";
 import {
+  buildInactiveCustomerDeletionFilter,
   buildCustomerReminderCandidatesFromData,
   buildCustomerReminderText,
   CUSTOMER_REMINDER_THRESHOLD_DAYS,
@@ -218,6 +219,22 @@ describe("customer reminder service", () => {
     expect(candidates).toHaveLength(0);
   });
 
+  it("skips customers inactive for exactly 30 days", () => {
+    const sweepAt = new Date("2026-04-10T10:00:00.000Z");
+    const lastInteraction = new Date("2026-03-11T10:00:00.000Z"); // 30 days ago
+
+    const candidates = buildCustomerReminderCandidatesFromData({
+      customers: [customer({ lastInteractionAt: lastInteraction })],
+      dateKey: "2026-04-10",
+      sentLogs: [],
+      sweepAt,
+      thresholdDays: 3,
+      users: [user()],
+    });
+
+    expect(candidates).toHaveLength(0);
+  });
+
   it("skips customers created more than 30 days ago with no interactions", () => {
     const sweepAt = new Date("2026-04-10T10:00:00.000Z");
     const createdAt = new Date("2026-03-05T10:00:00.000Z"); // 36 days ago
@@ -232,5 +249,28 @@ describe("customer reminder service", () => {
     });
 
     expect(candidates).toHaveLength(0);
+  });
+
+  it("builds deletion filter for customers inactive for 30 days", () => {
+    const sweepAt = new Date("2026-04-10T10:00:00.000Z");
+    const cutoff = new Date("2026-03-11T10:00:00.000Z");
+
+    expect(buildInactiveCustomerDeletionFilter(sweepAt)).toEqual({
+      $or: [
+        {
+          lastInteractionAt: {
+            $ne: null,
+            $lte: cutoff,
+          },
+        },
+        {
+          $or: [
+            { lastInteractionAt: null },
+            { lastInteractionAt: { $exists: false } },
+          ],
+          createdAt: { $lte: cutoff },
+        },
+      ],
+    });
   });
 });
