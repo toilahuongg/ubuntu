@@ -619,7 +619,7 @@ async function resolveUserHierarchy(input: {
 
   if (input.role === "ZONE_LEAD") {
     if (!input.zoneId) {
-      throw new Error("Vui lòng chọn Địa Vực cho ĐV.");
+      throw new Error("Vui lòng chọn Địa Vực cho ĐVT - NQL.");
     }
     const zone = (await ZoneModel.findById(input.zoneId).lean()) as ZoneRecord | null;
     if (!zone) throw new Error("Địa Vực không tồn tại.");
@@ -632,7 +632,7 @@ async function resolveUserHierarchy(input: {
 
   // TEAM_LEAD
   if (!input.teamId) {
-    throw new Error("Vui lòng chọn Nhóm cho NT.");
+    throw new Error("Vui lòng chọn Nhóm cho CS - ĐL.");
   }
   const team = (await TeamModel.findById(input.teamId).lean()) as TeamRecord | null;
   if (!team) throw new Error("Nhóm không tồn tại.");

@@ -159,13 +159,13 @@ async function assertCanAssignUserTarget(
   if (isAdmin(session)) return;
 
   if (input.role === "TEAM_LEAD") {
-    if (!input.teamId) throw new Error("Vui lòng chọn Nhóm cho NT.");
+    if (!input.teamId) throw new Error("Vui lòng chọn Nhóm cho CS - ĐL.");
     await assertOwnsTeam(session, input.teamId);
     return;
   }
 
   if (input.role === "ZONE_LEAD") {
-    if (!input.zoneId) throw new Error("Vui lòng chọn Địa Vực cho ĐV.");
+    if (!input.zoneId) throw new Error("Vui lòng chọn Địa Vực cho ĐVT - NQL.");
     const zone = await getZoneById(input.zoneId);
     if (!zone) throw new Error("Địa Vực không tồn tại.");
     await assertOwnsTeam(session, zone.teamId.toString());

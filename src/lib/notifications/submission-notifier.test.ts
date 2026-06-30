@@ -48,7 +48,7 @@ const users: UserInput[] = [
 ];
 
 describe("resolveNotificationRecipientIds", () => {
-  it("sends member submissions vertically to NT, DVT, and KVT in the same scope", () => {
+  it("sends member submissions vertically to CS - ĐL, ĐVT - NQL, and KVT in the same scope", () => {
     const recipientIds = resolveNotificationRecipientIds({
       excludeUserId: "member-a",
       scope: {
@@ -63,7 +63,7 @@ describe("resolveNotificationRecipientIds", () => {
     expect(recipientIds).toEqual(["nt-a", "dvt-a1", "kvt-a1"]);
   });
 
-  it("sends DVT submissions vertically and horizontally to DVT in the same team", () => {
+  it("sends ĐVT - NQL submissions vertically and horizontally to ĐVT - NQL in the same team", () => {
     const recipientIds = resolveNotificationRecipientIds({
       excludeUserId: "dvt-a1",
       scope: {

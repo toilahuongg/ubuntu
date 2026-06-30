@@ -18,7 +18,7 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Ubuntu",
   description:
-    "Web app giao và cập nhật nhiệm vụ hàng ngày qua Telegram WebApp cho NT, KVT và thành viên.",
+    "Web app giao và cập nhật nhiệm vụ hàng ngày qua Telegram WebApp cho CS - ĐL, KVT và thành viên.",
   manifest: "/manifest.json",
   robots: {
     index: false,

@@ -4,7 +4,11 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { BellRing, BellOff, Loader2, X } from "lucide-react";
 
-import { useWebPush } from "@/lib/push/use-web-push";
+import {
+  logPushDebug,
+  type PushSubscribeResult,
+  useWebPush,
+} from "@/lib/push/use-web-push";
 
 const SNOOZE_KEY = "push_permission_popup_snoozed_until_v1";
 const SNOOZE_EVENT = "push-permission-popup-snooze";
@@ -51,6 +55,44 @@ function getServerSnoozeSnapshot() {
   return true;
 }
 
+function getSubscribeFailureMessage(
+  result: Extract<PushSubscribeResult, { ok: false }>,
+) {
+  const suffix = `Mã lỗi: ${result.reason}${
+    result.status ? `/${result.status}` : ""
+  }.`;
+
+  if (result.reason === "denied") {
+    return `Bạn đã chặn thông báo. Hãy bật lại trong cài đặt trình duyệt. ${suffix}`;
+  }
+  if (result.reason === "unauthorized") {
+    return `Phiên đăng nhập trong app Home Screen đã hết hạn. Hãy đăng nhập lại rồi bật thông báo. ${suffix}`;
+  }
+  if (result.reason === "ios_not_installed") {
+    return `Trên iPhone, hãy mở Ubuntu từ icon Home Screen rồi bật thông báo. ${suffix}`;
+  }
+  if (result.reason === "unsupported") {
+    return `Trình duyệt hiện tại chưa hỗ trợ Web Push. ${suffix}`;
+  }
+  if (result.reason === "unconfigured") {
+    return `Thông báo đẩy chưa được cấu hình trên server. ${suffix}`;
+  }
+  if (result.reason === "not_allowed") {
+    return `iPhone chưa cho phép đăng ký Web Push. Hãy mở app từ Home Screen rồi bật lại. ${suffix}`;
+  }
+  if (result.reason === "invalid_key") {
+    return `VAPID key của thông báo đẩy chưa hợp lệ. ${suffix}`;
+  }
+  if (result.reason === "service_worker") {
+    return `Service worker chưa sẵn sàng. Hãy đóng mở lại app rồi bật lại. ${suffix}`;
+  }
+  if (result.message) {
+    return `${result.message} ${suffix}`;
+  }
+
+  return `Chưa thể bật thông báo lúc này. ${suffix}`;
+}
+
 export function PushPermissionPopup() {
   const { status, loading, subscribe } = useWebPush();
   const snoozed = useSyncExternalStore(
@@ -87,15 +129,13 @@ export function PushPermissionPopup() {
 
   const handleSubscribe = async () => {
     setMessage(null);
+    logPushDebug("popup:subscribe_click", { status });
     const result = await subscribe();
+    logPushDebug("popup:subscribe_result", result);
     if (result.ok) {
       return;
     }
-    if (result.reason === "denied") {
-      setMessage("Bạn đã chặn thông báo. Hãy bật lại trong cài đặt trình duyệt.");
-      return;
-    }
-    setMessage("Chưa thể bật thông báo lúc này. Vui lòng thử lại sau.");
+    setMessage(getSubscribeFailureMessage(result));
   };
 
   return (

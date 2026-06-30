@@ -1,4 +1,4 @@
-const CACHE_NAME = "ubuntu-v11";
+const CACHE_NAME = "ubuntu-v12";
 const OFFLINE_URL = "/offline";
 const DEFAULT_NOTIFICATION_ICON = "/icons/logo.png";
 

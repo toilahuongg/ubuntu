@@ -52,7 +52,7 @@ const view: AdminOperationsView = {
     memberCount: 2,
     name: "Nhóm A",
     role: "TEAM_LEAD",
-    roleLabel: "NT",
+    roleLabel: "CS - ĐL",
   },
   selectionDefaults: {
     teamId: "team-a",
