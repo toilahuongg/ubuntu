@@ -10,6 +10,8 @@ import { connectToDatabase } from "@/lib/mongoose";
 import { AdminSubHeader } from "../sub-header";
 import { DttManager } from "./dtt-manager";
 
+export const dynamic = "force-dynamic";
+
 export default async function DttManagementPage() {
   await connectToDatabase();
   const session = await getSessionUser();

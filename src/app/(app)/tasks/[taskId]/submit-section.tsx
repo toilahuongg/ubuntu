@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Send } from "lucide-react";
 
-import { submitTaskViaApi } from "@/lib/tasks/client-submit";
+import { StreakBonusPopup } from "@/app/(app)/tasks/streak-bonus-popup";
+import {
+  submitTaskViaApi,
+  type StreakBonusResult,
+} from "@/lib/tasks/client-submit";
 import { isDailyTaskType, type TaskType } from "@/lib/tasks/constants";
 import type { TaskStatus } from "@/lib/tasks/types";
 
@@ -25,6 +29,9 @@ export function SubmitSection({
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [streakBonus, setStreakBonus] = useState<StreakBonusResult | null>(
+    null,
+  );
 
   function handleSubmit() {
     setError(null);
@@ -39,6 +46,9 @@ export function SubmitSection({
         mode: alreadySubmittedToday ? "set" : undefined,
       });
       if (result.status === "success") {
+        if (result.data?.streakBonus?.awarded) {
+          setStreakBonus(result.data.streakBonus);
+        }
         setSuccess(
           alreadySubmittedToday
             ? "Đã bỏ hoàn thành hôm nay."
@@ -70,6 +80,10 @@ export function SubmitSection({
 
   return (
     <div className="glass-card p-4 space-y-4">
+      <StreakBonusPopup
+        bonus={streakBonus}
+        onClose={() => setStreakBonus(null)}
+      />
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">

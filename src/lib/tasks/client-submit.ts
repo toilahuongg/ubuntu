@@ -9,8 +9,27 @@ export type SubmitTaskClientInput = {
   revalidationPaths?: readonly string[];
 };
 
+export type StreakBonusResult = {
+  awarded: boolean;
+  bonusExp: number;
+  bonusPoints: number;
+  milestone: number | null;
+  streakLength: number;
+};
+
+export type SubmitTaskClientData = {
+  completionCount: number;
+  isFirstSubmission: boolean;
+  leveledUp: boolean;
+  newLevel: number | null;
+  streakBonus: StreakBonusResult;
+  submissionId: string;
+  taskJustCompleted: boolean;
+  xpAwarded: number;
+};
+
 export type SubmitTaskClientResult =
-  | { status: "success"; data?: unknown }
+  | { status: "success"; data?: SubmitTaskClientData }
   | { status: "timeout_unknown"; message: string }
   | { status: "error"; message: string };
 
@@ -40,9 +59,9 @@ export async function submitTaskViaApi(
       signal: controller.signal,
     });
 
-    let payload: ClientActionResult | null = null;
+    let payload: ClientActionResult<SubmitTaskClientData> | null = null;
     try {
-      payload = (await response.json()) as ClientActionResult;
+      payload = (await response.json()) as ClientActionResult<SubmitTaskClientData>;
     } catch {
       payload = null;
     }

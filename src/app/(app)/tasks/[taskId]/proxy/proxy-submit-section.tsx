@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { CalendarRange, Check, Minus, Plus, Send, X } from "lucide-react";
 
 import type { SessionUser } from "@/lib/domain";
-import { submitTaskViaApi } from "@/lib/tasks/client-submit";
+import { StreakBonusPopup } from "@/app/(app)/tasks/streak-bonus-popup";
+import {
+  submitTaskViaApi,
+  type StreakBonusResult,
+} from "@/lib/tasks/client-submit";
 import { isDailyTaskType, type TaskType } from "@/lib/tasks/constants";
 import type { TaskStatus } from "@/lib/tasks/types";
 
@@ -96,6 +100,9 @@ export function ProxySubmitSection({
   const [success, setSuccess] = useState<string | null>(null);
   const [activeDate, setActiveDate] = useState<string | null>(null);
   const [count, setCount] = useState<number>(1);
+  const [streakBonus, setStreakBonus] = useState<StreakBonusResult | null>(
+    null,
+  );
 
   const cells = useMemo(() => buildCalendar(yearMonth), [yearMonth]);
   const [yearStr, monthStr] = yearMonth.split("-");
@@ -141,6 +148,9 @@ export function ProxySubmitSection({
         mode: "set",
       });
       if (result.status === "success") {
+        if (result.data?.streakBonus?.awarded) {
+          setStreakBonus(result.data.streakBonus);
+        }
         setSuccess(amount === 0 ? "Đã đánh dấu chưa nộp." : "Đã lưu dữ liệu nộp.");
         setActiveDate(null);
         setCount(0);
@@ -176,6 +186,10 @@ export function ProxySubmitSection({
 
   return (
     <div className="glass-card space-y-4 p-4">
+      <StreakBonusPopup
+        bonus={streakBonus}
+        onClose={() => setStreakBonus(null)}
+      />
       <div>
         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
           Nộp cho
