@@ -1,13 +1,45 @@
 # Thiết kế tính năng: Trường học Đấng Tiên Tri (Trường học ĐTT)
 
-Tính năng này cho phép CS - ĐL (Team Lead) quản lý danh sách học viên tham gia Trường học ĐTT trong nhóm của mình và thiết lập nhanh các nhiệm vụ dành riêng cho các học viên này.
+Tính năng này cho phép CS - ĐL (Team Lead) quản lý danh sách học viên tham gia Trường học ĐTT trong nhóm của mình bằng cách phân chia lớp học, đồng thời thiết lập nhanh các nhiệm vụ dành riêng cho toàn bộ học viên này.
 
 ---
 
 ## 1. Thiết kế Cơ sở Dữ liệu & Xác thực (Database & Validation)
 
-### 1.1. Model Tuyển sinh Mới: `DttEnrollment`
-Tạo một Collection mới trong MongoDB để lưu trữ thông tin học viên tham gia Trường học ĐTT.
+### 1.1. Model Lớp học Mới: `DttClass`
+Lưu thông tin các lớp học ĐTT do CS - ĐL tự tạo cho nhóm của mình.
+*   **Đường dẫn file**: `src/lib/models/dtt-class.ts`
+*   **Schema**:
+    ```typescript
+    import { model, models, Schema, Types } from "mongoose";
+
+    const dttClassSchema = new Schema(
+      {
+        name: { required: true, trim: true, type: String },
+        teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId, index: true },
+        createdBy: { ref: "User", required: true, type: Schema.Types.ObjectId },
+      },
+      { timestamps: true }
+    );
+
+    // Tên lớp là duy nhất trong phạm vi mỗi nhóm
+    dttClassSchema.index({ name: 1, teamId: 1 }, { unique: true });
+
+    export type DttClassRecord = {
+      _id: Types.ObjectId;
+      name: string;
+      teamId: Types.ObjectId;
+      createdBy: Types.ObjectId;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+
+    export const DttClassModel =
+      models.DttClass || model("DttClass", dttClassSchema);
+    ```
+
+### 1.2. Model Tuyển sinh: `DttEnrollment`
+Ghi nhận học viên tham gia học ĐTT và lớp học cụ thể của họ.
 *   **Đường dẫn file**: `src/lib/models/dtt-enrollment.ts`
 *   **Schema**:
     ```typescript
@@ -16,6 +48,7 @@ Tạo một Collection mới trong MongoDB để lưu trữ thông tin học vi�
     const dttEnrollmentSchema = new Schema(
       {
         userId: { ref: "User", required: true, type: Schema.Types.ObjectId, index: true },
+        classId: { ref: "DttClass", required: true, type: Schema.Types.ObjectId, index: true },
         teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId, index: true },
         enrolledBy: { ref: "User", required: true, type: Schema.Types.ObjectId },
         enrolledAt: { default: Date.now, type: Date },
@@ -23,12 +56,13 @@ Tạo một Collection mới trong MongoDB để lưu trữ thông tin học vi�
       { timestamps: true }
     );
 
-    // Một user chỉ có tối đa 1 bản ghi tham gia học ĐTT
+    // Mỗi thành viên chỉ học duy nhất 1 lớp tại một thời điểm
     dttEnrollmentSchema.index({ userId: 1 }, { unique: true });
 
     export type DttEnrollmentRecord = {
       _id: Types.ObjectId;
       userId: Types.ObjectId;
+      classId: Types.ObjectId;
       teamId: Types.ObjectId;
       enrolledBy: Types.ObjectId;
       enrolledAt: Date;
@@ -40,14 +74,14 @@ Tạo một Collection mới trong MongoDB để lưu trữ thông tin học vi�
       models.DttEnrollment || model("DttEnrollment", dttEnrollmentSchema);
     ```
 
-### 1.2. Cập nhật Model `Task` (Nhiệm vụ mẫu)
+### 1.3. Cập nhật Model `Task` (Nhiệm vụ mẫu)
 *   **Đường dẫn file**: `src/lib/models/task.ts`
 *   **Thay đổi**: Thêm trường `isDtt` để đánh dấu nhiệm vụ thuộc Trường học ĐTT.
     ```typescript
     isDtt: { default: false, type: Boolean }
     ```
 
-### 1.3. Cập nhật Schema Xác thực `zod`
+### 1.4. Cập nhật Schema Xác thực `zod`
 *   **Đường dẫn file**: `src/lib/validation.ts`
 *   **Thay đổi**: Thêm trường `isDtt` vào `taskBaseSchema` để xác thực dữ liệu khi tạo/sửa nhiệm vụ.
     ```typescript
@@ -60,7 +94,7 @@ Tạo một Collection mới trong MongoDB để lưu trữ thông tin học vi�
 
 ### 2.1. Cập nhật hàm kiểm tra hiển thị nhiệm vụ `appliesToUser`
 *   **Đường dẫn file**: `src/lib/tasks/policy.ts`
-*   **Mô tả**: Sửa logic để một nhiệm vụ hiển thị cho người dùng nếu người dùng thỏa mãn một trong hai điều kiện (có vai trò khớp với `targetRoles` của nhiệm vụ HOẶC nhiệm vụ đó thuộc Trường học ĐTT và người dùng đang học ĐTT), đồng thời vẫn phải trùng khớp về phạm vi (nhóm/địa vực/khu vực).
+*   **Mô tả**: Một nhiệm vụ hiển thị cho người dùng nếu người dùng thỏa mãn một trong hai điều kiện (có vai trò khớp với `targetRoles` của nhiệm vụ HOẶC nhiệm vụ đó thuộc Trường học ĐTT và người dùng đang học ĐTT), đồng thời vẫn phải trùng khớp về phạm vi (nhóm/địa vực/khu vực).
 *   **Chi tiết sửa đổi**:
     ```typescript
     export type ScopeContext = {
@@ -105,7 +139,7 @@ Tạo một Collection mới trong MongoDB để lưu trữ thông tin học vi�
     }
     ```
 
-### 2.2. Tích hợp cờ `isDttUser` và `isDtt` vào Dashboard và Reminders
+### 2.2. Tích hợp cờ `isDttUser` vào Dashboard và Reminders
 *   **Trang Dashboard** (`src/lib/tasks/dashboard-service.ts`):
     *   Trong `loadScopeDataForVisibleUsers`, truy vấn bảng `DttEnrollmentModel` để lấy danh sách học viên ĐTT trong phạm vi.
     *   Tạo một Set chứa các `userId` đang học ĐTT để gán giá trị `isDttUser` vào các đối tượng thông tin người dùng được truyền vào `appliesToUser`.
@@ -122,7 +156,7 @@ Tạo một Collection mới trong MongoDB để lưu trữ thông tin học vi�
 *   **Đường dẫn file**:
     *   `src/app/(app)/templates/create-template-form.tsx`
     *   `src/app/(app)/templates/edit-template-form.tsx`
-*   **Giao diện**: Thêm một Switch component đẹp mắt (sử dụng Tailwind v4) với nhãn **"Dành cho Trường học ĐTT"**.
+*   **Giao diện**: Thêm một Switch component đẹp mắt với nhãn **"Dành cho Trường học ĐTT"**.
 *   **Server Actions**: Cập nhật `src/app/(app)/templates/actions.ts` để đọc và lưu trường `isDtt` từ form data gửi lên.
 
 ### 3.2. Đăng ký Menu tại trang Quản trị (Admin Menu)
@@ -131,16 +165,19 @@ Tạo một Collection mới trong MongoDB để lưu trữ thông tin học vi�
 
 ### 3.3. Trang Quản lý Tập trung `/admin/dtt`
 *   **Tạo mới trang**: `src/app/(app)/admin/dtt/page.tsx`
-*   **Giao diện**: Thiết kế giao diện hiện đại với 2 tab chính:
-    1.  **Tab "Học viên ĐTT"**:
-        *   Bảng hiển thị các học viên hiện tại (Họ tên, Vai trò, Ngày gia nhập).
-        *   Nút **"Rút khỏi trường học"** bên cạnh mỗi học viên.
-        *   Danh sách các thành viên khác trong nhóm chưa tham gia ĐTT kèm nút **"Thêm vào Trường học"**.
+*   **Giao diện**: Thiết kế giao diện với 2 tab chính:
+    1.  **Tab "Học viên & Lớp học"**:
+        *   **Quản lý lớp**: Nút "Tạo lớp học mới" (mở modal/form nhỏ). Hiển thị danh sách các lớp học ĐTT của nhóm, cho phép đổi tên hoặc xóa lớp (chỉ cho phép xóa khi lớp trống).
+        *   **Danh sách học viên theo lớp**: Khi chọn một lớp học, hiển thị danh sách học viên hiện tại thuộc lớp đó kèm nút "Rút khỏi lớp" (Xóa khỏi trường học ĐTT) và nút "Chuyển lớp".
+        *   **Thêm học viên**: Hiển thị danh sách thành viên nhóm chưa tham gia ĐTT, cho phép chọn lớp học bằng dropdown và ấn nút "Thêm vào lớp".
     2.  **Tab "Nhiệm vụ ĐTT"**:
-        *   Danh sách tất cả nhiệm vụ đang hoạt động của nhóm.
-        *   Bên cạnh mỗi nhiệm vụ có một Switch Toggle **"Dành cho Trường học ĐTT"** để thiết lập/gỡ bỏ nhanh trạng thái nhiệm vụ mà không cần tải lại trang.
+        *   Hiển thị danh sách toàn bộ nhiệm vụ của nhóm kèm nút Toggle nhanh **"Dành cho Trường học ĐTT"**.
 *   **Tập tin Server Actions**: Tạo mới `src/app/(app)/admin/dtt/actions.ts` chứa các hàm xử lý:
-    *   `enrollStudentAction(userId: string)`: Thêm một học viên vào cơ sở dữ liệu DttEnrollment.
-    *   `unenrollStudentAction(userId: string)`: Xóa học viên khỏi cơ sở dữ liệu DttEnrollment.
-    *   `toggleTaskDttAction(taskId: string, isDtt: boolean)`: Đổi trạng thái `isDtt` của một nhiệm vụ.
-    *   Tất cả actions này đều gọi `revalidatePath` để cập nhật UI ngay lập tức.
+    *   `createClassAction(name: string)`: Tạo lớp học mới.
+    *   `updateClassAction(classId: string, name: string)`: Đổi tên lớp học.
+    *   `deleteClassAction(classId: string)`: Xóa lớp học (nếu không có học viên).
+    *   `enrollStudentAction(userId: string, classId: string)`: Thêm một học viên vào lớp học ĐTT.
+    *   `unenrollStudentAction(userId: string)`: Xóa học viên khỏi lớp học ĐTT (rút học).
+    *   `changeStudentClassAction(userId: string, classId: string)`: Chuyển lớp cho học viên.
+    *   `toggleTaskDttAction(taskId: string, isDtt: boolean)`: Thiết lập nhanh trạng thái nhiệm vụ ĐTT.
+    *   Tất cả actions này đều gọi `revalidatePath` để làm mới UI ngay lập tức.
