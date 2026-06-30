@@ -299,7 +299,7 @@ export async function getTaskDetail(
     visibilities.map((v) => [v.userId.toString(), v.isVisible])
   );
 
-  const checkVisible = (u: any) => {
+  const checkVisible = (u: SessionUser | SerializedUser) => {
     const override = overridesMap.get(u.id);
     if (override !== undefined) return override;
     return appliesToUser(scope, userShape(u));

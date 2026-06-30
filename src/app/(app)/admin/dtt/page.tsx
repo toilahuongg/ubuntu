@@ -17,8 +17,9 @@ export default async function DttManagementPage() {
   const session = await getSessionUser();
   if (!session) redirect("/login");
   if (!canManageDtt(session)) redirect("/admin");
+  if (!session.teamId) redirect("/admin");
 
-  const teamId = toObjectId(session.teamId ?? "");
+  const teamId = toObjectId(session.teamId);
 
   // Load all classes for the team
   const classes = await DttClassModel.find({ teamId }).lean();

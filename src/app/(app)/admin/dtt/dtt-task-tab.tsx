@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Search, Book, Sparkles, BookOpen } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Search, Book } from "lucide-react";
+import { Switch } from "@base-ui/react/switch";
 import { toggleTaskDttAction } from "./actions";
 import { FormError, FormSuccess } from "../_shared";
 
@@ -12,6 +14,8 @@ type TaskItem = {
 };
 
 export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
+  const router = useRouter();
+  const [taskItems, setTaskItems] = useState(tasks);
   const [searchTerm, setSearchTerm] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -20,8 +24,11 @@ export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
   // Keep track of which task ID is currently being toggled
   const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
 
-  const handleToggleDtt = (taskId: string, currentIsDtt: boolean) => {
-    const nextIsDtt = !currentIsDtt;
+  useEffect(() => {
+    setTaskItems(tasks);
+  }, [tasks]);
+
+  const handleToggleDtt = (taskId: string, nextIsDtt: boolean) => {
     setTogglingTaskId(taskId);
     setError(null);
     setSuccess(null);
@@ -30,39 +37,49 @@ export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
       const res = await toggleTaskDttAction(taskId, nextIsDtt);
       setTogglingTaskId(null);
       if (res.ok) {
-        const taskTitle = tasks.find(t => t.id === taskId)?.title || "";
+        const taskTitle = taskItems.find((t) => t.id === taskId)?.title || "";
+        setTaskItems((current) =>
+          current.map((task) =>
+            task.id === taskId ? { ...task, isDtt: nextIsDtt } : task
+          )
+        );
         setSuccess(
           nextIsDtt
             ? `Đã thêm nhiệm vụ "${taskTitle}" vào Trường học ĐTT.`
             : `Đã rút nhiệm vụ "${taskTitle}" khỏi Trường học ĐTT.`
         );
+        router.refresh();
       } else {
         setError(res.error);
       }
     });
   };
 
-  const filteredTasks = tasks.filter((t) =>
+  const filteredTasks = taskItems.filter((t) =>
     t.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-4">
       {/* Search and control bar */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-border/40">
+      <div className="flex flex-col gap-2 border-b border-border/40 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Danh sách nhiệm vụ hoạt động</h3>
+          <h3 className="text-sm font-semibold text-foreground">Danh sách nhiệm vụ hoạt động</h3>
         </div>
 
         {/* Search bar */}
         <div className="relative max-w-xs w-full">
+          <label htmlFor="dtt-task-search" className="sr-only">
+            Tìm kiếm nhiệm vụ
+          </label>
           <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/75" />
           <input
+            id="dtt-task-search"
             type="text"
             placeholder="Tìm kiếm nhiệm vụ..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-9 w-full rounded-xl bg-overlay-subtle border border-border pl-9 pr-3 text-xs outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+            className="h-10 w-full rounded-lg border border-border bg-overlay-subtle pl-9 pr-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
           />
         </div>
       </div>
@@ -71,9 +88,9 @@ export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
       {success && <FormSuccess message={success} onDismiss={() => setSuccess(null)} />}
 
       {/* Task list with individual modern row cards */}
-      <div className="space-y-2.5">
+      <div className="space-y-2">
         {filteredTasks.length === 0 ? (
-          <div className="glass-card p-8 text-center text-xs text-muted-foreground/60 border border-border/40 rounded-2xl">
+          <div className="rounded-lg border border-dashed border-border/70 bg-overlay-subtle/20 p-6 text-center text-sm text-muted-foreground">
             Không tìm thấy nhiệm vụ nào phù hợp
           </div>
         ) : (
@@ -83,21 +100,21 @@ export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
             return (
               <div
                 key={task.id}
-                className="flex items-center justify-between p-4 rounded-2xl bg-overlay-subtle/20 border border-border/40 hover:border-border/80 hover:bg-overlay-subtle/40 transition-all duration-200 shadow-sm"
+                className="flex min-h-16 items-center justify-between rounded-lg border border-border/50 bg-background/70 px-3 py-2 transition-colors duration-150 hover:border-primary/30 hover:bg-overlay-subtle/25"
               >
-                <div className="min-w-0 pr-4 flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-xl bg-overlay-subtle border border-border/40 flex items-center justify-center shrink-0">
+                <div className="flex min-w-0 items-center gap-3 pr-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border/50 bg-overlay-subtle">
                     <Book className={`h-4.5 w-4.5 ${task.isDtt ? "text-primary" : "text-muted-foreground/75"}`} />
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-sm font-semibold truncate text-foreground">{task.title}</h4>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="mt-1 flex items-center gap-2">
                       {task.isDtt ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        <span className="inline-flex items-center rounded-md border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
                           Nhiệm vụ ĐTT
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-overlay-subtle text-muted-foreground border border-border/60">
+                        <span className="inline-flex items-center rounded-md border border-border/70 bg-overlay-subtle px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                           Nhiệm vụ Thường
                         </span>
                       )}
@@ -107,26 +124,25 @@ export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
 
                 {/* Toggle switch */}
                 <div className="flex items-center">
-                  <button
-                    type="button"
+                  <Switch.Root
+                    checked={task.isDtt}
+                    onCheckedChange={(checked) => handleToggleDtt(task.id, checked)}
                     disabled={isTaskToggling}
-                    onClick={() => handleToggleDtt(task.id, task.isDtt)}
                     aria-label={`Đặt làm nhiệm vụ ĐTT cho ${task.title}`}
-                    className={`relative inline-flex h-6 w-10 shrink-0 cursor-pointer rounded-full border border-border/40 transition-colors duration-200 ease-in-out outline-none focus:ring-2 focus:ring-primary/25 disabled:cursor-wait disabled:opacity-50 ${
-                      task.isDtt ? "bg-primary border-primary" : "bg-overlay-subtle hover:bg-overlay-medium"
-                    }`}
+                    className="group relative inline-flex h-11 w-14 shrink-0 cursor-pointer items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-wait disabled:opacity-60"
                   >
+                    <span
+                      aria-hidden
+                      className="absolute left-2 top-1/2 h-6 w-10 -translate-y-1/2 rounded-full border border-border/50 bg-overlay-subtle transition-colors duration-150 group-hover:bg-overlay-medium group-data-[checked]:border-primary group-data-[checked]:bg-primary"
+                    />
                     {isTaskToggling ? (
-                      <span className="absolute left-1 top-1 h-3.5 w-3.5 animate-spin rounded-full border-2 border-muted border-t-transparent" />
+                      <span className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-muted border-t-transparent group-data-[checked]:translate-x-4" />
                     ) : (
-                      <span
-                        pointer-events-none="true"
-                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-background shadow-md transition duration-200 ease-in-out ${
-                          task.isDtt ? "translate-x-4.5" : "translate-x-0.5"
-                        }`}
+                      <Switch.Thumb
+                        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background shadow-sm transition-transform duration-150 ease-in-out group-data-[checked]:translate-x-4"
                       />
                     )}
-                  </button>
+                  </Switch.Root>
                 </div>
               </div>
             );

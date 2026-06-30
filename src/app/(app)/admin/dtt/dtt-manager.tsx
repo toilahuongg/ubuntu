@@ -48,13 +48,21 @@ export function DttManager({
     <div className="space-y-6">
       {/* Segmented control tabs */}
       <div className="flex justify-center sm:justify-start">
-        <div className="inline-flex rounded-2xl bg-overlay-subtle border border-border/60 p-1 gap-1">
+        <div
+          role="tablist"
+          aria-label="Quản lý Trường học ĐTT"
+          className="inline-flex gap-1 rounded-lg border border-border/60 bg-overlay-subtle p-1"
+        >
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === "classes"}
+            aria-controls="dtt-classes-panel"
+            id="dtt-classes-tab"
             onClick={() => setActiveTab("classes")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 ${
+            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors duration-150 ${
               activeTab === "classes"
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border/20"
+                ? "bg-background text-foreground ring-1 ring-border/40"
                 : "text-muted-foreground hover:text-foreground hover:bg-overlay-subtle/50"
             }`}
           >
@@ -63,10 +71,14 @@ export function DttManager({
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === "tasks"}
+            aria-controls="dtt-tasks-panel"
+            id="dtt-tasks-tab"
             onClick={() => setActiveTab("tasks")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-200 ${
+            className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors duration-150 ${
               activeTab === "tasks"
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border/20"
+                ? "bg-background text-foreground ring-1 ring-border/40"
                 : "text-muted-foreground hover:text-foreground hover:bg-overlay-subtle/50"
             }`}
           >
@@ -77,7 +89,11 @@ export function DttManager({
       </div>
 
       {/* Tab content panel */}
-      <div className="transition-all duration-200 ease-in-out">
+      <div
+        role="tabpanel"
+        id={activeTab === "classes" ? "dtt-classes-panel" : "dtt-tasks-panel"}
+        aria-labelledby={activeTab === "classes" ? "dtt-classes-tab" : "dtt-tasks-tab"}
+      >
         {activeTab === "classes" ? (
           <DttClassTab
             classes={classes}

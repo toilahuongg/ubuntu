@@ -9,15 +9,18 @@ const mocks = vi.hoisted(() => ({
   }),
   // DttClassModel
   classCreate: vi.fn(),
-  classFindByIdAndUpdate: vi.fn(),
-  classFindByIdAndDelete: vi.fn(),
+  classExists: vi.fn(),
+  classFindOneAndUpdate: vi.fn(),
+  classFindOneAndDelete: vi.fn(),
   // DttEnrollmentModel
   enrollmentCreate: vi.fn(),
   enrollmentExists: vi.fn(),
   enrollmentFindOneAndDelete: vi.fn(),
   enrollmentFindOneAndUpdate: vi.fn(),
   // TaskModel
-  taskFindByIdAndUpdate: vi.fn(),
+  taskFindOneAndUpdate: vi.fn(),
+  // UserModel
+  userExists: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/session", () => ({
@@ -40,8 +43,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/models/dtt-class", () => ({
   DttClassModel: {
     create: mocks.classCreate,
-    findByIdAndUpdate: mocks.classFindByIdAndUpdate,
-    findByIdAndDelete: mocks.classFindByIdAndDelete,
+    exists: mocks.classExists,
+    findOneAndUpdate: mocks.classFindOneAndUpdate,
+    findOneAndDelete: mocks.classFindOneAndDelete,
   },
 }));
 
@@ -56,7 +60,13 @@ vi.mock("@/lib/models/dtt-enrollment", () => ({
 
 vi.mock("@/lib/models/task", () => ({
   TaskModel: {
-    findByIdAndUpdate: mocks.taskFindByIdAndUpdate,
+    findOneAndUpdate: mocks.taskFindOneAndUpdate,
+  },
+}));
+
+vi.mock("@/lib/models/user", () => ({
+  UserModel: {
+    exists: mocks.userExists,
   },
 }));
 
@@ -215,17 +225,30 @@ describe("DTT Server Actions", () => {
   describe("updateClassAction", async () => {
     it("updates class name and revalidates path", async () => {
       mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
-      mocks.classFindByIdAndUpdate.mockResolvedValueOnce({});
+      mocks.classFindOneAndUpdate.mockResolvedValueOnce({});
 
       const classId = "507f1f77bcf86cd799439019";
       const res = await updateClassAction(classId, "  Lớp ĐTT K02  ");
 
       expect(res.ok).toBe(true);
-      expect(mocks.classFindByIdAndUpdate).toHaveBeenCalledWith(
-        expect.any(Object),
+      expect(mocks.classFindOneAndUpdate).toHaveBeenCalledWith(
+        { _id: expect.any(Object), teamId: expect.any(Object) },
         { name: "Lớp ĐTT K02" }
       );
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/dtt");
+    });
+
+    it("rejects updates for classes outside the manager team", async () => {
+      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classFindOneAndUpdate.mockResolvedValueOnce(null);
+
+      const res = await updateClassAction("507f1f77bcf86cd799439019", "Lớp lạ");
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error).toBe("Không tìm thấy lớp học trong nhóm của bạn.");
+      }
+      expect(mocks.revalidatePath).not.toHaveBeenCalled();
     });
   });
 
@@ -234,6 +257,7 @@ describe("DTT Server Actions", () => {
 
     it("fails if the class has enrolled students", async () => {
       mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(true);
       mocks.enrollmentExists.mockResolvedValueOnce(true);
 
       const res = await deleteClassAction(classId);
@@ -242,19 +266,37 @@ describe("DTT Server Actions", () => {
       if (!res.ok) {
         expect(res.error).toBe("Không thể xóa lớp học đang có học viên.");
       }
-      expect(mocks.classFindByIdAndDelete).not.toHaveBeenCalled();
+      expect(mocks.classFindOneAndDelete).not.toHaveBeenCalled();
     });
 
     it("deletes the class if it has no students", async () => {
       mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(true);
       mocks.enrollmentExists.mockResolvedValueOnce(false);
-      mocks.classFindByIdAndDelete.mockResolvedValueOnce({});
+      mocks.classFindOneAndDelete.mockResolvedValueOnce({});
 
       const res = await deleteClassAction(classId);
 
       expect(res.ok).toBe(true);
-      expect(mocks.classFindByIdAndDelete).toHaveBeenCalledWith(expect.any(Object));
+      expect(mocks.classFindOneAndDelete).toHaveBeenCalledWith({
+        _id: expect.any(Object),
+        teamId: expect.any(Object),
+      });
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/dtt");
+    });
+
+    it("rejects deletes for classes outside the manager team", async () => {
+      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(false);
+
+      const res = await deleteClassAction(classId);
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error).toBe("Không tìm thấy lớp học trong nhóm của bạn.");
+      }
+      expect(mocks.enrollmentExists).not.toHaveBeenCalled();
+      expect(mocks.classFindOneAndDelete).not.toHaveBeenCalled();
     });
   });
 
@@ -264,6 +306,8 @@ describe("DTT Server Actions", () => {
 
     it("fails if the student is already enrolled in another class", async () => {
       mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(true);
+      mocks.userExists.mockResolvedValueOnce(true);
       mocks.enrollmentExists.mockResolvedValueOnce(true);
 
       const res = await enrollStudentAction(studentId, classId);
@@ -277,6 +321,8 @@ describe("DTT Server Actions", () => {
 
     it("enrolls the student if not already enrolled", async () => {
       mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(true);
+      mocks.userExists.mockResolvedValueOnce(true);
       mocks.enrollmentExists.mockResolvedValueOnce(false);
       mocks.enrollmentCreate.mockResolvedValueOnce({});
 
@@ -292,6 +338,34 @@ describe("DTT Server Actions", () => {
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/dtt");
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/dashboard");
     });
+
+    it("rejects enrollment into classes outside the manager team", async () => {
+      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(false);
+
+      const res = await enrollStudentAction(studentId, classId);
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error).toBe("Không tìm thấy lớp học trong nhóm của bạn.");
+      }
+      expect(mocks.userExists).not.toHaveBeenCalled();
+      expect(mocks.enrollmentCreate).not.toHaveBeenCalled();
+    });
+
+    it("rejects enrollment for users outside the manager team", async () => {
+      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(true);
+      mocks.userExists.mockResolvedValueOnce(false);
+
+      const res = await enrollStudentAction(studentId, classId);
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error).toBe("Không tìm thấy thành viên hoạt động trong nhóm của bạn.");
+      }
+      expect(mocks.enrollmentCreate).not.toHaveBeenCalled();
+    });
   });
 
   describe("unenrollStudentAction", () => {
@@ -305,15 +379,30 @@ describe("DTT Server Actions", () => {
       expect(res.ok).toBe(true);
       expect(mocks.enrollmentFindOneAndDelete).toHaveBeenCalledWith({
         userId: expect.any(Object),
+        teamId: expect.any(Object),
       });
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/dtt");
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/dashboard");
+    });
+
+    it("rejects unenrollment for users outside the manager team", async () => {
+      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.enrollmentFindOneAndDelete.mockResolvedValueOnce(null);
+
+      const res = await unenrollStudentAction("507f1f77bcf86cd79943901a");
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error).toBe("Không tìm thấy học viên ĐTT trong nhóm của bạn.");
+      }
+      expect(mocks.revalidatePath).not.toHaveBeenCalled();
     });
   });
 
   describe("changeStudentClassAction", () => {
     it("updates student enrollment to new class", async () => {
       mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(true);
       mocks.enrollmentFindOneAndUpdate.mockResolvedValueOnce({});
 
       const studentId = "507f1f77bcf86cd79943901a";
@@ -322,30 +411,76 @@ describe("DTT Server Actions", () => {
 
       expect(res.ok).toBe(true);
       expect(mocks.enrollmentFindOneAndUpdate).toHaveBeenCalledWith(
-        { userId: expect.any(Object) },
+        { userId: expect.any(Object), teamId: expect.any(Object) },
         { classId: expect.any(Object) }
       );
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/dtt");
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/dashboard");
+    });
+
+    it("rejects moving students to classes outside the manager team", async () => {
+      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(false);
+
+      const res = await changeStudentClassAction(
+        "507f1f77bcf86cd79943901a",
+        "507f1f77bcf86cd79943901b"
+      );
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error).toBe("Không tìm thấy lớp học trong nhóm của bạn.");
+      }
+      expect(mocks.enrollmentFindOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it("rejects moving students outside the manager team", async () => {
+      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.classExists.mockResolvedValueOnce(true);
+      mocks.enrollmentFindOneAndUpdate.mockResolvedValueOnce(null);
+
+      const res = await changeStudentClassAction(
+        "507f1f77bcf86cd79943901a",
+        "507f1f77bcf86cd79943901b"
+      );
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error).toBe("Không tìm thấy học viên ĐTT trong nhóm của bạn.");
+      }
+      expect(mocks.revalidatePath).not.toHaveBeenCalled();
     });
   });
 
   describe("toggleTaskDttAction", () => {
     it("updates task isDtt flag", async () => {
       mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
-      mocks.taskFindByIdAndUpdate.mockResolvedValueOnce({});
+      mocks.taskFindOneAndUpdate.mockResolvedValueOnce({});
 
       const taskId = "507f1f77bcf86cd79943901c";
       const res = await toggleTaskDttAction(taskId, true);
 
       expect(res.ok).toBe(true);
-      expect(mocks.taskFindByIdAndUpdate).toHaveBeenCalledWith(
-        expect.any(Object),
+      expect(mocks.taskFindOneAndUpdate).toHaveBeenCalledWith(
+        { _id: expect.any(Object), teamId: expect.any(Object), isActive: true },
         { isDtt: true }
       );
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/dtt");
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/templates");
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/dashboard");
+    });
+
+    it("rejects toggles for tasks outside the manager team", async () => {
+      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
+      mocks.taskFindOneAndUpdate.mockResolvedValueOnce(null);
+
+      const res = await toggleTaskDttAction("507f1f77bcf86cd79943901c", true);
+
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.error).toBe("Không tìm thấy nhiệm vụ hoạt động trong nhóm của bạn.");
+      }
+      expect(mocks.revalidatePath).not.toHaveBeenCalled();
     });
   });
 });

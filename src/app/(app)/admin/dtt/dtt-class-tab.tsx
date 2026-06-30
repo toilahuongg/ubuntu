@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, X, GraduationCap, Users, UserMinus, ArrowRightLeft, ShieldAlert, Award } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, X, GraduationCap, ArrowRightLeft, ShieldAlert, Award } from "lucide-react";
 import {
   createClassAction,
   updateClassAction,
@@ -41,6 +42,7 @@ export function DttClassTab({
   enrollments: EnrollmentItem[];
   nonDttMembers: NonDttMember[];
 }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -73,8 +75,9 @@ export function DttClassTab({
     startTransition(async () => {
       const res = await createClassAction(newClassName);
       if (res.ok) {
-        setSuccess(`Đã tạo lớp học "${newClassName}" thành công.`);
+        setSuccess(`Đã tạo lớp học "${newClassName.trim()}" thành công.`);
         setNewClassName("");
+        router.refresh();
       } else {
         setError(res.error);
       }
@@ -89,8 +92,9 @@ export function DttClassTab({
     startTransition(async () => {
       const res = await updateClassAction(classId, editingClassName);
       if (res.ok) {
-        setSuccess(`Đã đổi tên lớp thành "${editingClassName}".`);
+        setSuccess(`Đã đổi tên lớp thành "${editingClassName.trim()}".`);
         setEditingClassId(null);
+        router.refresh();
       } else {
         setError(res.error);
       }
@@ -111,16 +115,18 @@ export function DttClassTab({
         setSuccess(`Đã xếp học viên ${studentName} vào lớp ${className}.`);
         setSelectedStudentId("");
         setSelectedClassId("");
+        router.refresh();
       } else {
         setError(res.error);
       }
     });
   };
 
-  const handleUnenrollStudent = (userId: string, fullName: string) => {
+  const handleUnenrollStudent = (userId: string) => {
     return async () => {
       const res = await unenrollStudentAction(userId);
       if (res.ok) {
+        router.refresh();
         return { ok: true as const };
       } else {
         return { ok: false as const, error: res.error };
@@ -137,6 +143,7 @@ export function DttClassTab({
         const student = enrollments.find(e => e.userId === userId);
         const className = classes.find(c => c.id === targetClassId)?.name || "";
         setSuccess(`Đã chuyển học viên ${student?.fullName} sang lớp ${className}.`);
+        router.refresh();
       } else {
         setError(res.error);
       }
@@ -148,14 +155,14 @@ export function DttClassTab({
       {error && <FormError message={error} onDismiss={() => setError(null)} />}
       {success && <FormSuccess message={success} onDismiss={() => setSuccess(null)} />}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
         {/* Left column: creation & enrollment forms */}
-        <div className="space-y-6 lg:col-span-1">
+        <div className="space-y-4">
           {/* Create Class Card */}
-          <div className="glass-card p-5 space-y-4 border border-border/40 shadow-sm rounded-2xl">
+          <div className="glass-card space-y-4 border border-border/40 p-4">
             <div className="flex items-center gap-2 border-b border-border/40 pb-2">
               <Plus className="h-4 w-4 text-primary" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Tạo lớp học mới</h3>
+              <h3 className="text-sm font-semibold text-foreground">Tạo lớp học mới</h3>
             </div>
             <form onSubmit={handleCreateClass} className="space-y-3">
               <input
@@ -164,7 +171,7 @@ export function DttClassTab({
                 onChange={(e) => setNewClassName(e.target.value)}
                 placeholder="Tên lớp học (VD: Lớp ĐTT Khóa 1)"
                 required
-                className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+                className="h-10 w-full rounded-lg border border-border bg-overlay-subtle px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
               />
               <button
                 type="submit"
@@ -177,19 +184,19 @@ export function DttClassTab({
           </div>
 
           {/* Enroll Student Card */}
-          <div className="glass-card p-5 space-y-4 border border-border/40 shadow-sm rounded-2xl">
+          <div className="glass-card space-y-4 border border-border/40 p-4">
             <div className="flex items-center gap-2 border-b border-border/40 pb-2">
               <GraduationCap className="h-4 w-4 text-primary" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Ghi danh học viên</h3>
+              <h3 className="text-sm font-semibold text-foreground">Ghi danh học viên</h3>
             </div>
             <form onSubmit={handleEnrollStudent} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Thành viên chưa vào ĐTT</label>
+                <label className="text-xs font-medium text-muted-foreground">Thành viên chưa vào ĐTT</label>
                 <select
                   value={selectedStudentId}
                   onChange={(e) => setSelectedStudentId(e.target.value)}
                   required
-                  className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+                  className="form-select"
                 >
                   <option value="">-- Chọn thành viên --</option>
                   {nonDttMembers.map((member) => (
@@ -201,12 +208,12 @@ export function DttClassTab({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Lớp học ĐTT mục tiêu</label>
+                <label className="text-xs font-medium text-muted-foreground">Lớp học ĐTT mục tiêu</label>
                 <select
                   value={selectedClassId}
                   onChange={(e) => setSelectedClassId(e.target.value)}
                   required
-                  className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+                  className="form-select"
                 >
                   <option value="">-- Chọn lớp học --</option>
                   {classes.map((c) => (
@@ -229,9 +236,9 @@ export function DttClassTab({
         </div>
 
         {/* Right column: Class Lists with students */}
-        <div className="space-y-4 lg:col-span-2">
+        <div className="space-y-4">
           {classes.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-overlay-subtle/20 p-8 text-center space-y-3">
+            <div className="flex flex-col items-center justify-center space-y-3 rounded-lg border border-dashed border-border bg-overlay-subtle/20 p-8 text-center">
               <ShieldAlert className="h-10 w-10 text-muted-foreground/60" />
               <p className="text-sm font-semibold text-muted-foreground">Chưa có lớp học ĐTT nào được tạo</p>
               <p className="text-xs text-muted-foreground/50 max-w-xs leading-relaxed">Hãy tạo lớp học ở bảng bên trái để bắt đầu quản lý danh sách học viên</p>
@@ -242,9 +249,9 @@ export function DttClassTab({
               const otherClasses = classes.filter((c) => c.id !== classItem.id);
 
               return (
-                <div key={classItem.id} className="glass-card overflow-hidden border border-border/40 shadow-sm rounded-2xl">
+                <div key={classItem.id} className="glass-card overflow-hidden border border-border/40">
                   {/* Class Header */}
-                  <div className="border-b border-border/40 bg-overlay-subtle/50 px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center justify-between border-b border-border/40 bg-overlay-subtle/50 px-4 py-3">
                     {editingClassId === classItem.id ? (
                       <div className="flex items-center gap-2 flex-1 max-w-xs">
                         <input
@@ -255,7 +262,7 @@ export function DttClassTab({
                         />
                         <button
                           onClick={() => handleUpdateClass(classItem.id)}
-                          className="px-2 py-1 bg-primary text-background rounded-md text-xs font-semibold hover:bg-primary/95"
+                          className="rounded-md bg-primary px-2 py-1 text-xs font-semibold text-background hover:bg-primary/95"
                         >
                           Lưu
                         </button>
@@ -269,7 +276,7 @@ export function DttClassTab({
                     ) : (
                       <div className="flex items-center gap-2 min-w-0">
                         <h4 className="font-semibold text-sm truncate text-foreground">{classItem.name}</h4>
-                        <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/10">
+                        <span className="inline-flex shrink-0 items-center rounded-md border border-primary/10 bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
                           {classStudents.length} học viên
                         </span>
                         <button
@@ -289,6 +296,7 @@ export function DttClassTab({
                       confirmLabel="Xác nhận xóa"
                       onConfirm={async () => {
                         const res = await deleteClassAction(classItem.id);
+                        if (res.ok) router.refresh();
                         return res;
                       }}
                     />
@@ -301,9 +309,9 @@ export function DttClassTab({
                     ) : (
                       <div className="space-y-1.5">
                         {classStudents.map((student) => (
-                          <div key={student.userId} className="flex items-center justify-between p-2.5 hover:bg-overlay-subtle/30 rounded-xl transition-all border border-transparent hover:border-border/30">
+                          <div key={student.userId} className="flex items-center justify-between rounded-lg border border-transparent p-2.5 transition-colors hover:border-border/30 hover:bg-overlay-subtle/30">
                             <div className="min-w-0 flex items-center gap-2.5">
-                              <div className="h-7 w-7 rounded-lg bg-overlay-subtle flex items-center justify-center shrink-0">
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-overlay-subtle">
                                 <Award className="h-4 w-4 text-primary/70" />
                               </div>
                               <div className="min-w-0">
@@ -317,7 +325,7 @@ export function DttClassTab({
                             <div className="flex items-center gap-3">
                               {/* Move class action selector */}
                               {otherClasses.length > 0 && (
-                                <div className="flex items-center gap-1.5 rounded-lg bg-overlay-subtle border border-border/40 px-2 py-1">
+                                <div className="flex items-center gap-1.5 rounded-lg border border-border/40 bg-overlay-subtle px-2 py-1">
                                   <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
                                   <select
                                     onChange={(e) => {
@@ -342,7 +350,7 @@ export function DttClassTab({
                               <ConfirmDeleteButton
                                 ariaLabel="Rút khỏi ĐTT"
                                 confirmLabel="Xác nhận rút"
-                                onConfirm={handleUnenrollStudent(student.userId, student.fullName)}
+                                onConfirm={handleUnenrollStudent(student.userId)}
                               />
                             </div>
                           </div>

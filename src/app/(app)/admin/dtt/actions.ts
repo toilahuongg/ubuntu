@@ -7,6 +7,7 @@ import { runAction, type ActionResult } from "@/lib/actions/result";
 import { DttClassModel } from "@/lib/models/dtt-class";
 import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
 import { TaskModel } from "@/lib/models/task";
+import { UserModel } from "@/lib/models/user";
 import { toObjectId } from "@/lib/utils/ids";
 import { connectToDatabase } from "@/lib/mongoose";
 import { canManageDtt } from "@/lib/permissions";
@@ -23,14 +24,36 @@ async function requireManager() {
   return session;
 }
 
+async function requireManagerTeam() {
+  const session = await requireManager();
+  if (!session.teamId) {
+    throw new Error("Chưa xác định được nhóm của bạn.");
+  }
+
+  return {
+    session,
+    teamId: toObjectId(session.teamId),
+  };
+}
+
+async function assertClassInTeam(classId: string, teamId: ReturnType<typeof toObjectId>) {
+  const exists = await DttClassModel.exists({
+    _id: toObjectId(classId),
+    teamId,
+  });
+
+  if (!exists) {
+    throw new Error("Không tìm thấy lớp học trong nhóm của bạn.");
+  }
+}
+
 export async function createClassAction(name: string): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requireManager();
-    if (!session.teamId) throw new Error("Tài khoản của bạn chưa thuộc nhóm nào.");
+    const { session, teamId } = await requireManagerTeam();
 
     await DttClassModel.create({
       name: name.trim(),
-      teamId: toObjectId(session.teamId),
+      teamId,
       createdBy: toObjectId(session.id),
     });
 
@@ -40,32 +63,58 @@ export async function createClassAction(name: string): Promise<ActionResult> {
 
 export async function updateClassAction(classId: string, name: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireManager();
-    await DttClassModel.findByIdAndUpdate(toObjectId(classId), {
+    const { teamId } = await requireManagerTeam();
+    const updated = await DttClassModel.findOneAndUpdate({
+      _id: toObjectId(classId),
+      teamId,
+    }, {
       name: name.trim(),
     });
+
+    if (!updated) {
+      throw new Error("Không tìm thấy lớp học trong nhóm của bạn.");
+    }
+
     revalidatePath("/admin/dtt");
   });
 }
 
 export async function deleteClassAction(classId: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireManager();
+    const { teamId } = await requireManagerTeam();
 
-    const hasStudents = await DttEnrollmentModel.exists({ classId: toObjectId(classId) });
+    await assertClassInTeam(classId, teamId);
+
+    const hasStudents = await DttEnrollmentModel.exists({
+      classId: toObjectId(classId),
+      teamId,
+    });
     if (hasStudents) {
       throw new Error("Không thể xóa lớp học đang có học viên.");
     }
 
-    await DttClassModel.findByIdAndDelete(toObjectId(classId));
+    await DttClassModel.findOneAndDelete({
+      _id: toObjectId(classId),
+      teamId,
+    });
     revalidatePath("/admin/dtt");
   });
 }
 
 export async function enrollStudentAction(userId: string, classId: string): Promise<ActionResult> {
   return runAction(async () => {
-    const session = await requireManager();
-    if (!session.teamId) throw new Error("Chưa xác định được nhóm của bạn.");
+    const { session, teamId } = await requireManagerTeam();
+
+    await assertClassInTeam(classId, teamId);
+
+    const userInTeam = await UserModel.exists({
+      _id: toObjectId(userId),
+      status: "ACTIVE",
+      teamId,
+    });
+    if (!userInTeam) {
+      throw new Error("Không tìm thấy thành viên hoạt động trong nhóm của bạn.");
+    }
 
     const exists = await DttEnrollmentModel.exists({ userId: toObjectId(userId) });
     if (exists) {
@@ -75,7 +124,7 @@ export async function enrollStudentAction(userId: string, classId: string): Prom
     await DttEnrollmentModel.create({
       userId: toObjectId(userId),
       classId: toObjectId(classId),
-      teamId: toObjectId(session.teamId),
+      teamId,
       enrolledBy: toObjectId(session.id),
     });
 
@@ -86,8 +135,16 @@ export async function enrollStudentAction(userId: string, classId: string): Prom
 
 export async function unenrollStudentAction(userId: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireManager();
-    await DttEnrollmentModel.findOneAndDelete({ userId: toObjectId(userId) });
+    const { teamId } = await requireManagerTeam();
+    const deleted = await DttEnrollmentModel.findOneAndDelete({
+      userId: toObjectId(userId),
+      teamId,
+    });
+
+    if (!deleted) {
+      throw new Error("Không tìm thấy học viên ĐTT trong nhóm của bạn.");
+    }
+
     revalidatePath("/admin/dtt");
     revalidatePath("/dashboard");
   });
@@ -95,11 +152,19 @@ export async function unenrollStudentAction(userId: string): Promise<ActionResul
 
 export async function changeStudentClassAction(userId: string, classId: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireManager();
-    await DttEnrollmentModel.findOneAndUpdate(
-      { userId: toObjectId(userId) },
+    const { teamId } = await requireManagerTeam();
+
+    await assertClassInTeam(classId, teamId);
+
+    const updated = await DttEnrollmentModel.findOneAndUpdate(
+      { userId: toObjectId(userId), teamId },
       { classId: toObjectId(classId) }
     );
+
+    if (!updated) {
+      throw new Error("Không tìm thấy học viên ĐTT trong nhóm của bạn.");
+    }
+
     revalidatePath("/admin/dtt");
     revalidatePath("/dashboard");
   });
@@ -107,8 +172,16 @@ export async function changeStudentClassAction(userId: string, classId: string):
 
 export async function toggleTaskDttAction(taskId: string, isDtt: boolean): Promise<ActionResult> {
   return runAction(async () => {
-    await requireManager();
-    await TaskModel.findByIdAndUpdate(toObjectId(taskId), { isDtt });
+    const { teamId } = await requireManagerTeam();
+    const updated = await TaskModel.findOneAndUpdate(
+      { _id: toObjectId(taskId), teamId, isActive: true },
+      { isDtt }
+    );
+
+    if (!updated) {
+      throw new Error("Không tìm thấy nhiệm vụ hoạt động trong nhóm của bạn.");
+    }
+
     revalidatePath("/admin/dtt");
     revalidatePath("/templates");
     revalidatePath("/dashboard");

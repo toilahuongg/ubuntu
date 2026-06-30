@@ -118,7 +118,7 @@ export function canManageUser(actor: SessionUser, subject: SessionUser) {
 
   if (isZoneLead(actor)) {
     return (
-      isMemberLike(subject) &&
+      (isMemberLike(subject) || subject.role === "REGIONAL_LEAD") &&
       !!actor.zoneId &&
       actor.zoneId === subject.zoneId
     );
@@ -158,7 +158,15 @@ export function canAssignUserRole(actor: SessionUser, role: Role) {
       role === "MEMBER"
     );
   }
-  if (isZoneLead(actor) || isRegionalLead(actor)) {
+  if (isZoneLead(actor)) {
+    return (
+      role === "REGIONAL_LEAD" ||
+      role === "NGV" ||
+      role === "TDM" ||
+      role === "MEMBER"
+    );
+  }
+  if (isRegionalLead(actor)) {
     return role === "NGV" || role === "TDM" || role === "MEMBER";
   }
   return false;
