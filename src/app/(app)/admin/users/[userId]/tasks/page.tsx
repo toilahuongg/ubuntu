@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
-import { canManageUser } from "@/lib/permissions";
+import { canPersonalizeTasks } from "@/lib/permissions";
 import { getUserById } from "@/lib/services/organization-service";
 import { TaskModel } from "@/lib/models/task";
 import { UserTaskVisibilityModel } from "@/lib/models/user-task-visibility";
@@ -22,7 +22,7 @@ export default async function MemberTasksPage({
   const targetUser = await getUserById(userId);
   if (!targetUser) redirect("/admin/users");
 
-  if (!canManageUser(actor, targetUser)) {
+  if (!canPersonalizeTasks(actor, targetUser)) {
     redirect("/admin/users");
   }
 

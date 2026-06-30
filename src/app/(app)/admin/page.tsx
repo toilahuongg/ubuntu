@@ -109,9 +109,7 @@ export default async function AdminPage() {
               icon={ClipboardList}
               label="Nhiệm vụ"
               description={
-                isRegionalLead
-                  ? "Quản lý nhiệm vụ trong khu vực"
-                  : isZoneLead
+                isZoneLead
                   ? "Quản lý nhiệm vụ trong địa vực"
                   : "Quản lý mẫu nhiệm vụ"
               }

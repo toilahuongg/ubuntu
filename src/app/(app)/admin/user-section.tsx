@@ -7,7 +7,7 @@ import { AlertTriangle, ClipboardList, Filter, Pencil, Search, X } from "lucide-
 import { deleteUserAction, saveUserAction } from "@/app/(app)/actions";
 import { ROLE_LABELS, ROLES, USER_STATUSES } from "@/lib/domain";
 import type { Role, SerializedUser, SessionUser, UserStatus } from "@/lib/domain";
-import { canManageUser } from "@/lib/permissions";
+import { canManageUser, canPersonalizeTasks } from "@/lib/permissions";
 import { ConfirmDeleteButton, FormError } from "./_shared";
 
 type Zone = { id: string; name: string; teamId: string; teamName?: string };
@@ -240,7 +240,7 @@ function UserRow({
             <Pencil className="h-4 w-4" aria-hidden />
           </button>
         )}
-        {canEdit && (user.role === "MEMBER" || user.role === "TDM" || user.role === "NGV") && (
+        {canPersonalizeTasks(currentUser, user) && (user.role === "MEMBER" || user.role === "TDM" || user.role === "NGV") && (
           <Link
             href={`/admin/users/${user.id}/tasks`}
             className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"

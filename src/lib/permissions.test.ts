@@ -4,6 +4,7 @@ import {
   canCreateInteraction,
   canManageCustomer,
   canManageTasks,
+  canPersonalizeTasks,
   canProxySubmit,
   canViewCustomer,
 } from "@/lib/permissions";
@@ -263,7 +264,7 @@ describe("canManageTasks", () => {
         zoneId: "zone-a",
         regionId: "region-a",
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("rejects unscoped leads and regular roles", () => {
@@ -294,6 +295,99 @@ describe("canManageTasks", () => {
         status: "ACTIVE",
         teamId: "team-a",
       }),
+    ).toBe(false);
+  });
+});
+
+describe("canPersonalizeTasks", () => {
+  const subject = {
+    fullName: "Member",
+    id: "member",
+    role: "MEMBER" as const,
+    status: "ACTIVE" as const,
+    teamId: "team-a",
+    zoneId: "zone-a",
+    regionId: "region-a",
+  };
+
+  it("allows admin, team lead (same team), and zone lead (same zone)", () => {
+    expect(
+      canPersonalizeTasks(
+        {
+          fullName: "Admin",
+          id: "admin",
+          role: "ADMIN",
+          status: "ACTIVE",
+        },
+        subject,
+      ),
+    ).toBe(true);
+
+    expect(
+      canPersonalizeTasks(
+        {
+          fullName: "Team Lead",
+          id: "team-lead",
+          role: "TEAM_LEAD",
+          status: "ACTIVE",
+          teamId: "team-a",
+        },
+        subject,
+      ),
+    ).toBe(true);
+
+    expect(
+      canPersonalizeTasks(
+        {
+          fullName: "Zone Lead",
+          id: "zone-lead",
+          role: "ZONE_LEAD",
+          status: "ACTIVE",
+          zoneId: "zone-a",
+        },
+        subject,
+      ),
+    ).toBe(true);
+  });
+
+  it("denies regional leads and leads from other scopes", () => {
+    expect(
+      canPersonalizeTasks(
+        {
+          fullName: "Regional Lead",
+          id: "regional-lead",
+          role: "REGIONAL_LEAD",
+          status: "ACTIVE",
+          regionId: "region-a",
+        },
+        subject,
+      ),
+    ).toBe(false);
+
+    expect(
+      canPersonalizeTasks(
+        {
+          fullName: "Other Team Lead",
+          id: "team-lead-other",
+          role: "TEAM_LEAD",
+          status: "ACTIVE",
+          teamId: "team-b",
+        },
+        subject,
+      ),
+    ).toBe(false);
+
+    expect(
+      canPersonalizeTasks(
+        {
+          fullName: "Other Zone Lead",
+          id: "zone-lead-other",
+          role: "ZONE_LEAD",
+          status: "ACTIVE",
+          zoneId: "zone-b",
+        },
+        subject,
+      ),
     ).toBe(false);
   });
 });

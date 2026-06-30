@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
-import { canManageUser } from "@/lib/permissions";
+import { canPersonalizeTasks } from "@/lib/permissions";
 import { getUserById } from "@/lib/services/organization-service";
 import { UserTaskVisibilityModel } from "@/lib/models/user-task-visibility";
 import { connectToDatabase } from "@/lib/mongoose";
@@ -22,8 +22,8 @@ export async function toggleTaskVisibilityAction(
     const targetUser = await getUserById(targetUserId);
     if (!targetUser) throw new Error("Thành viên không tồn tại.");
 
-    if (!canManageUser(actor, targetUser)) {
-      throw new Error("Bạn không có quyền quản lý thành viên này.");
+    if (!canPersonalizeTasks(actor, targetUser)) {
+      throw new Error("Bạn không có quyền cấu hình hiển thị nhiệm vụ cho thành viên này.");
     }
 
     await UserTaskVisibilityModel.updateOne(
