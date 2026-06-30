@@ -19,3 +19,5 @@ export * from "@/lib/models/customer-heart-log";
 export * from "@/lib/models/customer-interaction";
 export * from "@/lib/models/customer-reminder-log";
 export * from "@/lib/models/user-task-visibility";
+export * from "@/lib/models/dtt-class";
+export * from "@/lib/models/dtt-enrollment";
