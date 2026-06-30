@@ -12,6 +12,7 @@ export const POINT_SOURCES = [
   "cosmetic_purchase",
   "admin_adjust",
   "customer_interaction_reward",
+  "task_streak_bonus_reward",
 ] as const;
 export type PointSource = (typeof POINT_SOURCES)[number];
 

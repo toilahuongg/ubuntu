@@ -31,6 +31,11 @@ import {
 } from "@/lib/tasks/constants";
 import { appliesToUser, isWithinLateWindow } from "@/lib/tasks/policy";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
+import {
+  calculateTaskStreakBonus,
+  EMPTY_TASK_STREAK_BONUS,
+  type TaskStreakBonusResult,
+} from "@/lib/tasks/streaks";
 import { sumTaskCompletions, taskToScope } from "@/lib/tasks/task-service";
 import {
   notifySubmissionToGroups,
@@ -43,6 +48,7 @@ export type SaveSubmissionResult = {
   completionCount: number;
   isFirstSubmission: boolean;
   xpAwarded: number;
+  streakBonus: TaskStreakBonusResult;
   newLevel: number | null;
   leveledUp: boolean;
   taskJustCompleted: boolean;
@@ -155,6 +161,7 @@ export async function saveSubmission(
         completionCount: existing?.completionCount ?? 0,
         isFirstSubmission: false,
         xpAwarded: 0,
+        streakBonus: EMPTY_TASK_STREAK_BONUS,
         newLevel: null,
         leveledUp: false,
         taskJustCompleted: false,
@@ -168,6 +175,7 @@ export async function saveSubmission(
           completionCount: 0,
           isFirstSubmission: false,
           xpAwarded: 0,
+          streakBonus: EMPTY_TASK_STREAK_BONUS,
           newLevel: null,
           leveledUp: false,
           taskJustCompleted: false,
@@ -278,6 +286,7 @@ export async function saveSubmission(
         completionCount: 0,
         isFirstSubmission: false,
         xpAwarded: -expReward,
+        streakBonus: EMPTY_TASK_STREAK_BONUS,
         newLevel,
         leveledUp,
         taskJustCompleted: false,
@@ -309,6 +318,7 @@ export async function saveSubmission(
         completionCount: existing.completionCount,
         isFirstSubmission: false,
         xpAwarded: 0,
+        streakBonus: EMPTY_TASK_STREAK_BONUS,
         newLevel: null,
         leveledUp: false,
         taskJustCompleted: false,
@@ -349,6 +359,7 @@ export async function saveSubmission(
     let newLevel: number | null = null;
     let leveledUp = false;
     let xpAwarded = 0;
+    let streakBonus: TaskStreakBonusResult = EMPTY_TASK_STREAK_BONUS;
 
     const previousCount = existing?.completionCount ?? 0;
     const countAwarded = mode === "set"
@@ -388,12 +399,99 @@ export async function saveSubmission(
         );
       }
 
+      if (isDailyTask) {
+        const yearMonth = dateKey.slice(0, 7);
+        const monthSubmissions = (await SubmissionModel.find({
+          completionCount: { $gt: 0 },
+          date: { $regex: `^${yearMonth}` },
+          subjectUserId: subjectRaw._id,
+          taskId: taskRaw._id,
+        })
+          .session(session ?? null)
+          .select({ date: 1 })
+          .lean()) as Array<{ date: string }>;
+
+        const nextStreakBonus = calculateTaskStreakBonus({
+          completedDateKeys: monthSubmissions.map((submission) => submission.date),
+          dateKey,
+          expReward,
+          pointReward,
+          task: taskRaw,
+        });
+
+        if (nextStreakBonus.awarded && nextStreakBonus.milestone) {
+          const description = `Thưởng chuỗi ${nextStreakBonus.milestone} ngày: ${taskRaw.title}`;
+          const [existingXpBonus, existingPointBonus] = await Promise.all([
+            XpTransactionModel.findOne({
+              description,
+              source: "task_streak_bonus",
+              sourceId: taskRaw._id,
+              userId: subjectRaw._id,
+            })
+              .session(session ?? null)
+              .lean(),
+            PointTransactionModel.findOne({
+              description,
+              source: "task_streak_bonus_reward",
+              sourceId: taskRaw._id,
+              userId: subjectRaw._id,
+            })
+              .session(session ?? null)
+              .lean(),
+          ]);
+
+          if (!existingXpBonus && !existingPointBonus) {
+            streakBonus = nextStreakBonus;
+          } else {
+            streakBonus = {
+              ...nextStreakBonus,
+              awarded: false,
+              bonusExp: 0,
+              bonusPoints: 0,
+            };
+          }
+        } else {
+          streakBonus = nextStreakBonus;
+        }
+      }
+
+      if (streakBonus.awarded && streakBonus.bonusExp > 0) {
+        await XpTransactionModel.create(
+          [
+            {
+              amount: streakBonus.bonusExp,
+              description: `Thưởng chuỗi ${streakBonus.milestone} ngày: ${taskRaw.title}`,
+              source: "task_streak_bonus",
+              sourceId: taskRaw._id,
+              userId: subjectRaw._id,
+            },
+          ],
+          session ? { session } : undefined,
+        );
+      }
+      if (streakBonus.awarded && streakBonus.bonusPoints > 0) {
+        await PointTransactionModel.create(
+          [
+            {
+              amount: streakBonus.bonusPoints,
+              description: `Thưởng chuỗi ${streakBonus.milestone} ngày: ${taskRaw.title}`,
+              source: "task_streak_bonus_reward",
+              sourceId: taskRaw._id,
+              userId: subjectRaw._id,
+            },
+          ],
+          session ? { session } : undefined,
+        );
+      }
+
+      xpAwarded += streakBonus.bonusExp;
+
       const updatedUser = (await UserModel.findByIdAndUpdate(
         subjectRaw._id,
         {
           $inc: {
-            totalXp: totalExp,
-            pointBalance: totalPoints,
+            totalXp: totalExp + streakBonus.bonusExp,
+            pointBalance: totalPoints + streakBonus.bonusPoints,
           },
         },
         { new: true, session },
@@ -463,6 +561,7 @@ export async function saveSubmission(
       completionCount: updated.completionCount,
       isFirstSubmission,
       xpAwarded,
+      streakBonus,
       newLevel,
       leveledUp,
       taskJustCompleted,

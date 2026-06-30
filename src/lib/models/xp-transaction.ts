@@ -7,7 +7,11 @@ import {
   Types,
 } from "mongoose";
 
-export const XP_SOURCES = ["task_completion", "customer_interaction"] as const;
+export const XP_SOURCES = [
+  "task_completion",
+  "customer_interaction",
+  "task_streak_bonus",
+] as const;
 export type XpSource = (typeof XP_SOURCES)[number];
 
 const xpTransactionSchema = new Schema(

@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 
-import { submitTaskViaApi } from "@/lib/tasks/client-submit";
+import { StreakBonusPopup } from "@/app/(app)/tasks/streak-bonus-popup";
+import {
+  submitTaskViaApi,
+  type StreakBonusResult,
+} from "@/lib/tasks/client-submit";
 import type { TaskStatus } from "@/lib/tasks/types";
 import type { TaskType } from "@/lib/tasks/constants";
 
@@ -27,6 +31,9 @@ export function TaskTickButton({
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [optimisticCount, setOptimisticCount] = useState(myCompletionCount);
+  const [streakBonus, setStreakBonus] = useState<StreakBonusResult | null>(
+    null,
+  );
 
   useEffect(() => {
     setOptimisticCount(myCompletionCount);
@@ -68,6 +75,9 @@ export function TaskTickButton({
         setError(result.message);
         window.setTimeout(() => router.refresh(), 1200);
       } else {
+        if (result.data?.streakBonus?.awarded) {
+          setStreakBonus(result.data.streakBonus);
+        }
         router.refresh();
       }
       setIsPending(false);
@@ -90,6 +100,10 @@ export function TaskTickButton({
 
   return (
     <div className="flex flex-col items-center">
+      <StreakBonusPopup
+        bonus={streakBonus}
+        onClose={() => setStreakBonus(null)}
+      />
       <button
         type="button"
         onClick={handleClick}
