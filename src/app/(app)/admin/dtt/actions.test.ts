@@ -34,6 +34,7 @@ vi.mock("next/cache", () => ({
 
 vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
+  unstable_rethrow: vi.fn(),
 }));
 
 vi.mock("@/lib/models/dtt-class", () => ({
@@ -269,7 +270,7 @@ describe("DTT Server Actions", () => {
 
       expect(res.ok).toBe(false);
       if (!res.ok) {
-        expect(res.error).toBe("Thành viên đã tham gia một lớp học ĐTT khác.");
+        expect(res.error).toBe("Học viên đã tham gia một lớp học ĐTT khác.");
       }
       expect(mocks.enrollmentCreate).not.toHaveBeenCalled();
     });

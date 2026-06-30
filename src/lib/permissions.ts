@@ -27,6 +27,14 @@ export function canManageTasks(user: SessionUser) {
   return false;
 }
 
+export function canManageDtt(user: SessionUser) {
+  if (isAdmin(user)) return true;
+  if (isTeamLead(user)) return !!user.teamId;
+  if (isZoneLead(user)) return !!user.zoneId;
+  if (isRegionalLead(user)) return !!user.regionId;
+  return false;
+}
+
 export function canPersonalizeTasks(actor: SessionUser, subject: SessionUser) {
   if (isAdmin(actor)) return true;
   if (isTeamLead(actor)) {

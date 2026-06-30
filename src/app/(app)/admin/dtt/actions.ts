@@ -9,24 +9,14 @@ import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
 import { TaskModel } from "@/lib/models/task";
 import { toObjectId } from "@/lib/utils/ids";
 import { connectToDatabase } from "@/lib/mongoose";
+import { canManageDtt } from "@/lib/permissions";
 
 async function requireManager() {
   await connectToDatabase();
   const session = await getSessionUser();
   if (!session) redirect("/login");
 
-  const allowedRoles = ["ADMIN", "REGIONAL_LEAD", "ZONE_LEAD", "TEAM_LEAD"];
-  if (!allowedRoles.includes(session.role)) {
-    throw new Error("Bạn không có quyền quản lý.");
-  }
-
-  if (session.role === "TEAM_LEAD" && !session.teamId) {
-    throw new Error("Bạn không có quyền quản lý.");
-  }
-  if (session.role === "ZONE_LEAD" && !session.zoneId) {
-    throw new Error("Bạn không có quyền quản lý.");
-  }
-  if (session.role === "REGIONAL_LEAD" && !session.regionId) {
+  if (!canManageDtt(session)) {
     throw new Error("Bạn không có quyền quản lý.");
   }
 
@@ -79,7 +69,7 @@ export async function enrollStudentAction(userId: string, classId: string): Prom
 
     const exists = await DttEnrollmentModel.exists({ userId: toObjectId(userId) });
     if (exists) {
-      throw new Error("Thành viên đã tham gia một lớp học ĐTT khác.");
+      throw new Error("Học viên đã tham gia một lớp học ĐTT khác.");
     }
 
     await DttEnrollmentModel.create({
