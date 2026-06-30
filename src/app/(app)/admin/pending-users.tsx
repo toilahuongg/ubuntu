@@ -1,28 +1,29 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCheck, CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock } from "lucide-react";
 import type { SerializedUser } from "@/lib/domain";
 import {
-  approveUserAction,
-  bulkApproveUsersAction,
+  approveUserWithRegionAction,
   deleteUserAction,
 } from "@/app/(app)/actions";
 import { ConfirmDeleteButton, FormError } from "./_shared";
 
-export function PendingUsers({ users }: { users: SerializedUser[] }) {
-  const [isBulkPending, startBulkTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+type RegionOption = {
+  id: string;
+  name: string;
+  teamId: string;
+  zoneId: string;
+  zoneName?: string;
+};
 
-  function handleBulkApprove() {
-    if (users.length === 0) return;
-    startBulkTransition(async () => {
-      const result = await bulkApproveUsersAction(users.map((u) => u.id));
-      if (!result.ok) setError(result.error);
-      else setError(null);
-    });
-  }
-
+export function PendingUsers({
+  regions,
+  users,
+}: {
+  regions: RegionOption[];
+  users: SerializedUser[];
+}) {
   return (
     <section>
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -30,52 +31,43 @@ export function PendingUsers({ users }: { users: SerializedUser[] }) {
           <Clock className="mr-1 inline h-3.5 w-3.5" />
           Chờ duyệt ({users.length})
         </h2>
-        {users.length > 1 && (
-          <button
-            type="button"
-            onClick={handleBulkApprove}
-            disabled={isBulkPending}
-            className="inline-flex min-h-10 cursor-pointer items-center gap-1 rounded-lg bg-primary/15 px-3 py-2 text-[11px] font-medium text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
-          >
-            {isBulkPending ? (
-              <span
-                aria-hidden
-                className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent"
-              />
-            ) : (
-              <CheckCheck className="h-3.5 w-3.5" />
-            )}
-            Duyệt tất cả
-          </button>
-        )}
       </div>
-      {error && (
-        <div className="mb-3">
-          <FormError message={error} onDismiss={() => setError(null)} />
-        </div>
-      )}
       <div className="glass-card divide-y divide-border overflow-hidden">
         {users.map((user) => (
-          <PendingUserRow key={user.id} user={user} />
+          <PendingUserRow key={user.id} regions={regions} user={user} />
         ))}
       </div>
     </section>
   );
 }
 
-function PendingUserRow({ user }: { user: SerializedUser }) {
+function PendingUserRow({
+  regions,
+  user,
+}: {
+  regions: RegionOption[];
+  user: SerializedUser;
+}) {
   const [isPending, startTransition] = useTransition();
+  const [regionId, setRegionId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  function handleApprove() {
+  const regionOptions = regions.filter((region) => {
+    if (user.zoneId) return region.zoneId === user.zoneId;
+    if (user.teamId) return region.teamId === user.teamId;
+    return true;
+  });
+
+  function handleApprove(formData: FormData) {
     startTransition(async () => {
-      const result = await approveUserAction(user.id);
+      const result = await approveUserWithRegionAction(formData);
       if (!result.ok) setError(result.error);
     });
   }
 
   return (
-    <div className="flex flex-col gap-2 px-4 py-3">
+    <form action={handleApprove} className="flex flex-col gap-2 px-4 py-3">
+      <input name="userId" type="hidden" value={user.id} />
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium">{user.fullName}</p>
@@ -84,9 +76,23 @@ function PendingUserRow({ user }: { user: SerializedUser }) {
           )}
         </div>
         <div className="ml-3 flex items-center gap-2">
+          <select
+            name="regionId"
+            value={regionId}
+            onChange={(event) => setRegionId(event.target.value)}
+            required
+            className="form-select h-11 min-w-32 text-xs"
+            aria-label={`Chọn Khu vực cho ${user.fullName}`}
+          >
+            <option value="">Chọn KV</option>
+            {regionOptions.map((region) => (
+              <option key={region.id} value={region.id}>
+                {region.name}
+              </option>
+            ))}
+          </select>
           <button
-            type="button"
-            onClick={handleApprove}
+            type="submit"
             disabled={isPending}
             className="flex min-h-11 cursor-pointer items-center gap-1 rounded-lg bg-overlay-medium px-4 py-2 text-xs font-medium transition-colors hover:bg-overlay-strong disabled:opacity-50"
           >
@@ -106,6 +112,6 @@ function PendingUserRow({ user }: { user: SerializedUser }) {
         </div>
       </div>
       {error && <FormError message={error} onDismiss={() => setError(null)} />}
-    </div>
+    </form>
   );
 }

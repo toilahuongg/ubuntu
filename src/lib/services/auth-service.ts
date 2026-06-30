@@ -9,6 +9,7 @@ import type { SessionUser } from "@/lib/domain";
 import {
   createPendingGoogleUser,
   createPendingUser,
+  authenticateManualUser,
   getUserByEmail,
   getUserByGoogleId,
   getUserById,
@@ -96,6 +97,13 @@ export async function authenticateGoogleUser(
     email: profile.email,
     avatarUrl: profile.avatarUrl ?? null,
   });
+}
+
+export async function authenticateUsernamePassword(input: {
+  password: string;
+  username: string;
+}) {
+  return authenticateManualUser(input);
 }
 
 export async function refreshSessionUser(userId: string) {

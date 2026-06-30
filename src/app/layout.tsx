@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, Outfit } from "next/font/google";
 import Script from "next/script";
+import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/lib/theme";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -41,14 +42,31 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f7fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#061425" },
-  ],
+  themeColor: "#f6f7fb",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
 };
+
+const themeInitScript = `
+(() => {
+  try {
+    const storedTheme = window.localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});
+    const theme = storedTheme === "dark" || storedTheme === "light"
+      ? storedTheme
+      : ${JSON.stringify(DEFAULT_THEME)};
+    const oppositeTheme = theme === "dark" ? "light" : "dark";
+    document.documentElement.classList.remove(oppositeTheme);
+    document.documentElement.classList.add(theme);
+    const themeColor = theme === "dark" ? "#061425" : "#f6f7fb";
+    document
+      .querySelectorAll('meta[name="theme-color"]')
+      .forEach((meta) => meta.setAttribute("content", themeColor));
+  } catch {
+    document.documentElement.classList.add(${JSON.stringify(DEFAULT_THEME)});
+  }
+})();
+`;
 
 export default function RootLayout({
   children,
@@ -72,6 +90,11 @@ export default function RootLayout({
         <meta name="theme-color" content="#f6f7fb" />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground bg-gradient-mesh">
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"

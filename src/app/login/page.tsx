@@ -1,13 +1,30 @@
 import { Suspense } from "react";
 
-import { listDevLoginUsers } from "@/lib/services/organization-service";
+import {
+  listDevLoginUsers,
+  listTeams,
+  listZones,
+} from "@/lib/services/organization-service";
 
 import { DevLoginPanel } from "./dev-login-panel";
 import { LoginContent } from "./login-content";
 
 export default async function LoginPage() {
   const isDev = process.env.NODE_ENV !== "production";
-  const devUsers = isDev ? await listDevLoginUsers().catch(() => []) : [];
+  const [devUsers, teams, zones] = await Promise.all([
+    isDev ? listDevLoginUsers().catch(() => []) : Promise.resolve([]),
+    listTeams().catch(() => []),
+    listZones().catch(() => []),
+  ]);
+  const teamOptions = teams.map((team) => ({
+    id: team._id.toString(),
+    name: team.name,
+  }));
+  const zoneOptions = zones.map((zone) => ({
+    id: zone._id.toString(),
+    name: zone.name,
+    teamId: zone.teamId.toString(),
+  }));
 
   return (
     <Suspense
@@ -17,7 +34,7 @@ export default async function LoginPage() {
         </main>
       }
     >
-      <LoginContent />
+      <LoginContent teams={teamOptions} zones={zoneOptions} />
       {isDev && <DevLoginPanel users={devUsers} />}
     </Suspense>
   );

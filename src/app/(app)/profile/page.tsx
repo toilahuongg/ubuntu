@@ -20,8 +20,13 @@ import {
   type UserTaskActivityStats,
 } from "@/lib/services/analytics-service";
 import { getUserProgress } from "@/lib/services/gamification-service";
+import {
+  listProfileTaskSettings,
+  type ProfileTaskSetting,
+} from "@/lib/tasks/profile-settings-service";
 import { EditProfileForm } from "./edit-profile-form";
 import { LogoutButton } from "./logout-button";
+import { ProfileTaskSettingsShortcut } from "./profile-task-settings-shortcut";
 import { TaskActivityCalendar } from "./task-activity-calendar";
 
 function formatNumber(value: number) {
@@ -47,9 +52,10 @@ export default async function ProfilePage() {
   const session = await getCurrentUser();
   if (!session) redirect("/login");
 
-  const [progress, activityStats] = await Promise.all([
+  const [progress, activityStats, taskSettings] = await Promise.all([
     getUserProgress(session.id),
     getUserTaskActivityStats(session, 30),
+    listProfileTaskSettings(session),
   ]);
 
   const levelSpan = Math.max(progress.nextLevelXp - progress.currentLevelXp, 0);
@@ -124,7 +130,7 @@ export default async function ProfilePage() {
         </div>
       </section>
 
-      <QuickActionsSection />
+      <QuickActionsSection taskSettings={taskSettings} />
 
       <TaskStatsSection stats={activityStats} />
 
@@ -147,7 +153,11 @@ export default async function ProfilePage() {
   );
 }
 
-function QuickActionsSection() {
+function QuickActionsSection({
+  taskSettings,
+}: {
+  taskSettings: ProfileTaskSetting[];
+}) {
   return (
     <section className="space-y-3">
       <div className="px-1">
@@ -176,6 +186,8 @@ function QuickActionsSection() {
           </span>
           <ChevronRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" />
         </Link>
+
+        <ProfileTaskSettingsShortcut settings={taskSettings} />
 
         <PushToggle compact />
       </div>

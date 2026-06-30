@@ -17,13 +17,29 @@ type TelegramWidgetUser = {
   hash: string;
 };
 
-export function LoginContent() {
+type TeamOption = { id: string; name: string };
+type ZoneOption = { id: string; name: string; teamId: string };
+
+export function LoginContent({
+  teams,
+  zones,
+}: {
+  teams: TeamOption[];
+  zones: ZoneOption[];
+}) {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState<string | null>(
     searchParams.get("error"),
   );
   const [isTelegramWebApp, setIsTelegramWebApp] = useState(false);
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [registerTeamId, setRegisterTeamId] = useState("");
+  const [registerZoneId, setRegisterZoneId] = useState("");
+
+  const zonesForRegisterTeam = zones.filter(
+    (zone) => !registerTeamId || zone.teamId === registerTeamId,
+  );
 
   const handleLoginResult = useCallback(
     (res: Response, data: { error?: string; status?: string }) => {
@@ -120,6 +136,51 @@ export function LoginContent() {
     [handleLoginResult],
   );
 
+  async function handleManualLogin(formData: FormData) {
+    setStatus("loading");
+    setError(null);
+
+    try {
+      const res = await fetch("/api/auth/manual-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: formData.get("password"),
+          username: formData.get("username"),
+        }),
+      });
+      const data = await res.json();
+      handleLoginResult(res, data);
+    } catch {
+      setStatus("error");
+      setError("Không thể kết nối máy chủ.");
+    }
+  }
+
+  async function handleRegister(formData: FormData) {
+    setStatus("loading");
+    setError(null);
+
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: formData.get("fullName"),
+          password: formData.get("password"),
+          teamId: formData.get("teamId"),
+          username: formData.get("username"),
+          zoneId: formData.get("zoneId"),
+        }),
+      });
+      const data = await res.json();
+      handleLoginResult(res, data);
+    } catch {
+      setStatus("error");
+      setError("Không thể kết nối máy chủ.");
+    }
+  }
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-6">
       {/* Decorative orbs */}
@@ -157,13 +218,14 @@ export function LoginContent() {
             <div className="flex flex-col items-center gap-4 py-4">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-foreground" />
               <p className="text-sm text-muted-foreground">
-                Đang xác thực qua Telegram...
+                Đang xác thực...
               </p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {!isTelegramWebApp && (
+              {mode === "login" && !isTelegramWebApp && (
                 <>
+                  <ManualLoginForm onSubmit={handleManualLogin} />
                   <TelegramLoginButton onAuth={handleWidgetLogin} />
                   <div className="flex items-center gap-3 py-1">
                     <div className="h-px flex-1 bg-border" />
@@ -173,7 +235,34 @@ export function LoginContent() {
                     <div className="h-px flex-1 bg-border" />
                   </div>
                   <GoogleLoginButton />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setMode("register");
+                    }}
+                    className="h-10 cursor-pointer rounded-lg border border-border text-sm font-medium transition-colors hover:bg-overlay-subtle"
+                  >
+                    Tạo tài khoản mới
+                  </button>
                 </>
+              )}
+
+              {mode === "register" && (
+                <ManualRegisterForm
+                  onSubmit={handleRegister}
+                  registerTeamId={registerTeamId}
+                  registerZoneId={registerZoneId}
+                  setRegisterTeamId={(value) => {
+                    setRegisterTeamId(value);
+                    if (!zones.find((zone) => zone.id === registerZoneId && zone.teamId === value)) {
+                      setRegisterZoneId("");
+                    }
+                  }}
+                  setRegisterZoneId={setRegisterZoneId}
+                  teams={teams}
+                  zones={zonesForRegisterTeam}
+                />
               )}
 
               {isTelegramWebApp && (
@@ -187,6 +276,19 @@ export function LoginContent() {
                   {error}
                 </div>
               )}
+
+              {mode === "register" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setMode("login");
+                  }}
+                  className="h-10 cursor-pointer rounded-lg border border-border text-sm font-medium transition-colors hover:bg-overlay-subtle"
+                >
+                  Quay lại đăng nhập
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -196,6 +298,119 @@ export function LoginContent() {
         </div>
       </div>
     </main>
+  );
+}
+
+function ManualLoginForm({
+  onSubmit,
+}: {
+  onSubmit: (formData: FormData) => void;
+}) {
+  return (
+    <form action={onSubmit} className="space-y-3">
+      <input
+        name="username"
+        autoComplete="username"
+        required
+        placeholder="Username"
+        className="h-11 w-full rounded-lg border border-border bg-overlay-subtle px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+      />
+      <input
+        name="password"
+        autoComplete="current-password"
+        required
+        type="password"
+        placeholder="Mật khẩu"
+        className="h-11 w-full rounded-lg border border-border bg-overlay-subtle px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+      />
+      <button
+        type="submit"
+        className="btn-gradient flex h-11 w-full items-center justify-center text-sm"
+      >
+        Đăng nhập
+      </button>
+    </form>
+  );
+}
+
+function ManualRegisterForm({
+  onSubmit,
+  registerTeamId,
+  registerZoneId,
+  setRegisterTeamId,
+  setRegisterZoneId,
+  teams,
+  zones,
+}: {
+  onSubmit: (formData: FormData) => void;
+  registerTeamId: string;
+  registerZoneId: string;
+  setRegisterTeamId: (value: string) => void;
+  setRegisterZoneId: (value: string) => void;
+  teams: TeamOption[];
+  zones: ZoneOption[];
+}) {
+  return (
+    <form action={onSubmit} className="space-y-3">
+      <input
+        name="fullName"
+        autoComplete="name"
+        required
+        placeholder="Họ tên"
+        className="h-11 w-full rounded-lg border border-border bg-overlay-subtle px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+      />
+      <input
+        name="username"
+        autoComplete="username"
+        required
+        placeholder="Username"
+        className="h-11 w-full rounded-lg border border-border bg-overlay-subtle px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+      />
+      <input
+        name="password"
+        autoComplete="new-password"
+        minLength={8}
+        required
+        type="password"
+        placeholder="Mật khẩu tối thiểu 8 ký tự"
+        className="h-11 w-full rounded-lg border border-border bg-overlay-subtle px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+      />
+      <select
+        name="teamId"
+        value={registerTeamId}
+        onChange={(event) => setRegisterTeamId(event.target.value)}
+        required
+        className="form-select h-11"
+      >
+        <option value="">Chọn Nhóm</option>
+        {teams.map((team) => (
+          <option key={team.id} value={team.id}>
+            {team.name}
+          </option>
+        ))}
+      </select>
+      <select
+        name="zoneId"
+        value={registerZoneId}
+        onChange={(event) => setRegisterZoneId(event.target.value)}
+        required
+        disabled={!registerTeamId}
+        className="form-select h-11 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <option value="">Chọn Địa Vực</option>
+        {zones.map((zone) => (
+          <option key={zone.id} value={zone.id}>
+            {zone.name}
+          </option>
+        ))}
+      </select>
+      <button
+        type="submit"
+        className="btn-gradient flex h-11 w-full items-center justify-center text-sm"
+      >
+        Tạo tài khoản
+      </button>
+    </form>
   );
 }
 

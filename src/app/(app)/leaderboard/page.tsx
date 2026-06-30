@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Crown, MapPin, Sparkles, Trophy, Users } from "lucide-react";
+import { Crown, Layers, MapPin, Sparkles, Trophy, Users } from "lucide-react";
 
 import { LevelAvatar } from "@/components/level-avatar";
 import { getSessionUser } from "@/lib/auth/session";
@@ -10,7 +10,10 @@ import {
   getTopRegionalLeads,
   getTopRegions,
   getTopTdm,
+  getTopZoneLeads,
+  getTopZones,
   type RegionLeaderboardEntry,
+  type ZoneLeaderboardEntry,
 } from "@/lib/services/leaderboard-service";
 import type { LeaderboardEntry } from "@/lib/services/gamification-service";
 import { CosmeticName } from "@/components/cosmetic-name";
@@ -23,6 +26,12 @@ const LEADERBOARD_BOARDS = [
     label: "Top Khu vực",
     description: "Tổng điểm theo khu vực",
     icon: <MapPin className="h-4 w-4" />,
+  },
+  {
+    value: "zones",
+    label: "Top Địa vực",
+    description: "Tổng điểm theo địa vực",
+    icon: <Layers className="h-4 w-4" />,
   },
   {
     value: "tdm",
@@ -41,6 +50,12 @@ const LEADERBOARD_BOARDS = [
     label: "Top NTĐ",
     description: "Thành viên NTĐ nổi bật",
     icon: <Users className="h-4 w-4" />,
+  },
+  {
+    value: "zone-leads",
+    label: "Top ĐVT - NQL",
+    description: "Địa vực trưởng nổi bật",
+    icon: <Crown className="h-4 w-4" />,
   },
   {
     value: "leads",
@@ -78,13 +93,17 @@ export default async function LeaderboardPage({
   const entries =
     activeBoard === "regions"
       ? await getTopRegions(LEADERBOARD_LIMIT)
-      : activeBoard === "tdm"
-        ? await getTopTdm(LEADERBOARD_LIMIT)
-        : activeBoard === "members"
-          ? await getTopMembers(LEADERBOARD_LIMIT)
-          : activeBoard === "ngv"
-            ? await getTopNgv(LEADERBOARD_LIMIT)
-            : await getTopRegionalLeads(LEADERBOARD_LIMIT);
+      : activeBoard === "zones"
+        ? await getTopZones(LEADERBOARD_LIMIT)
+        : activeBoard === "tdm"
+          ? await getTopTdm(LEADERBOARD_LIMIT)
+          : activeBoard === "members"
+            ? await getTopMembers(LEADERBOARD_LIMIT)
+            : activeBoard === "ngv"
+              ? await getTopNgv(LEADERBOARD_LIMIT)
+              : activeBoard === "zone-leads"
+                ? await getTopZoneLeads(LEADERBOARD_LIMIT)
+                : await getTopRegionalLeads(LEADERBOARD_LIMIT);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
@@ -107,7 +126,12 @@ export default async function LeaderboardPage({
         {entries.length > 0 && activeBoard === "regions" ? (
           <RegionPodium regions={entries as RegionLeaderboardEntry[]} />
         ) : null}
-        {entries.length > 0 && activeBoard !== "regions" ? (
+        {entries.length > 0 && activeBoard === "zones" ? (
+          <ZonePodium zones={entries as ZoneLeaderboardEntry[]} />
+        ) : null}
+        {entries.length > 0 &&
+        activeBoard !== "regions" &&
+        activeBoard !== "zones" ? (
           <UserPodium entries={entries as LeaderboardEntry[]} selfId={session.id} />
         ) : null}
       </Section>
@@ -214,6 +238,10 @@ function userToPodiumItem(
 
 function RegionPodium({ regions }: { regions: RegionLeaderboardEntry[] }) {
   return <Podium items={regions.map(regionToPodiumItem)} />;
+}
+
+function ZonePodium({ zones }: { zones: ZoneLeaderboardEntry[] }) {
+  return <Podium items={zones.map(regionToPodiumItem)} />;
 }
 
 function UserPodium({

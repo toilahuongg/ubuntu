@@ -18,10 +18,10 @@ describe("calculateInteractionScore", () => {
     });
   });
 
-  it("returns +500 points and +500 exp for BAPTIZED", () => {
+  it("returns +1000 points and +1000 exp for BAPTIZED", () => {
     expect(calculateInteractionScore("BAPTIZED")).toEqual({
-      points: 500,
-      exp: 500,
+      points: 1000,
+      exp: 1000,
     });
   });
 });

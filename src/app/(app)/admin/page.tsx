@@ -26,10 +26,11 @@ import {
 import { buildAdminOperationsView } from "@/lib/services/admin-operations-service";
 import {
   getAdminSnapshot,
-  listPendingUsers,
+  listPendingUsersForReview,
 } from "@/lib/services/organization-service";
 
 import { OperationsDashboard } from "./operations-dashboard";
+import { getScopedProgressItem } from "./progress-links";
 
 type NavItem = {
   href: string;
@@ -62,6 +63,7 @@ export default async function AdminPage() {
   const isZoneLead = canAccessZoneManagement(session);
   const isRegionalLead = canAccessRegionManagement(session);
   const telegramEnabled = getOptionalEnv().telegramNotificationsEnabled;
+  const scopedProgressItem = getScopedProgressItem(session);
 
   if (!canManageStructure && !isZoneLead && !isRegionalLead) {
     redirect("/dashboard");
@@ -71,24 +73,8 @@ export default async function AdminPage() {
 
   if (!canManageStructure) {
     const operations = await buildAdminOperationsView(session, dateKey);
-    const scopedStructureItems: NavItem[] = isZoneLead
-      ? [
-          {
-            href: "/admin/regions",
-            icon: MapPin,
-            label: "Khu vực",
-            description: "Quản lý các khu vực trong địa vực",
-          },
-        ]
-      : isRegionalLead && session.regionId
-      ? [
-          {
-            href: `/admin/regions/${encodeURIComponent(session.regionId)}`,
-            icon: MapPin,
-            label: "Tiến độ khu vực",
-            description: "Xem tiến độ thành viên trong khu vực quản lý",
-          },
-        ]
+    const scopedStructureItems: NavItem[] = scopedProgressItem
+      ? [scopedProgressItem]
       : [];
 
     return (
@@ -143,7 +129,7 @@ export default async function AdminPage() {
   if (session.role === "TEAM_LEAD") {
     const [snapshot, pendingUsers, operations] = await Promise.all([
       getAdminSnapshot(session),
-      listPendingUsers(),
+      listPendingUsersForReview(session),
       buildAdminOperationsView(session, dateKey),
     ]);
 
@@ -155,6 +141,7 @@ export default async function AdminPage() {
         />
         <ManagementHome
           pendingCount={pendingUsers.length}
+          progressItem={scopedProgressItem}
           role={session.role}
           snapshot={snapshot}
           telegramEnabled={telegramEnabled}
@@ -166,7 +153,7 @@ export default async function AdminPage() {
 
   const [snapshot, pendingUsers, operations] = await Promise.all([
     getAdminSnapshot(session),
-    listPendingUsers(),
+    listPendingUsersForReview(session),
     buildAdminOperationsView(session, dateKey),
   ]);
 
@@ -178,7 +165,8 @@ export default async function AdminPage() {
       />
       <ManagementHome
         pendingCount={pendingUsers.length}
-        role="ADMIN"
+        progressItem={scopedProgressItem}
+        role={session.role === "ZONE_LEAD" ? "ZONE_LEAD" : "ADMIN"}
         snapshot={snapshot}
         telegramEnabled={telegramEnabled}
       />
@@ -211,12 +199,14 @@ function AdminTitle({
 
 function ManagementHome({
   pendingCount,
+  progressItem,
   role,
   snapshot,
   telegramEnabled,
 }: {
   pendingCount: number;
-  role: "ADMIN" | "TEAM_LEAD";
+  progressItem?: NavItem | null;
+  role: "ADMIN" | "TEAM_LEAD" | "ZONE_LEAD";
   snapshot: Awaited<ReturnType<typeof getAdminSnapshot>>;
   telegramEnabled: boolean;
 }) {
@@ -248,19 +238,20 @@ function ManagementHome({
     });
   }
 
-  const sections: NavSection[] = isAdmin
-    ? [
-        {
-          title: "Vận hành",
-          items: operationItems,
-        },
-      ]
-    : [
-        {
-          title: "Vận hành",
-          items: operationItems,
-        },
-      ];
+  const sections: NavSection[] = [
+    ...(progressItem
+      ? [
+          {
+            title: "Tiến độ",
+            items: [progressItem],
+          },
+        ]
+      : []),
+    {
+      title: "Vận hành",
+      items: operationItems,
+    },
+  ];
 
   const topStats: StatItem[] = isAdmin
     ? [
@@ -298,7 +289,7 @@ function ManagementHome({
           href: "/admin/users",
           icon: Users,
           label: "TĐ",
-          note: "Trong nhóm của bạn",
+          note: role === "ZONE_LEAD" ? "Trong địa vực của bạn" : "Trong nhóm của bạn",
           value: snapshot.users.length,
         },
         {
@@ -313,14 +304,14 @@ function ManagementHome({
           href: "/admin/zones",
           icon: Layers,
           label: "Địa vực",
-          note: primaryTeam?.name ?? "Trong phạm vi nhóm",
+          note: role === "ZONE_LEAD" ? "Địa vực của bạn" : primaryTeam?.name ?? "Trong phạm vi nhóm",
           value: snapshot.zones.length,
         },
         {
           href: "/admin/regions",
           icon: MapPin,
           label: "Khu vực",
-          note: "Trong nhóm của bạn",
+          note: role === "ZONE_LEAD" ? "Trong địa vực của bạn" : "Trong nhóm của bạn",
           value: snapshot.regions.length,
         },
       ];

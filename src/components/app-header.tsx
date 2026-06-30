@@ -3,6 +3,7 @@ import type { SessionUser } from "@/lib/domain";
 import { ROLE_LABELS } from "@/lib/domain";
 import { CosmeticName } from "@/components/cosmetic-name";
 import type { EquippedView } from "@/lib/cosmetics/serialize";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AppHeader({
   user,
@@ -21,7 +22,7 @@ export function AppHeader({
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-gradient-to-b from-overlay-subtle via-transparent to-transparent"
       />
-      <div className="relative mx-auto flex h-full max-w-2xl items-center justify-between">
+      <div className="relative mx-auto flex h-full max-w-2xl items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center">
             <Image
@@ -42,6 +43,7 @@ export function AppHeader({
             </p>
           </div>
         </div>
+        <ThemeToggle />
       </div>
     </header>
   );

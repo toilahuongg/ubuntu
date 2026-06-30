@@ -11,6 +11,7 @@ import {
   canCreateZoneStructure,
   canAssignUserRole,
   canManageUser,
+  canReviewPendingUser,
   getAssignableUserRoles,
 } from "@/lib/permissions";
 
@@ -185,6 +186,73 @@ describe("user management permissions", () => {
       "TDM",
     ]);
     expect(getAssignableUserRoles(regionalLead)).toEqual(["NGV", "MEMBER", "TDM"]);
+  });
+
+  it("limits pending approvals to admin, team lead by team, and zone lead by zone", () => {
+    const pendingTdm: SessionUser = {
+      ...baseUser,
+      id: "pending",
+      role: "TDM",
+      status: "PENDING",
+      teamId: "team-a",
+      zoneId: "zone-a",
+    };
+
+    expect(
+      canReviewPendingUser(
+        { ...baseUser, id: "admin", role: "ADMIN" },
+        pendingTdm,
+      ),
+    ).toBe(true);
+    expect(
+      canReviewPendingUser(
+        { ...baseUser, id: "team", role: "TEAM_LEAD", teamId: "team-a" },
+        pendingTdm,
+      ),
+    ).toBe(true);
+    expect(
+      canReviewPendingUser(
+        {
+          ...baseUser,
+          id: "zone",
+          role: "ZONE_LEAD",
+          teamId: "team-a",
+          zoneId: "zone-a",
+        },
+        pendingTdm,
+      ),
+    ).toBe(true);
+    expect(
+      canReviewPendingUser(
+        {
+          ...baseUser,
+          id: "regional",
+          regionId: "region-a",
+          role: "REGIONAL_LEAD",
+          teamId: "team-a",
+          zoneId: "zone-a",
+        },
+        pendingTdm,
+      ),
+    ).toBe(false);
+    expect(
+      canReviewPendingUser(
+        { ...baseUser, id: "other-team", role: "TEAM_LEAD", teamId: "team-b" },
+        pendingTdm,
+      ),
+    ).toBe(false);
+    expect(
+      canReviewPendingUser(
+        {
+          ...baseUser,
+          id: "other-zone",
+          role: "ZONE_LEAD",
+          teamId: "team-a",
+          zoneId: "zone-b",
+        },
+        pendingTdm,
+      ),
+    ).toBe(false);
   });
 });
 

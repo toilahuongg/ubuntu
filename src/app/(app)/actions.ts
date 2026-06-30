@@ -22,6 +22,7 @@ import {
 import {
   approveUser,
   bulkApproveUsers,
+  completePendingUserScope,
   createRegion,
   createTeam,
   createZone,
@@ -205,8 +206,19 @@ async function assertCanAssignUserTarget(
 
 export async function approveUserAction(userId: string): Promise<ActionResult> {
   return runAction(async () => {
-    await requireManagementUser();
-    await approveUser(userId);
+    void userId;
+    throw new Error("Vui lòng chọn Khu vực trước khi duyệt.");
+  });
+}
+
+export async function approveUserWithRegionAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireSession();
+    const userId = formData.get("userId") as string;
+    const regionId = formData.get("regionId") as string;
+    await approveUser(session, { regionId, userId });
     revalidatePath("/admin");
   });
 }
@@ -219,6 +231,22 @@ export async function bulkApproveUsersAction(
     const approved = await bulkApproveUsers(userIds);
     revalidatePath("/admin");
     return { approved };
+  });
+}
+
+export async function completePendingUserScopeAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await requireSession();
+    if (session.status !== "PENDING") {
+      throw new Error("Tài khoản này không ở trạng thái chờ duyệt.");
+    }
+    await completePendingUserScope(session.id, {
+      teamId: formData.get("teamId") as string,
+      zoneId: formData.get("zoneId") as string,
+    });
+    revalidatePath("/onboarding");
   });
 }
 

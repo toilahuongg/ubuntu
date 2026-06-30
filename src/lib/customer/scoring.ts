@@ -14,7 +14,7 @@ export function calculateInteractionScore(
     case "EFFECTIVE":
       return { exp: 50, points: 50 };
     case "BAPTIZED":
-      return { exp: 500, points: 500 };
+      return { exp: 1000, points: 1000 };
     case "NONE":
     default:
       return { exp: 0, points: 0 };

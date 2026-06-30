@@ -4,11 +4,10 @@ import { getSessionUser } from "@/lib/auth/session";
 import {
   canAccessUserManagement,
   getAssignableUserRoles,
-  isAdmin,
 } from "@/lib/permissions";
 import {
   getUserManagementSnapshot,
-  listPendingUsers,
+  listPendingUsersForReview,
 } from "@/lib/services/organization-service";
 
 import { CreateUserForm } from "../create-user-form";
@@ -22,10 +21,9 @@ export default async function AdminUsersPage() {
   if (!session) redirect("/login");
   if (!canAccessUserManagement(session)) redirect("/admin");
 
-  const canReviewPendingUsers = isAdmin(session);
   const [snapshot, pendingUsers] = await Promise.all([
     getUserManagementSnapshot(session),
-    canReviewPendingUsers ? listPendingUsers() : Promise.resolve([]),
+    listPendingUsersForReview(session),
   ]);
   const roleOptions = getAssignableUserRoles(session);
 
@@ -58,7 +56,9 @@ export default async function AdminUsersPage() {
           regions={regionOptions.map((r) => ({ id: r.id, name: r.name }))}
         />
       </div>
-      {pendingUsers.length > 0 && <PendingUsers users={pendingUsers} />}
+      {pendingUsers.length > 0 && (
+        <PendingUsers regions={regionOptions} users={pendingUsers} />
+      )}
       <div className="space-y-3">
         <UserSection
           currentUser={session}

@@ -7,6 +7,7 @@ import { connectToDatabase } from "@/lib/mongoose";
 import {
   RegionModel,
   SubmissionModel,
+  ZoneModel,
   type UserRecord,
 } from "@/lib/models";
 import { getLevelInfo } from "@/lib/level-utils";
@@ -22,6 +23,8 @@ export type RegionLeaderboardEntry = {
   totalXp: number;
   memberCount: number;
 };
+
+export type ZoneLeaderboardEntry = RegionLeaderboardEntry;
 
 type MonthlyXpRow = { _id: unknown; monthlyXp: number };
 
@@ -124,6 +127,13 @@ export async function getTopRegionalLeads(
   );
 }
 
+export async function getTopZoneLeads(limit = 3): Promise<LeaderboardEntry[]> {
+  return getTopUsersByMonthlyXp(
+    { role: "ZONE_LEAD", status: "ACTIVE" },
+    limit,
+  );
+}
+
 export async function getTopRegions(
   limit = 3,
 ): Promise<RegionLeaderboardEntry[]> {
@@ -180,6 +190,67 @@ export async function getTopRegions(
       };
     })
     .filter((r): r is RegionLeaderboardEntry => r !== null);
+}
+
+export async function getTopZones(
+  limit = 3,
+): Promise<ZoneLeaderboardEntry[]> {
+  await connectToDatabase();
+  const yearMonth = getCurrentYearMonth();
+
+  const aggregated = (await SubmissionModel.aggregate([
+    ...buildMonthlyPointsPipeline(yearMonth),
+    {
+      $lookup: {
+        as: "user",
+        foreignField: "_id",
+        from: "users",
+        localField: "_id",
+      },
+    },
+    { $unwind: "$user" },
+    { $match: { "user.zoneId": { $ne: null }, "user.status": "ACTIVE" } },
+    {
+      $group: {
+        _id: "$user.zoneId",
+        memberCount: { $sum: 1 },
+        totalXp: { $sum: "$monthlyXp" },
+      },
+    },
+    { $match: { totalXp: { $gt: 0 } } },
+    { $sort: { totalXp: -1 } },
+    { $limit: limit },
+  ])) as { _id: unknown; totalXp: number; memberCount: number }[];
+
+  if (aggregated.length === 0) return [];
+
+  const zoneIds = aggregated.map((row) => row._id);
+  const zones = (await ZoneModel.find({ _id: { $in: zoneIds } })
+    .select({ code: 1, name: 1 })
+    .lean()) as { _id: { toString(): string }; code: string; name: string }[];
+
+  const zoneMap = new Map(
+    zones.map((zone) => [
+      zone._id.toString(),
+      { code: zone.code, name: zone.name },
+    ]),
+  );
+
+  return aggregated
+    .map((row, index) => {
+      const id = (row._id as { toString(): string }).toString();
+      const meta = zoneMap.get(id);
+      if (!meta) return null;
+      return {
+        id,
+        name: meta.name,
+        code: meta.code,
+        rank: index + 1,
+        totalXp: row.totalXp,
+        memberCount: row.memberCount,
+      };
+    })
+    .filter((zone): zone is ZoneLeaderboardEntry => zone !== null);
 }
 
 export function getLeaderboardMonthLabel(now = new Date()): string {

@@ -43,7 +43,11 @@ export function canPersonalizeTasks(actor: SessionUser, subject: SessionUser) {
 }
 
 export function canAccessManagement(user: SessionUser) {
-  return isAdmin(user) || (isTeamLead(user) && !!user.teamId);
+  return (
+    isAdmin(user) ||
+    (isTeamLead(user) && !!user.teamId) ||
+    (isZoneLead(user) && !!user.zoneId)
+  );
 }
 
 export function canAccessUserManagement(user: SessionUser) {
@@ -120,6 +124,18 @@ export function canManageUser(actor: SessionUser, subject: SessionUser) {
     );
   }
 
+  return false;
+}
+
+export function canReviewPendingUser(actor: SessionUser, subject: SessionUser) {
+  if (subject.status !== "PENDING") return false;
+  if (isAdmin(actor)) return true;
+  if (isTeamLead(actor)) {
+    return !!actor.teamId && actor.teamId === subject.teamId;
+  }
+  if (isZoneLead(actor)) {
+    return !!actor.zoneId && actor.zoneId === subject.zoneId;
+  }
   return false;
 }
 

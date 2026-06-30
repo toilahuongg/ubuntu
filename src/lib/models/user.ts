@@ -57,6 +57,7 @@ const userSchema = new Schema(
     googleId: { default: null, trim: true, type: String },
     email: { default: null, lowercase: true, trim: true, type: String },
     avatarUrl: { default: null, trim: true, type: String },
+    passwordHash: { default: null, type: String },
   },
   { timestamps: true },
 );
@@ -90,6 +91,14 @@ userSchema.index(
   { email: 1 },
   {
     partialFilterExpression: { email: { $type: "string" } },
+    unique: true,
+  },
+);
+
+userSchema.index(
+  { username: 1 },
+  {
+    partialFilterExpression: { username: { $type: "string" } },
     unique: true,
   },
 );

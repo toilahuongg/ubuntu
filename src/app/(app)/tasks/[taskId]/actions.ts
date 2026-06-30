@@ -32,6 +32,7 @@ export async function setMonthlyGoalAction(
     );
     revalidatePath(`/tasks/${parsed.taskId}`);
     revalidatePath("/dashboard");
+    revalidatePath("/profile");
   });
 }
 
@@ -49,5 +50,6 @@ export async function setTaskReminderPreferenceAction(
     await setTaskReminderPreference(session, parsed);
     revalidatePath(`/tasks/${parsed.taskId}`);
     revalidatePath("/dashboard");
+    revalidatePath("/profile");
   });
 }

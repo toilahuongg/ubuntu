@@ -1,10 +1,12 @@
 import "server-only";
 
 import type { Role, SerializedUser, SessionUser, UserStatus } from "@/lib/domain";
+import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import {
   canAccessManagement,
   canAccessRegionStructure,
   canAccessUserManagement,
+  canReviewPendingUser,
 } from "@/lib/permissions";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
@@ -95,6 +97,25 @@ function serializeUser(record: UserRecord): SerializedUser {
     username: record.username,
     zoneId: stringifyId((record as UserRecord & { zoneId?: unknown }).zoneId),
   };
+}
+
+function normalizeUsername(username: string) {
+  return username.trim().toLowerCase();
+}
+
+async function assertTeamZonePair(teamId: string, zoneId: string) {
+  const [team, zone] = await Promise.all([
+    TeamModel.findById(teamId).lean() as Promise<TeamRecord | null>,
+    ZoneModel.findById(zoneId).lean() as Promise<ZoneRecord | null>,
+  ]);
+
+  if (!team) throw new Error("Nhóm không tồn tại.");
+  if (!zone) throw new Error("Địa Vực không tồn tại.");
+  if (zone.teamId.toString() !== team._id.toString()) {
+    throw new Error("Địa Vực không thuộc Nhóm đã chọn.");
+  }
+
+  return { team, zone };
 }
 
 async function syncLeadAssignments(user: SerializedUser) {
@@ -221,6 +242,16 @@ function getManagementSnapshotFilters(actor: SessionUser): SnapshotFilters {
     };
   }
 
+  if (actor.role === "ZONE_LEAD" && actor.zoneId) {
+    const zoneId = toObjectId(actor.zoneId);
+    return {
+      regionFilter: { zoneId },
+      teamFilter: actor.teamId ? { _id: toObjectId(actor.teamId) } : { _id: null },
+      userFilter: { zoneId },
+      zoneFilter: { _id: zoneId },
+    };
+  }
+
   return {
     regionFilter: {},
     teamFilter: {},
@@ -344,6 +375,44 @@ export async function getUserByEmail(email: string) {
   return user ? serializeUser(user) : null;
 }
 
+export async function getUserByUsername(username: string) {
+  await connectToDatabase();
+  const normalized = normalizeUsername(username);
+  const user = (await UserModel.findOne({ username: normalized }).lean()) as UserRecord | null;
+  return user ? serializeUser(user) : null;
+}
+
+export async function authenticateManualUser(input: {
+  password: string;
+  username: string;
+}) {
+  await connectToDatabase();
+  const normalized = normalizeUsername(input.username);
+  const user = (await UserModel.findOne({ username: normalized }).lean()) as
+    | (UserRecord & { passwordHash?: string | null })
+    | null;
+
+  if (!user) {
+    throw new Error("Tên đăng nhập hoặc mật khẩu không đúng.");
+  }
+
+  const passwordOk = await verifyPassword(input.password, user.passwordHash);
+  if (!passwordOk) {
+    throw new Error("Tên đăng nhập hoặc mật khẩu không đúng.");
+  }
+
+  if (user.status === "INACTIVE") {
+    throw new Error("Tài khoản của bạn đã bị khóa.");
+  }
+
+  const serialized = serializeUser(user);
+  if (serialized.status === "ACTIVE") {
+    await markUserLogin(serialized.id);
+  }
+
+  return serialized;
+}
+
 export async function linkGoogleAccount(
   userId: string,
   input: { googleId: string; email: string; avatarUrl?: string | null },
@@ -371,12 +440,77 @@ export async function createPendingGoogleUser(input: {
   await connectToDatabase();
   const user = await UserModel.create({
     fullName: input.fullName,
-    role: "MEMBER",
+    role: "TDM",
     status: "PENDING",
     googleId: input.googleId,
     email: input.email.toLowerCase().trim(),
     avatarUrl: input.avatarUrl ?? null,
   });
+  return serializeUser(user.toObject() as UserRecord);
+}
+
+export async function createPendingManualUser(input: {
+  fullName: string;
+  password: string;
+  teamId: string;
+  username: string;
+  zoneId: string;
+}) {
+  await connectToDatabase();
+
+  const fullName = input.fullName.trim();
+  const username = normalizeUsername(input.username);
+  if (!fullName) throw new Error("Vui lòng nhập họ tên.");
+  if (!username) throw new Error("Vui lòng nhập tên đăng nhập.");
+  if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
+    throw new Error("Tên đăng nhập chỉ gồm chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang.");
+  }
+
+  const { team, zone } = await assertTeamZonePair(input.teamId, input.zoneId);
+  const passwordHash = await hashPassword(input.password);
+
+  try {
+    const user = await UserModel.create({
+      fullName,
+      passwordHash,
+      role: "TDM",
+      status: "PENDING",
+      teamId: team._id,
+      username,
+      zoneId: zone._id,
+    });
+    return serializeUser(user.toObject() as UserRecord);
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: number }).code === 11000
+    ) {
+      throw new Error("Tên đăng nhập đã tồn tại.");
+    }
+    throw error;
+  }
+}
+
+export async function completePendingUserScope(
+  userId: string,
+  input: { teamId: string; zoneId: string },
+) {
+  await connectToDatabase();
+  const { team, zone } = await assertTeamZonePair(input.teamId, input.zoneId);
+
+  const user = await UserModel.findOneAndUpdate(
+    { _id: toObjectId(userId), status: "PENDING" },
+    {
+      role: "TDM",
+      teamId: team._id,
+      zoneId: zone._id,
+    },
+    { new: true },
+  );
+
+  if (!user) throw new Error("Không tìm thấy tài khoản chờ duyệt.");
   return serializeUser(user.toObject() as UserRecord);
 }
 
@@ -729,21 +863,52 @@ export async function createPendingUser(input: {
 
   const user = await UserModel.create({
     fullName: input.fullName,
-    role: "MEMBER",
+    role: "TDM",
     status: "PENDING",
     telegramId: input.telegramId,
-    username: input.username?.trim() || null,
+    username: input.username ? normalizeUsername(input.username) : null,
   });
 
   return serializeUser(user.toObject() as UserRecord);
 }
 
-export async function approveUser(userId: string) {
+export async function approveUser(
+  actor: SessionUser,
+  input: { regionId: string; userId: string },
+) {
   await connectToDatabase();
 
+  const pendingUser = (await UserModel.findById(input.userId).lean()) as UserRecord | null;
+  if (!pendingUser) {
+    throw new Error("Không tìm thấy người dùng.");
+  }
+
+  const serializedPending = serializeUser(pendingUser);
+  if (!canReviewPendingUser(actor, serializedPending)) {
+    throw new Error("Bạn không có quyền duyệt người dùng này.");
+  }
+
+  const region = (await RegionModel.findById(input.regionId).lean()) as RegionRecord | null;
+  if (!region) throw new Error("Khu vực không tồn tại.");
+
+  const pendingTeamId = stringifyId(pendingUser.teamId);
+  const pendingZoneId = stringifyId((pendingUser as UserRecord & { zoneId?: unknown }).zoneId);
+  if (pendingTeamId && pendingTeamId !== region.teamId.toString()) {
+    throw new Error("Khu vực không thuộc Nhóm người dùng đã đăng ký.");
+  }
+  if (pendingZoneId && pendingZoneId !== region.zoneId.toString()) {
+    throw new Error("Khu vực không thuộc Địa Vực người dùng đã đăng ký.");
+  }
+
   const user = await UserModel.findByIdAndUpdate(
-    userId,
-    { status: "ACTIVE" },
+    input.userId,
+    {
+      regionId: region._id,
+      role: serializedPending.role || "TDM",
+      status: "ACTIVE",
+      teamId: region.teamId,
+      zoneId: region.zoneId,
+    },
     { new: true },
   );
 
@@ -794,6 +959,29 @@ export async function listPendingUsers() {
     .sort({ createdAt: -1 })
     .lean()) as UserRecord[];
   return users.map(serializeUser);
+}
+
+export async function listPendingUsersForReview(actor: SessionUser) {
+  await connectToDatabase();
+
+  if (actor.role === "REGIONAL_LEAD") return [];
+
+  const query: Record<string, unknown> = { status: "PENDING" };
+  if (actor.role === "TEAM_LEAD") {
+    if (!actor.teamId) return [];
+    query.teamId = toObjectId(actor.teamId);
+  } else if (actor.role === "ZONE_LEAD") {
+    if (!actor.zoneId) return [];
+    query.zoneId = toObjectId(actor.zoneId);
+  } else if (actor.role !== "ADMIN") {
+    return [];
+  }
+
+  const users = (await UserModel.find(query)
+    .sort({ createdAt: -1 })
+    .lean()) as UserRecord[];
+
+  return users.map(serializeUser).filter((user) => canReviewPendingUser(actor, user));
 }
 
 export async function deleteTeam(teamId: string) {
@@ -863,12 +1051,7 @@ export async function deleteUser(userId: string) {
   if (!deleted) throw new Error("Không tìm thấy người dùng.");
 }
 
-export async function bulkApproveUsers(userIds: string[]) {
-  await connectToDatabase();
-  if (userIds.length === 0) return 0;
-  const result = await UserModel.updateMany(
-    { _id: { $in: userIds.map(toObjectId) }, status: "PENDING" },
-    { status: "ACTIVE" },
-  );
-  return result.modifiedCount ?? 0;
+export async function bulkApproveUsers(_userIds: string[] = []): Promise<number> {
+  void _userIds;
+  throw new Error("Vui lòng duyệt từng thành viên và chọn Khu vực.");
 }
