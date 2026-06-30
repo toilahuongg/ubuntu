@@ -1,21 +1,23 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState, useTransition } from "react";
 import { Search, Book } from "lucide-react";
 import { Switch } from "@base-ui/react/switch";
 import { toggleTaskDttAction } from "./actions";
+import {
+  mergeDttTaskState,
+  type DttTaskItem,
+  type DttTaskOverrides,
+} from "./dtt-task-state";
 import { FormError, FormSuccess } from "../_shared";
 
-type TaskItem = {
-  id: string;
-  title: string;
-  isDtt: boolean;
-};
-
-export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
-  const router = useRouter();
-  const [taskItems, setTaskItems] = useState(tasks);
+export function DttTaskTab({ tasks }: { tasks: DttTaskItem[] }) {
+  const [localDttOverrides, setLocalDttOverrides] =
+    useState<DttTaskOverrides>({});
+  const taskItems = useMemo(
+    () => mergeDttTaskState(tasks, localDttOverrides),
+    [tasks, localDttOverrides]
+  );
   const [searchTerm, setSearchTerm] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -24,32 +26,29 @@ export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
   // Keep track of which task ID is currently being toggled
   const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setTaskItems(tasks);
-  }, [tasks]);
-
   const handleToggleDtt = (taskId: string, nextIsDtt: boolean) => {
+    const previousIsDtt =
+      taskItems.find((task) => task.id === taskId)?.isDtt ?? !nextIsDtt;
     setTogglingTaskId(taskId);
     setError(null);
     setSuccess(null);
+    setLocalDttOverrides((current) => ({ ...current, [taskId]: nextIsDtt }));
 
     startTransition(async () => {
       const res = await toggleTaskDttAction(taskId, nextIsDtt);
       setTogglingTaskId(null);
       if (res.ok) {
         const taskTitle = taskItems.find((t) => t.id === taskId)?.title || "";
-        setTaskItems((current) =>
-          current.map((task) =>
-            task.id === taskId ? { ...task, isDtt: nextIsDtt } : task
-          )
-        );
         setSuccess(
           nextIsDtt
             ? `Đã thêm nhiệm vụ "${taskTitle}" vào Trường học ĐTT.`
             : `Đã rút nhiệm vụ "${taskTitle}" khỏi Trường học ĐTT.`
         );
-        router.refresh();
       } else {
+        setLocalDttOverrides((current) => ({
+          ...current,
+          [taskId]: previousIsDtt,
+        }));
         setError(res.error);
       }
     });
@@ -96,6 +95,10 @@ export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
         ) : (
           filteredTasks.map((task) => {
             const isTaskToggling = togglingTaskId === task.id && isPending;
+            const switchTrackClass = task.isDtt
+              ? "border-primary bg-primary"
+              : "border-border/50 bg-overlay-subtle";
+            const switchThumbClass = task.isDtt ? "translate-x-4" : "";
 
             return (
               <div
@@ -133,13 +136,15 @@ export function DttTaskTab({ tasks }: { tasks: TaskItem[] }) {
                   >
                     <span
                       aria-hidden
-                      className="absolute left-2 top-1/2 h-6 w-10 -translate-y-1/2 rounded-full border border-border/50 bg-overlay-subtle transition-colors duration-150 group-hover:bg-overlay-medium group-data-[checked]:border-primary group-data-[checked]:bg-primary"
+                      className={`absolute left-2 top-1/2 h-6 w-10 -translate-y-1/2 rounded-full border transition-colors duration-150 group-hover:bg-overlay-medium ${switchTrackClass}`}
                     />
                     {isTaskToggling ? (
-                      <span className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-muted border-t-transparent group-data-[checked]:translate-x-4" />
+                      <span
+                        className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-muted border-t-transparent ${switchThumbClass}`}
+                      />
                     ) : (
                       <Switch.Thumb
-                        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background shadow-sm transition-transform duration-150 ease-in-out group-data-[checked]:translate-x-4"
+                        className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-background shadow-sm transition-transform duration-150 ease-in-out ${switchThumbClass}`}
                       />
                     )}
                   </Switch.Root>

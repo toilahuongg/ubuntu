@@ -223,7 +223,7 @@ describe("canProxySubmit", () => {
 });
 
 describe("canManageTasks", () => {
-  it("allows admin and scoped management roles", () => {
+  it("allows admin and scoped team leads", () => {
     expect(
       canManageTasks({
         fullName: "Admin",
@@ -245,17 +245,6 @@ describe("canManageTasks", () => {
 
     expect(
       canManageTasks({
-        fullName: "Zone lead",
-        id: "zone-lead",
-        role: "ZONE_LEAD",
-        status: "ACTIVE",
-        teamId: "team-a",
-        zoneId: "zone-a",
-      }),
-    ).toBe(true);
-
-    expect(
-      canManageTasks({
         fullName: "Regional lead",
         id: "regional-lead",
         role: "REGIONAL_LEAD",
@@ -267,7 +256,18 @@ describe("canManageTasks", () => {
     ).toBe(false);
   });
 
-  it("rejects unscoped leads and regular roles", () => {
+  it("rejects zone leads, unscoped leads, and regular roles", () => {
+    expect(
+      canManageTasks({
+        fullName: "Zone lead",
+        id: "zone-lead",
+        role: "ZONE_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+        zoneId: "zone-a",
+      }),
+    ).toBe(false);
+
     expect(
       canManageTasks({
         fullName: "Unscoped team lead",

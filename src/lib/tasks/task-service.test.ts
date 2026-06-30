@@ -42,7 +42,7 @@ function makeTask(
 }
 
 describe("filterManageableTasksForActor", () => {
-  it("excludes team-scoped tasks for a zone lead", () => {
+  it("excludes all tasks for a zone lead", () => {
     const teamId = new Types.ObjectId().toString();
     const zoneId = new Types.ObjectId().toString();
     const regionId = new Types.ObjectId().toString();
@@ -80,10 +80,7 @@ describe("filterManageableTasksForActor", () => {
       }),
     ];
 
-    expect(filterManageableTasksForActor(actor, tasks).map((task) => task.title)).toEqual([
-      "Region task",
-      "Zone task",
-    ]);
+    expect(filterManageableTasksForActor(actor, tasks)).toEqual([]);
   });
 
   it("keeps all matching-team tasks for a team lead", () => {
