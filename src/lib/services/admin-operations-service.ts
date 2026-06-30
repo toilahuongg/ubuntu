@@ -141,16 +141,16 @@ function memberStatusWeight(status: AdminOperationsMember["status"]) {
 }
 
 function userShape(
-  user: Pick<SerializedUser, "teamId" | "zoneId" | "regionId" | "role">,
-  dttUserIdsSet?: Set<string>,
-  userId?: string,
+  user: Pick<SerializedUser, "teamId" | "zoneId" | "regionId" | "role"> & {
+    isDttUser?: boolean;
+  },
 ) {
   return {
     teamId: user.teamId ?? null,
     zoneId: user.zoneId ?? null,
     regionId: user.regionId ?? null,
     role: user.role,
-    isDttUser: dttUserIdsSet && userId ? dttUserIdsSet.has(userId) : false,
+    isDttUser: user.isDttUser ?? false,
   };
 }
 
@@ -234,7 +234,11 @@ export function buildAdminOperationsViewModel({
       ),
   );
   const taskById = new Map(tasks.map((task) => [task._id.toString(), task]));
-  const userById = new Map(visibleUsers.map((user) => [user.id, user]));
+  const enrichedUsers = visibleUsers.map((user) => ({
+    ...user,
+    isDttUser: dttUserIdsSet ? dttUserIdsSet.has(user.id) : false,
+  }));
+  const userById = new Map(enrichedUsers.map((user) => [user.id, user]));
   const completionTasksByMemberDate = new Map<
     string,
     Map<string, AdminOperationsCompletionTask[]>
@@ -252,7 +256,7 @@ export function buildAdminOperationsViewModel({
     if (!task || !user) continue;
     if (!isTaskScheduledForDate(task, submission.date)) continue;
     const override = visibilityOverrides?.get(`${taskId}:${userId}`);
-    const isApplicable = override !== undefined ? override : appliesToUser(taskToScope(task), userShape(user, dttUserIdsSet, userId));
+    const isApplicable = override !== undefined ? override : appliesToUser(taskToScope(task), userShape(user));
     if (!isApplicable) continue;
 
     const byDate =
@@ -275,7 +279,7 @@ export function buildAdminOperationsViewModel({
   const memberCounters = new Map<string, ProgressCounter>();
   const memberTaskCounters = new Map<string, Map<string, ProgressCounter>>();
 
-  for (const user of visibleUsers) {
+  for (const user of enrichedUsers) {
     memberCounters.set(user.id, createCounter());
     memberTaskCounters.set(user.id, new Map<string, ProgressCounter>());
   }
@@ -290,9 +294,9 @@ export function buildAdminOperationsViewModel({
     if (scheduledDates.length === 0) continue;
 
     for (const currentDate of scheduledDates) {
-      for (const user of visibleUsers) {
+      for (const user of enrichedUsers) {
         const override = visibilityOverrides?.get(`${taskId}:${user.id}`);
-        const isApplicable = override !== undefined ? override : appliesToUser(scope, userShape(user, dttUserIdsSet, user.id));
+        const isApplicable = override !== undefined ? override : appliesToUser(scope, userShape(user));
         if (!isApplicable) continue;
 
         const counter = memberCounters.get(user.id);
@@ -322,7 +326,7 @@ export function buildAdminOperationsViewModel({
     }
   }
 
-  const members = visibleUsers
+  const members = enrichedUsers
     .map((user) => {
       const summary = counterToSummary(memberCounters.get(user.id) ?? createCounter());
       const memberCompletionTasks = completionTasksByMemberDate.get(user.id);
