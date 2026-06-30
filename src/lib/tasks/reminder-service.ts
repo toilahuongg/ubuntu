@@ -17,6 +17,7 @@ import {
   type UserRecord,
   UserTaskVisibilityModel,
 } from "@/lib/models";
+import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
 import {
   DEFAULT_LATE_WINDOW_DAYS,
   MONTHLY_GOAL_TASK_TYPES,
@@ -115,7 +116,7 @@ export function isReminderDue(input: {
 function taskToScope(
   task: Pick<
     TaskRecord,
-    "scope" | "teamId" | "zoneId" | "regionId" | "targetRoles"
+    "scope" | "teamId" | "zoneId" | "regionId" | "targetRoles" | "isDtt"
   >,
 ): ScopeContext {
   return {
@@ -124,6 +125,7 @@ function taskToScope(
     targetRoles: normalizeTargetRoles(task.targetRoles, task.scope),
     teamId: task.teamId.toString(),
     zoneId: task.zoneId?.toString() ?? null,
+    isDtt: task.isDtt,
   };
 }
 
@@ -156,12 +158,13 @@ function userShape(
   };
 }
 
-function recordUserShape(user: ReminderUserLike) {
+function recordUserShape(user: ReminderUserLike, dttUserIdsSet?: Set<string>) {
   return {
     regionId: user.regionId?.toString() ?? null,
     role: user.role,
     teamId: user.teamId?.toString() ?? null,
     zoneId: user.zoneId?.toString() ?? null,
+    isDttUser: dttUserIdsSet ? dttUserIdsSet.has(user._id.toString()) : false,
   };
 }
 
@@ -183,6 +186,7 @@ function buildSentPairs(logs: ReminderLogRecord[]) {
 
 export function buildDueTaskReminderCandidatesFromData(input: {
   dateKey: string;
+  dttUserIdsSet?: Set<string>;
   preferences: ReminderPreferenceLike[];
   sentLogs: ReminderLogRecord[];
   submissions: SubmissionRecordModel[];
@@ -218,7 +222,7 @@ export function buildDueTaskReminderCandidatesFromData(input: {
       if (sentPairs.has(key)) continue;
       if (submittedIds.has(userId)) continue;
       const override = input.visibilityOverrides?.get(key);
-      const isApplicable = override !== undefined ? override : appliesToUser(scope, recordUserShape(user));
+      const isApplicable = override !== undefined ? override : appliesToUser(scope, recordUserShape(user, input.dttUserIdsSet));
       if (!isApplicable) continue;
 
       const schedule = resolveEffectiveReminderTime({
@@ -251,6 +255,7 @@ export function buildDueTaskReminderCandidatesFromData(input: {
 }
 
 export function buildDueMonthlyGoalReminderCandidatesFromData(input: {
+  dttUserIdsSet?: Set<string>;
   goals: MonthlyGoalRecord[];
   preferences: ReminderPreferenceLike[];
   sentLogs: ReminderLogRecord[];
@@ -286,7 +291,7 @@ export function buildDueMonthlyGoalReminderCandidatesFromData(input: {
       const key = pairKey(taskId, userId);
       if (sentPairs.has(key)) continue;
       if (goalPairs.has(key)) continue;
-      if (!appliesToUser(scope, recordUserShape(user))) continue;
+      if (!appliesToUser(scope, recordUserShape(user, input.dttUserIdsSet))) continue;
 
       const schedule = resolveEffectiveReminderTime({
         defaultReminderTime: task.deadlineTime,
@@ -400,7 +405,7 @@ export async function getReminderCandidates(
   if (users.length === 0) return [];
 
   const userIds = users.map((user) => user._id);
-  const [sentLogs, submissions, preferences] = await Promise.all([
+  const [sentLogs, submissions, preferences, dttEnrollments] = await Promise.all([
     ReminderLogModel.find({
       date: dateKey,
       taskId: { $in: openTasks.map((task) => task._id) },
@@ -410,7 +415,9 @@ export async function getReminderCandidates(
       taskId: { $in: openTasks.map((task) => task._id) },
     }).lean() as Promise<SubmissionRecordModel[]>,
     getPreferences(taskIds, userIds),
+    DttEnrollmentModel.find({ userId: { $in: userIds } }).lean(),
   ]);
+  const dttUserIdsSet = new Set(dttEnrollments.map((e) => e.userId.toString()));
 
   const visibilities = await UserTaskVisibilityModel.find({
     userId: { $in: userIds },
@@ -422,6 +429,7 @@ export async function getReminderCandidates(
 
   return buildDueTaskReminderCandidatesFromData({
     dateKey,
+    dttUserIdsSet,
     preferences,
     sentLogs,
     submissions,
@@ -482,7 +490,7 @@ export async function getMonthlyGoalReminderCandidates(
 
   const taskIds = tasks.map((task) => task._id);
   const userIds = users.map((user) => user._id);
-  const [sentLogs, goals, preferences] = await Promise.all([
+  const [sentLogs, goals, preferences, dttEnrollments] = await Promise.all([
     ReminderLogModel.find({
       date: yearMonth,
       taskId: { $in: taskIds },
@@ -492,9 +500,12 @@ export async function getMonthlyGoalReminderCandidates(
       yearMonth,
     }).lean() as Promise<MonthlyGoalRecord[]>,
     getPreferences(taskIds, userIds),
+    DttEnrollmentModel.find({ userId: { $in: userIds } }).lean(),
   ]);
+  const dttUserIdsSet = new Set(dttEnrollments.map((e) => e.userId.toString()));
 
   return buildDueMonthlyGoalReminderCandidatesFromData({
+    dttUserIdsSet,
     goals,
     preferences,
     sentLogs,

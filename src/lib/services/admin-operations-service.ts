@@ -10,6 +10,7 @@ import {
   type TaskRecord,
   UserTaskVisibilityModel,
 } from "@/lib/models";
+import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
 import { connectToDatabase } from "@/lib/mongoose";
 import type {
   AdminOperationsCompletionDay,
@@ -59,6 +60,7 @@ type AdminOperationsStructure = {
 type BuildAdminOperationsViewModelInput = {
   actor: SessionUser;
   dateKey: string;
+  dttUserIdsSet?: Set<string>;
   orgContext: Awaited<ReturnType<typeof getUserOrgContext>>;
   structure: AdminOperationsStructure;
   submissions: SubmissionRecordModel[];
@@ -140,12 +142,15 @@ function memberStatusWeight(status: AdminOperationsMember["status"]) {
 
 function userShape(
   user: Pick<SerializedUser, "teamId" | "zoneId" | "regionId" | "role">,
+  dttUserIdsSet?: Set<string>,
+  userId?: string,
 ) {
   return {
     teamId: user.teamId ?? null,
     zoneId: user.zoneId ?? null,
     regionId: user.regionId ?? null,
     role: user.role,
+    isDttUser: dttUserIdsSet && userId ? dttUserIdsSet.has(userId) : false,
   };
 }
 
@@ -208,6 +213,7 @@ function buildSelectionDefaults(
 export function buildAdminOperationsViewModel({
   actor,
   dateKey,
+  dttUserIdsSet,
   orgContext,
   structure,
   submissions,
@@ -246,7 +252,7 @@ export function buildAdminOperationsViewModel({
     if (!task || !user) continue;
     if (!isTaskScheduledForDate(task, submission.date)) continue;
     const override = visibilityOverrides?.get(`${taskId}:${userId}`);
-    const isApplicable = override !== undefined ? override : appliesToUser(taskToScope(task), userShape(user));
+    const isApplicable = override !== undefined ? override : appliesToUser(taskToScope(task), userShape(user, dttUserIdsSet, userId));
     if (!isApplicable) continue;
 
     const byDate =
@@ -286,7 +292,7 @@ export function buildAdminOperationsViewModel({
     for (const currentDate of scheduledDates) {
       for (const user of visibleUsers) {
         const override = visibilityOverrides?.get(`${taskId}:${user.id}`);
-        const isApplicable = override !== undefined ? override : appliesToUser(scope, userShape(user));
+        const isApplicable = override !== undefined ? override : appliesToUser(scope, userShape(user, dttUserIdsSet, user.id));
         if (!isApplicable) continue;
 
         const counter = memberCounters.get(user.id);
@@ -591,9 +597,15 @@ export async function buildAdminOperationsView(
     visibilities.map((v) => [`${v.taskId.toString()}:${v.userId.toString()}`, v.isVisible])
   );
 
+  const dttEnrollments = await DttEnrollmentModel.find({
+    userId: { $in: visibleUsers.map((user) => toObjectId(user.id)) },
+  }).lean();
+  const dttUserIdsSet = new Set(dttEnrollments.map((e) => e.userId.toString()));
+
   return buildAdminOperationsViewModel({
     actor,
     dateKey,
+    dttUserIdsSet,
     orgContext,
     structure,
     submissions,
