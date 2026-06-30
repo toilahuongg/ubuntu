@@ -16,10 +16,12 @@ export type ScopeContext = {
   zoneId: string | null;
   regionId: string | null;
   targetRoles?: TaskTargetRole[] | null;
+  isDtt?: boolean;
 };
 
 type UserScope = Pick<SessionUser, "teamId" | "zoneId" | "regionId"> & {
   role?: Role;
+  isDttUser?: boolean;
 };
 
 export function resolveActorScope(actor: SessionUser): ScopeContext {
@@ -60,7 +62,14 @@ export function appliesToUser(
   if (!user.teamId) return false;
   const targetRoles = normalizeTargetRoles(task.targetRoles, task.scope);
   if (user.role === "ADMIN") return false;
-  if (user.role && !targetRoles.includes(user.role)) return false;
+
+  // logic mới
+  const roleMatches = user.role && targetRoles.includes(user.role);
+  const dttMatches = !!task.isDtt && !!user.isDttUser;
+
+  if (!roleMatches && !dttMatches) return false;
+
+  // So khớp scope (giữ nguyên)
   if (task.scope === "TEAM") return task.teamId === user.teamId;
   if (task.scope === "ZONE") {
     if (user.role === "TEAM_LEAD") return task.teamId === user.teamId;

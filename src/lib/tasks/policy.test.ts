@@ -70,4 +70,44 @@ describe("task targeting policy", () => {
     expect(appliesToUser(task, ngv)).toBe(true);
     expect(appliesToUser(task, regionalLead)).toBe(false);
   });
+
+  describe("appliesToUser", () => {
+    it("should return true if task is for DTT and user is in DTT, even if roles do not match", () => {
+      const taskContext = {
+        scope: "TEAM" as const,
+        teamId: "team-a",
+        zoneId: null,
+        regionId: null,
+        targetRoles: ["NGV" as const],
+        isDtt: true,
+      };
+      const userScope = {
+        teamId: "team-a",
+        zoneId: null,
+        regionId: null,
+        role: "MEMBER" as const, // Vai trò không khớp targetRoles
+        isDttUser: true,          // Nhưng là học viên ĐTT
+      };
+      expect(appliesToUser(taskContext, userScope)).toBe(true);
+    });
+
+    it("should return false if task is for DTT but user is NOT in DTT and role doesn't match", () => {
+      const taskContext = {
+        scope: "TEAM" as const,
+        teamId: "team-a",
+        zoneId: null,
+        regionId: null,
+        targetRoles: ["NGV" as const],
+        isDtt: true,
+      };
+      const userScope = {
+        teamId: "team-a",
+        zoneId: null,
+        regionId: null,
+        role: "MEMBER" as const,
+        isDttUser: false,
+      };
+      expect(appliesToUser(taskContext, userScope)).toBe(false);
+    });
+  });
 });
