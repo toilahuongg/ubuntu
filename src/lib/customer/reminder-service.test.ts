@@ -201,4 +201,36 @@ describe("customer reminder service", () => {
     expect(candidates).toHaveLength(1);
     expect(candidates[0].daysSinceLastInteraction).toBe(9);
   });
+
+  it("skips customers inactive for more than 30 days", () => {
+    const sweepAt = new Date("2026-04-10T10:00:00.000Z");
+    const lastInteraction = new Date("2026-03-05T10:00:00.000Z"); // 36 days ago
+
+    const candidates = buildCustomerReminderCandidatesFromData({
+      customers: [customer({ lastInteractionAt: lastInteraction })],
+      dateKey: "2026-04-10",
+      sentLogs: [],
+      sweepAt,
+      thresholdDays: 3,
+      users: [user()],
+    });
+
+    expect(candidates).toHaveLength(0);
+  });
+
+  it("skips customers created more than 30 days ago with no interactions", () => {
+    const sweepAt = new Date("2026-04-10T10:00:00.000Z");
+    const createdAt = new Date("2026-03-05T10:00:00.000Z"); // 36 days ago
+
+    const candidates = buildCustomerReminderCandidatesFromData({
+      customers: [customer({ createdAt, lastInteractionAt: null })],
+      dateKey: "2026-04-10",
+      sentLogs: [],
+      sweepAt,
+      thresholdDays: 3,
+      users: [user()],
+    });
+
+    expect(candidates).toHaveLength(0);
+  });
 });

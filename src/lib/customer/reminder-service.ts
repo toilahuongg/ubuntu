@@ -9,6 +9,7 @@ import {
 } from "@/lib/models";
 
 export const CUSTOMER_REMINDER_THRESHOLD_DAYS = 3;
+export const CUSTOMER_INACTIVE_MAX_DAYS = 30;
 
 export type CustomerReminderCandidate = {
   chatId: number | null;
@@ -67,7 +68,7 @@ export function buildCustomerReminderCandidatesFromData(input: {
       (sweepTime - lastInteractionTime) / (1000 * 60 * 60 * 24),
     );
 
-    if (daysSince < threshold) continue;
+    if (daysSince < threshold || daysSince > CUSTOMER_INACTIVE_MAX_DAYS) continue;
 
     const caregiverIds = (customer.caregiverIds ?? []).map((id) =>
       id.toString(),
@@ -109,10 +110,28 @@ export async function getCustomerReminderCandidates(
   const thresholdDate = new Date(sweepAt);
   thresholdDate.setDate(thresholdDate.getDate() - threshold);
 
+  const maxInactiveDate = new Date(sweepAt);
+  maxInactiveDate.setDate(maxInactiveDate.getDate() - CUSTOMER_INACTIVE_MAX_DAYS);
+
   const customers = (await CustomerModel.find({
     $or: [
-      { lastInteractionAt: { $lte: thresholdDate } },
-      { lastInteractionAt: { $exists: false } },
+      {
+        lastInteractionAt: {
+          $ne: null,
+          $gte: maxInactiveDate,
+          $lte: thresholdDate,
+        },
+      },
+      {
+        $or: [
+          { lastInteractionAt: null },
+          { lastInteractionAt: { $exists: false } },
+        ],
+        createdAt: {
+          $gte: maxInactiveDate,
+          $lte: thresholdDate,
+        },
+      },
     ],
   }).lean()) as CustomerRecord[];
 
