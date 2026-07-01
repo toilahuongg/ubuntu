@@ -32,6 +32,7 @@ export async function saveDailyCampaignAction(
     });
     const id = await saveDailyCampaign(session, parsed);
     revalidatePath("/admin/campaigns");
+    revalidatePath("/admin/campaigns/tasks");
     revalidatePath("/dashboard");
     return { id };
   });
@@ -63,6 +64,7 @@ export async function createCampaignOnlyTaskAction(
     });
     const id = await createTask(session, createCampaignOnlyTaskInput(parsed));
     revalidatePath("/admin/campaigns");
+    revalidatePath("/admin/campaigns/tasks");
     return { id };
   });
 }

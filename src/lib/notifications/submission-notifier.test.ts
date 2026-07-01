@@ -13,7 +13,9 @@ type UserInput = {
 
 const users: UserInput[] = [
   { id: "nt-a", role: "TEAM_LEAD", teamId: "team-a" },
+  { id: "nt-a2", role: "TEAM_LEAD", teamId: "team-a" },
   { id: "nt-b", role: "TEAM_LEAD", teamId: "team-b" },
+  { id: "nt-c", role: "TEAM_LEAD", teamId: "team-c" },
   { id: "dvt-a1", role: "ZONE_LEAD", teamId: "team-a", zoneId: "zone-a" },
   { id: "dvt-a2", role: "ZONE_LEAD", teamId: "team-a", zoneId: "zone-b" },
   { id: "dvt-b", role: "ZONE_LEAD", teamId: "team-b", zoneId: "zone-c" },
@@ -60,10 +62,23 @@ describe("resolveNotificationRecipientIds", () => {
       users,
     });
 
-    expect(recipientIds).toEqual(["nt-a", "dvt-a1", "kvt-a1"]);
+    expect(recipientIds).toEqual(["nt-a", "nt-a2", "dvt-a1", "kvt-a1"]);
   });
 
-  it("sends ĐVT - NQL submissions vertically and horizontally to ĐVT - NQL in the same team", () => {
+  it("sends TEAM_LEAD submissions horizontally to other TEAM_LEAD users in the same team", () => {
+    const recipientIds = resolveNotificationRecipientIds({
+      excludeUserId: "nt-a",
+      scope: {
+        teamId: "team-a",
+      },
+      subjectRole: "TEAM_LEAD",
+      users,
+    });
+
+    expect(recipientIds).toEqual(["nt-a2"]);
+  });
+
+  it("sends ĐVT - NQL submissions vertically and horizontally to other ĐVT - NQL users in the same team", () => {
     const recipientIds = resolveNotificationRecipientIds({
       excludeUserId: "dvt-a1",
       scope: {
@@ -75,10 +90,10 @@ describe("resolveNotificationRecipientIds", () => {
       users,
     });
 
-    expect(recipientIds).toEqual(["nt-a", "dvt-a2"]);
+    expect(recipientIds).toEqual(["nt-a", "nt-a2", "dvt-a2"]);
   });
 
-  it("sends KVT submissions vertically and horizontally to KVT in the same zone", () => {
+  it("sends KVT submissions vertically and horizontally to other KVT users in the same team", () => {
     const recipientIds = resolveNotificationRecipientIds({
       excludeUserId: "kvt-a1",
       scope: {
@@ -90,7 +105,7 @@ describe("resolveNotificationRecipientIds", () => {
       users,
     });
 
-    expect(recipientIds).toEqual(["nt-a", "dvt-a1", "kvt-a2"]);
+    expect(recipientIds).toEqual(["nt-a", "nt-a2", "dvt-a1", "kvt-a2", "kvt-a3"]);
   });
 
   it("uses task scope as the horizontal level for task completion notifications", () => {
@@ -104,7 +119,14 @@ describe("resolveNotificationRecipientIds", () => {
       users,
     });
 
-    expect(recipientIds).toEqual(["nt-a", "dvt-a1", "kvt-a1", "kvt-a2"]);
+    expect(recipientIds).toEqual([
+      "nt-a",
+      "nt-a2",
+      "dvt-a1",
+      "kvt-a1",
+      "kvt-a2",
+      "kvt-a3",
+    ]);
   });
 
   it("dedupes users and removes the subject from the recipient list", () => {
@@ -138,6 +160,7 @@ describe("resolveNotificationRecipientIds", () => {
 
     expect(recipientIds).toEqual([
       "nt-a",
+      "nt-a2",
       "dvt-a1",
       "dvt-a2",
       "kvt-a1",

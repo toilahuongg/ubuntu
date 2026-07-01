@@ -9,6 +9,7 @@ import {
   assertCampaignOnlyTaskCanSubmit,
   assertCanManageDailyCampaign,
   buildCampaignReportRows,
+  resolveCampaignReportDate,
   normalizeCampaignTaskIds,
 } from "@/lib/campaigns/campaign-service";
 import type { SessionUser } from "@/lib/domain";
@@ -132,6 +133,64 @@ describe("campaign report rows", () => {
         ],
       },
     ]);
+  });
+
+  it("sorts users by completed campaign tasks from highest to lowest", () => {
+    const rows = buildCampaignReportRows({
+      taskIds: ["task-a", "task-b", "task-c"],
+      users: [
+        { id: "u1", fullName: "A", role: "NGV" },
+        { id: "u2", fullName: "B", role: "NGV" },
+        { id: "u3", fullName: "C", role: "NGV" },
+      ],
+      applicableUserIdsByTaskId: new Map([
+        ["task-a", new Set(["u1", "u2", "u3"])],
+        ["task-b", new Set(["u1", "u2", "u3"])],
+        ["task-c", new Set(["u1", "u2", "u3"])],
+      ]),
+      completionByTaskUser: new Map([
+        ["task-a:u1", 1],
+        ["task-a:u2", 1],
+        ["task-b:u2", 1],
+        ["task-c:u2", 1],
+        ["task-a:u3", 1],
+        ["task-b:u3", 1],
+      ]),
+    });
+
+    expect(rows.map((row) => row.id)).toEqual(["u2", "u3", "u1"]);
+  });
+});
+
+describe("campaign report date selection", () => {
+  it("uses the requested campaign date when it exists", () => {
+    expect(
+      resolveCampaignReportDate({
+        availableDates: ["2026-07-01", "2026-06-30"],
+        requestedDate: "2026-06-30",
+        todayDate: "2026-07-01",
+      }),
+    ).toBe("2026-06-30");
+  });
+
+  it("uses today when no requested date is provided", () => {
+    expect(
+      resolveCampaignReportDate({
+        availableDates: ["2026-06-30"],
+        requestedDate: null,
+        todayDate: "2026-07-01",
+      }),
+    ).toBe("2026-07-01");
+  });
+
+  it("falls back to today when the requested date is not a known campaign", () => {
+    expect(
+      resolveCampaignReportDate({
+        availableDates: ["2026-06-30"],
+        requestedDate: "2026-06-29",
+        todayDate: "2026-07-01",
+      }),
+    ).toBe("2026-07-01");
   });
 });
 

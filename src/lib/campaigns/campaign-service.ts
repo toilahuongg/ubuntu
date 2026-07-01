@@ -37,6 +37,11 @@ export type DailyCampaignAdminView = {
   report: CampaignReportEntry[];
 };
 
+export type DailyCampaignListItem = {
+  date: string;
+  id: string;
+};
+
 export function assertCanManageDailyCampaign(
   actor: SessionUser,
 ): asserts actor is SessionUser & { teamId: string } {
@@ -54,6 +59,21 @@ export function normalizeCampaignTaskIds(taskIds: readonly string[]): string[] {
     result.push(taskId);
   }
   return result;
+}
+
+export function resolveCampaignReportDate(input: {
+  availableDates: readonly string[];
+  requestedDate: string | null | undefined;
+  todayDate: string;
+}) {
+  if (
+    input.requestedDate &&
+    input.availableDates.includes(input.requestedDate)
+  ) {
+    return input.requestedDate;
+  }
+
+  return input.todayDate;
 }
 
 export function assertEditableCampaignDate(dateKey: string, now = new Date()) {
@@ -103,31 +123,37 @@ export function buildCampaignReportRows(input: {
   applicableUserIdsByTaskId: Map<string, Set<string>>;
   completionByTaskUser: Map<string, number>;
 }): CampaignReportEntry[] {
-  return input.users.map((user) => {
-    const statuses = input.taskIds.map((taskId) => {
-      const applicable =
-        input.applicableUserIdsByTaskId.get(taskId)?.has(user.id) ?? false;
-      const completionCount =
-        input.completionByTaskUser.get(`${taskId}:${user.id}`) ?? 0;
-      return { taskId, applicable, completionCount };
-    });
-    const applicableStatuses = statuses.filter((status) => status.applicable);
-    const completed = applicableStatuses.filter(
-      (status) => status.completionCount > 0,
-    ).length;
+  return input.users
+    .map((user) => {
+      const statuses = input.taskIds.map((taskId) => {
+        const applicable =
+          input.applicableUserIdsByTaskId.get(taskId)?.has(user.id) ?? false;
+        const completionCount =
+          input.completionByTaskUser.get(`${taskId}:${user.id}`) ?? 0;
+        return { taskId, applicable, completionCount };
+      });
+      const applicableStatuses = statuses.filter((status) => status.applicable);
+      const completed = applicableStatuses.filter(
+        (status) => status.completionCount > 0,
+      ).length;
 
-    return {
-      id: user.id,
-      fullName: user.fullName,
-      role: user.role,
-      completed,
-      total: applicableStatuses.length,
-      isComplete:
-        applicableStatuses.length > 0 &&
-        completed === applicableStatuses.length,
-      statuses,
-    };
-  });
+      return {
+        id: user.id,
+        fullName: user.fullName,
+        role: user.role,
+        completed,
+        total: applicableStatuses.length,
+        isComplete:
+          applicableStatuses.length > 0 &&
+          completed === applicableStatuses.length,
+        statuses,
+      };
+    })
+    .sort((a, b) => {
+      if (a.completed !== b.completed) return b.completed - a.completed;
+      if (a.total !== b.total) return b.total - a.total;
+      return a.fullName.localeCompare(b.fullName, "vi") || a.id.localeCompare(b.id);
+    });
 }
 
 export async function getDailyCampaignRecordForTeam(
@@ -140,6 +166,25 @@ export async function getDailyCampaignRecordForTeam(
     date: dateKey,
     teamId: toObjectId(teamId),
   }).lean()) as DailyCampaignRecord | null;
+}
+
+export async function listDailyCampaignsForTeam(
+  actor: SessionUser,
+): Promise<DailyCampaignListItem[]> {
+  assertCanManageDailyCampaign(actor);
+  await connectToDatabase();
+
+  const campaigns = (await DailyCampaignModel.find({
+    teamId: toObjectId(actor.teamId),
+  })
+    .sort({ date: -1 })
+    .select({ date: 1 })
+    .lean()) as Array<Pick<DailyCampaignRecord, "_id" | "date">>;
+
+  return campaigns.map((campaign) => ({
+    date: campaign.date,
+    id: campaign._id.toString(),
+  }));
 }
 
 function buildCompletionByTaskUser(

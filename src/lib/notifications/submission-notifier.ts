@@ -63,6 +63,29 @@ function addMatchingUserIds(
   }
 }
 
+function resolveHorizontalRole(input: {
+  scope?: TaskScope | null;
+  subjectRole?: Role | null;
+}): Role | null {
+  if (
+    input.subjectRole === "TEAM_LEAD" ||
+    input.subjectRole === "ZONE_LEAD" ||
+    input.subjectRole === "REGIONAL_LEAD"
+  ) {
+    return input.subjectRole;
+  }
+
+  return (
+    input.scope === "TEAM"
+      ? "TEAM_LEAD"
+      : input.scope === "ZONE"
+        ? "ZONE_LEAD"
+        : input.scope === "REGION"
+          ? "REGIONAL_LEAD"
+          : null
+  );
+}
+
 export function resolveNotificationRecipientIds(input: {
   excludeUserId?: string | null;
   scope: NotificationScope;
@@ -104,37 +127,16 @@ export function resolveNotificationRecipientIds(input: {
       );
     }
 
-    const horizontalRole =
-      input.subjectRole ??
-      (scope === "TEAM"
-        ? "TEAM_LEAD"
-        : scope === "ZONE"
-          ? "ZONE_LEAD"
-          : scope === "REGION"
-            ? "REGIONAL_LEAD"
-            : null);
+    const horizontalRole = resolveHorizontalRole({
+      scope,
+      subjectRole: input.subjectRole,
+    });
 
-    if (horizontalRole === "TEAM_LEAD" && teamId) {
+    if (horizontalRole && teamId) {
       addMatchingUserIds(
         recipientIds,
         input.users,
-        (user) => user.role === "TEAM_LEAD" && user.teamId === teamId,
-      );
-    }
-
-    if (horizontalRole === "ZONE_LEAD" && teamId) {
-      addMatchingUserIds(
-        recipientIds,
-        input.users,
-        (user) => user.role === "ZONE_LEAD" && user.teamId === teamId,
-      );
-    }
-
-    if (horizontalRole === "REGIONAL_LEAD" && zoneId) {
-      addMatchingUserIds(
-        recipientIds,
-        input.users,
-        (user) => user.role === "REGIONAL_LEAD" && user.zoneId === zoneId,
+        (user) => user.role === horizontalRole && user.teamId === teamId,
       );
     }
   }
@@ -155,13 +157,21 @@ async function findNotificationRecipientUserIds(input: {
   const teamId = input.scope.teamId ? toObjectId(input.scope.teamId) : null;
   const zoneId = input.scope.zoneId ? toObjectId(input.scope.zoneId) : null;
   const regionId = input.scope.regionId ? toObjectId(input.scope.regionId) : null;
-  if (!teamId && !zoneId && !regionId) return [];
+  const horizontalRole =
+    input.taskType === "COUNT_TOTAL" || !teamId
+      ? null
+      : resolveHorizontalRole({
+          scope: input.scope.scope,
+          subjectRole: input.subjectRole,
+        });
+  if (!teamId && !zoneId && !regionId && !horizontalRole) return [];
 
   const query = {
     $or: [
       ...(teamId ? [{ teamId }] : []),
       ...(zoneId ? [{ zoneId }] : []),
       ...(regionId ? [{ regionId }] : []),
+      ...(horizontalRole ? [{ role: horizontalRole, teamId }] : []),
     ],
   };
 
