@@ -157,6 +157,24 @@ export const updateTaskInputSchema = taskBaseSchema
     },
   );
 
+export const saveDailyCampaignInputSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Ngày không hợp lệ."),
+  taskIds: z.array(z.string().min(1)).min(1, "Vui lòng chọn nhiệm vụ."),
+});
+
+export const campaignOnlyTaskInputSchema = taskBaseSchema
+  .extend({
+    isActive: z.boolean().default(true),
+  })
+  .transform((value) => ({
+    ...value,
+    taskType: "DAILY_PER_MEMBER" as const,
+    scheduleType: DEFAULT_TASK_SCHEDULE_TYPE,
+    scheduledWeekdays: [],
+    scheduledMonthDays: [],
+    targetCount: undefined,
+  }));
+
 export const monthlyGoalInputSchema = z.object({
   taskId: z.string().min(1, "Thiếu mã nhiệm vụ."),
   yearMonth: z
