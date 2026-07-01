@@ -157,6 +157,7 @@ export function TaskDetailActions({
                       ) : null}
                       {openPanel === "reminder" && reminder ? (
                         <ReminderSettingsForm
+                          key={`reminder-${reminder.taskId}`}
                           defaultReminderTime={reminder.defaultReminderTime}
                           effectiveReminderTime={reminder.effectiveReminderTime}
                           initialEnabled={reminder.initialEnabled}

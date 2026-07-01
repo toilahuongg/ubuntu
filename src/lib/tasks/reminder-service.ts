@@ -23,12 +23,13 @@ import {
   MONTHLY_GOAL_TASK_TYPES,
 } from "@/lib/tasks/constants";
 import { appliesToUser, isWithinLateWindow, type ScopeContext } from "@/lib/tasks/policy";
+import {
+  MONTHLY_GOAL_REMINDER_WINDOW_DAYS,
+  REMINDER_SWEEP_WINDOW_MINUTES,
+  resolveReminderDisplayTime,
+} from "@/lib/tasks/reminder-time";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
 import { toObjectId } from "@/lib/utils/ids";
-
-export const REMINDER_LEAD_MINUTES = 30;
-export const REMINDER_SWEEP_WINDOW_MINUTES = 5;
-export const MONTHLY_GOAL_REMINDER_WINDOW_DAYS = 5;
 
 type ReminderPreferenceLike = Pick<
   TaskReminderPreferenceRecord,
@@ -61,20 +62,6 @@ export type TaskReminderSettings = {
   source: "custom" | "default";
 };
 
-export function minutesFromTime(time: string): number {
-  const [hours, minutes] = time.split(":").map(Number);
-  return hours * 60 + minutes;
-}
-
-export function timeFromMinutes(total: number): string {
-  const clamped = Math.max(0, Math.min(total, 23 * 60 + 59));
-  const hours = Math.floor(clamped / 60);
-  const minutes = clamped % 60;
-  return `${hours.toString().padStart(2, "0")}:${minutes
-    .toString()
-    .padStart(2, "0")}`;
-}
-
 export function resolveEffectiveReminderTime(input: {
   defaultReminderTime: string;
   deadlineTime: string;
@@ -83,18 +70,17 @@ export function resolveEffectiveReminderTime(input: {
   const source = input.preference ? "custom" : "default";
   const enabled = input.preference?.enabled ?? true;
   const reminderTime = input.preference?.reminderTime ?? input.defaultReminderTime;
-  const deadlineMinutes = minutesFromTime(input.deadlineTime);
-  const reminderMinutes = minutesFromTime(reminderTime);
-  const cappedMinutes = Math.max(0, deadlineMinutes - REMINDER_LEAD_MINUTES);
-  const isCappedBeforeDeadline = enabled && reminderMinutes >= deadlineMinutes;
+  const displayTime = resolveReminderDisplayTime({
+    deadlineTime: input.deadlineTime,
+    enabled,
+    reminderTime,
+  });
 
   return {
     defaultReminderTime: input.defaultReminderTime,
-    effectiveReminderTime: enabled
-      ? timeFromMinutes(isCappedBeforeDeadline ? cappedMinutes : reminderMinutes)
-      : null,
+    effectiveReminderTime: displayTime.effectiveReminderTime,
     enabled,
-    isCappedBeforeDeadline,
+    isCappedBeforeDeadline: displayTime.isCappedBeforeDeadline,
     reminderTime,
     source,
   };

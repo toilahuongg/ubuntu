@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import { Bell, BellOff, Check, Loader2 } from "lucide-react";
 
+import { resolveReminderDisplayTime } from "@/lib/tasks/reminder-time";
+
 import { setTaskReminderPreferenceAction } from "./actions";
 
 type ReminderSettingsFormProps = {
@@ -16,10 +18,8 @@ type ReminderSettingsFormProps = {
 
 export function ReminderSettingsForm({
   defaultReminderTime,
-  effectiveReminderTime,
   initialEnabled,
   initialReminderTime,
-  isCappedBeforeDeadline,
   taskId,
 }: ReminderSettingsFormProps) {
   const [enabled, setEnabled] = useState(initialEnabled);
@@ -37,10 +37,16 @@ export function ReminderSettingsForm({
     });
   }
 
+  const reminderPreview = resolveReminderDisplayTime({
+    deadlineTime: defaultReminderTime,
+    enabled,
+    reminderTime,
+  });
   const statusText = enabled
-    ? isCappedBeforeDeadline && effectiveReminderTime
-      ? `Sẽ nhắc lúc ${effectiveReminderTime}, sớm hơn hạn 30 phút.`
-      : `Sẽ nhắc lúc ${effectiveReminderTime ?? reminderTime}.`
+    ? reminderPreview.isCappedBeforeDeadline &&
+      reminderPreview.effectiveReminderTime
+      ? `Sẽ nhắc lúc ${reminderPreview.effectiveReminderTime}, sớm hơn hạn 30 phút.`
+      : `Sẽ nhắc lúc ${reminderPreview.effectiveReminderTime ?? reminderTime}.`
     : "Đã tắt nhắc riêng cho nhiệm vụ này.";
 
   return (
