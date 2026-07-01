@@ -10,6 +10,7 @@ import {
   normalizeCampaignTaskIds,
 } from "@/lib/campaigns/campaign-service";
 import type { SessionUser } from "@/lib/domain";
+import { createCampaignOnlyTaskInput } from "@/lib/tasks/task-service";
 
 describe("campaign constants", () => {
   it("uses the approved campaign roles", () => {
@@ -56,5 +57,30 @@ describe("campaign management permissions", () => {
       "b",
       "c",
     ]);
+  });
+});
+
+describe("campaign-only task input", () => {
+  it("forces campaign-only tasks to daily team tasks", () => {
+    const input = createCampaignOnlyTaskInput({
+      title: "Special",
+      description: "",
+      deadlineTime: "20:00",
+      expReward: 20,
+      pointReward: 5,
+      lateWindowDays: 1,
+      targetRoles: ["NGV"],
+      submissionMessage: "",
+      completionMessage: "",
+    });
+
+    expect(input).toMatchObject({
+      campaignOnly: true,
+      taskType: "DAILY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      scheduledWeekdays: [],
+      scheduledMonthDays: [],
+      targetCount: null,
+    });
   });
 });

@@ -485,7 +485,30 @@ export type CreateTaskInput = {
   targetRoles: TaskTargetRole[];
   submissionMessage?: string;
   completionMessage?: string;
+  campaignOnly?: boolean;
 };
+
+export function createCampaignOnlyTaskInput(
+  input: Omit<
+    CreateTaskInput,
+    | "campaignOnly"
+    | "taskType"
+    | "scheduleType"
+    | "scheduledWeekdays"
+    | "scheduledMonthDays"
+    | "targetCount"
+  >,
+): CreateTaskInput {
+  return {
+    ...input,
+    campaignOnly: true,
+    taskType: "DAILY_PER_MEMBER",
+    scheduleType: "EVERY_DAY",
+    scheduledWeekdays: [],
+    scheduledMonthDays: [],
+    targetCount: null,
+  };
+}
 
 const TASK_SORT_ORDER_STEP = 100;
 
@@ -496,9 +519,10 @@ async function listVisibleTaskRecordsForActor(
 
   const all = (
     actor.role === "ADMIN"
-      ? await TaskModel.find({}).lean()
+      ? await TaskModel.find({ campaignOnly: { $ne: true } }).lean()
       : actor.teamId
         ? await TaskModel.find({
+            campaignOnly: { $ne: true },
             teamId: toObjectId(actor.teamId),
           }).lean()
         : []
@@ -550,12 +574,21 @@ export async function createTask(
       "Vui lòng chọn ít nhất một vai trò phù hợp với phạm vi nhiệm vụ.",
     );
   }
-  const taskType: TaskType = normalizeTaskType(input.taskType);
+  const campaignOnly = !!input.campaignOnly;
+  if (campaignOnly && actor.role !== "TEAM_LEAD") {
+    throw new Error("Chỉ CS - ĐL được tạo nhiệm vụ chiến dịch.");
+  }
+  if (campaignOnly && actorScope.scope !== "TEAM") {
+    throw new Error("Nhiệm vụ chiến dịch chỉ áp dụng trong toàn Nhóm.");
+  }
+  const taskType: TaskType = campaignOnly
+    ? "DAILY_PER_MEMBER"
+    : normalizeTaskType(input.taskType);
   const external = normalizeTaskExternalLink(input);
   const schedule = normalizeTaskSchedule({
-    scheduleType: input.scheduleType,
-    scheduledMonthDays: input.scheduledMonthDays,
-    scheduledWeekdays: input.scheduledWeekdays,
+    scheduleType: campaignOnly ? "EVERY_DAY" : input.scheduleType,
+    scheduledMonthDays: campaignOnly ? [] : input.scheduledMonthDays,
+    scheduledWeekdays: campaignOnly ? [] : input.scheduledWeekdays,
     taskType,
   });
 
@@ -597,6 +630,7 @@ export async function createTask(
     scheduledMonthDays: schedule.scheduledMonthDays,
     submissionMessage: input.submissionMessage?.trim() ?? "",
     completionMessage: input.completionMessage?.trim() ?? "",
+    campaignOnly,
     taskType,
     targetCount: taskType === "COUNT_TOTAL" ? input.targetCount : null,
     targetRoles,
@@ -646,6 +680,7 @@ export type UpdateTaskInput = {
   targetRoles: TaskTargetRole[];
   submissionMessage?: string;
   completionMessage?: string;
+  campaignOnly?: boolean;
 };
 
 export async function updateTask(
@@ -659,6 +694,10 @@ export async function updateTask(
 
   if (!record || !canManageTask(actor, taskToScope(record))) {
     throw new Error("Không tìm thấy nhiệm vụ phù hợp.");
+  }
+
+  if (!!input.campaignOnly !== !!record.campaignOnly) {
+    throw new Error("Không thể đổi loại nhiệm vụ chiến dịch.");
   }
 
   const taskType = normalizeTaskType(record.taskType);

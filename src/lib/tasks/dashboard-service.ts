@@ -108,6 +108,7 @@ async function loadScopeDataForVisibleUsers(
 
   const [allTasks, dttEnrollments] = await Promise.all([
     TaskModel.find({
+      campaignOnly: { $ne: true },
       isActive: true,
       $or: scopeClauses,
     })
