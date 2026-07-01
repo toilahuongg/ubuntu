@@ -148,6 +148,7 @@ export function mapTask(record: TaskRecord): TaskSummary {
     completedAt: record.completedAt ? record.completedAt.toISOString() : null,
     isActive: record.isActive,
     isDtt: !!record.isDtt,
+    campaignOnly: !!record.campaignOnly,
     teamId: record.teamId.toString(),
     zoneId: record.zoneId?.toString() ?? null,
     regionId: record.regionId?.toString() ?? null,

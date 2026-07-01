@@ -62,6 +62,7 @@ export type TaskSummary = {
   completedAt: string | null;
   isActive: boolean;
   isDtt: boolean;
+  campaignOnly: boolean;
   teamId: string;
   zoneId: string | null;
   regionId: string | null;
@@ -144,6 +145,30 @@ export type DashboardRosterEntry = {
   statuses: DashboardMemberTaskStatus[];
 };
 
+export type CampaignTaskStatus = {
+  taskId: string;
+  applicable: boolean;
+  completionCount: number;
+};
+
+export type CampaignReportEntry = {
+  id: string;
+  fullName: string;
+  role: Role;
+  completed: number;
+  total: number;
+  isComplete: boolean;
+  statuses: CampaignTaskStatus[];
+};
+
+export type DailyCampaignView = {
+  id: string;
+  date: string;
+  taskIds: string[];
+  cards: TaskCard[];
+  report: CampaignReportEntry[];
+};
+
 export type DashboardHighlights = {
   visibleUsers: number;
   completionPercent: number;
@@ -155,6 +180,7 @@ export type DashboardView = {
   date: string;
   highlights: DashboardHighlights;
   cards: TaskCard[];
+  campaign: DailyCampaignView | null;
   goalNotice: DashboardGoalNotice | null;
   roster: DashboardRosterEntry[];
   tasks: TaskSummary[];
@@ -178,6 +204,7 @@ type DashboardLevelSummary = {
 export type MemberDashboardView = {
   date: string;
   cards: TaskCard[];
+  campaign: DailyCampaignView | null;
   goalNotice: DashboardGoalNotice | null;
 } & DashboardLevelSummary;
 

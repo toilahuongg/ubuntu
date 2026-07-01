@@ -37,6 +37,7 @@ const taskSchema = new Schema(
     sortOrder: { default: null, type: Number },
     isActive: { default: true, type: Boolean },
     isDtt: { default: false, type: Boolean },
+    campaignOnly: { default: false, type: Boolean },
     regionId: { default: null, ref: "Region", type: Schema.Types.ObjectId },
     scope: { default: "TEAM", enum: TASK_SCOPES, type: String },
     taskType: {
@@ -77,6 +78,7 @@ const taskSchema = new Schema(
 taskSchema.index({ isActive: 1, scope: 1, teamId: 1, createdAt: -1 });
 taskSchema.index({ isActive: 1, scope: 1, zoneId: 1, createdAt: -1 });
 taskSchema.index({ isActive: 1, scope: 1, regionId: 1, createdAt: -1 });
+taskSchema.index({ campaignOnly: 1, isActive: 1, teamId: 1, createdAt: -1 });
 
 export type TaskRecord = {
   _id: Types.ObjectId;
@@ -91,6 +93,7 @@ export type TaskRecord = {
   sortOrder: number | null;
   isActive: boolean;
   isDtt: boolean;
+  campaignOnly: boolean;
   regionId: Types.ObjectId | null;
   scope: TaskScope;
   scheduleType?: TaskScheduleType | null;
