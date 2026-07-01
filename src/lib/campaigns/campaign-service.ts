@@ -1,22 +1,41 @@
 import "server-only";
 
-import { CAMPAIGN_TARGET_ROLES } from "@/lib/campaigns/constants";
+import {
+  CAMPAIGN_TARGET_ROLES,
+  isCampaignRole,
+} from "@/lib/campaigns/constants";
 import { getTodayDateKey } from "@/lib/dates";
 import type { SessionUser } from "@/lib/domain";
 import {
   AuditLogModel,
   DailyCampaignModel,
+  SubmissionModel,
+  type SubmissionRecordModel,
   TaskModel,
   type DailyCampaignRecord,
   type TaskRecord,
 } from "@/lib/models";
 import { connectToDatabase } from "@/lib/mongoose";
+import { listVisibleUsersForActor } from "@/lib/services/organization-service";
 import { normalizeTaskType } from "@/lib/tasks/constants";
 import { appliesToUser, type ScopeContext } from "@/lib/tasks/policy";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
-import { taskToScope } from "@/lib/tasks/task-service";
-import type { CampaignReportEntry } from "@/lib/tasks/types";
+import {
+  mapTask,
+  sortTasksForDisplay,
+  taskToScope,
+} from "@/lib/tasks/task-service";
+import type { CampaignReportEntry, TaskSummary } from "@/lib/tasks/types";
 import { toObjectId } from "@/lib/utils/ids";
+
+export type DailyCampaignAdminView = {
+  date: string;
+  campaignId: string | null;
+  selectedTaskIds: string[];
+  eligibleTasks: TaskSummary[];
+  campaignOnlyTasks: TaskSummary[];
+  report: CampaignReportEntry[];
+};
 
 export function assertCanManageDailyCampaign(
   actor: SessionUser,
@@ -121,6 +140,98 @@ export async function getDailyCampaignRecordForTeam(
     date: dateKey,
     teamId: toObjectId(teamId),
   }).lean()) as DailyCampaignRecord | null;
+}
+
+function buildCompletionByTaskUser(
+  submissions: SubmissionRecordModel[],
+): Map<string, number> {
+  const completionByTaskUser = new Map<string, number>();
+  for (const submission of submissions) {
+    completionByTaskUser.set(
+      `${submission.taskId.toString()}:${submission.subjectUserId.toString()}`,
+      submission.completionCount ?? 0,
+    );
+  }
+  return completionByTaskUser;
+}
+
+export async function getDailyCampaignAdminView(
+  actor: SessionUser,
+  dateKey: string,
+): Promise<DailyCampaignAdminView> {
+  assertCanManageDailyCampaign(actor);
+  await connectToDatabase();
+
+  const [campaign, tasks, visibleUsers] = await Promise.all([
+    DailyCampaignModel.findOne({
+      date: dateKey,
+      teamId: toObjectId(actor.teamId),
+    }).lean() as Promise<DailyCampaignRecord | null>,
+    TaskModel.find({
+      isActive: true,
+      scope: "TEAM",
+      teamId: toObjectId(actor.teamId),
+    }).lean() as Promise<TaskRecord[]>,
+    listVisibleUsersForActor(actor),
+  ]);
+
+  const eligibleTaskRecords = sortTasksForDisplay(
+    tasks.filter(
+      (task) =>
+        !task.campaignOnly &&
+        isTaskEligibleForCampaign(task, actor.teamId, dateKey),
+    ),
+  );
+  const campaignOnlyTaskRecords = sortTasksForDisplay(
+    tasks.filter((task) => task.campaignOnly),
+  );
+  const selectedTaskIds = campaign?.taskIds.map((id) => id.toString()) ?? [];
+  const selectedTasks = selectedTaskIds
+    .map((taskId) => tasks.find((task) => task._id.toString() === taskId))
+    .filter((task): task is TaskRecord =>
+      Boolean(task && isTaskEligibleForCampaign(task, actor.teamId, dateKey)),
+    );
+  const reportUsers = visibleUsers.filter((user) => isCampaignRole(user.role));
+  const applicableUserIdsByTaskId = new Map<string, Set<string>>();
+
+  for (const task of selectedTasks) {
+    const taskId = task._id.toString();
+    const scope = taskToScope(task);
+    applicableUserIdsByTaskId.set(
+      taskId,
+      new Set(
+        reportUsers
+          .filter((user) => appliesToUser(scope, user))
+          .map((user) => user.id),
+      ),
+    );
+  }
+
+  const submissions =
+    selectedTasks.length > 0 && reportUsers.length > 0
+      ? ((await SubmissionModel.find({
+          date: dateKey,
+          subjectUserId: { $in: reportUsers.map((user) => toObjectId(user.id)) },
+          taskId: { $in: selectedTasks.map((task) => task._id) },
+        }).lean()) as SubmissionRecordModel[])
+      : [];
+  const selectedEligibleTaskIds = selectedTasks.map((task) =>
+    task._id.toString(),
+  );
+
+  return {
+    date: dateKey,
+    campaignId: campaign?._id.toString() ?? null,
+    selectedTaskIds,
+    eligibleTasks: eligibleTaskRecords.map(mapTask),
+    campaignOnlyTasks: campaignOnlyTaskRecords.map(mapTask),
+    report: buildCampaignReportRows({
+      taskIds: selectedEligibleTaskIds,
+      users: reportUsers,
+      applicableUserIdsByTaskId,
+      completionByTaskUser: buildCompletionByTaskUser(submissions),
+    }),
+  };
 }
 
 export function assertCampaignOnlyTaskCanSubmit(input: {

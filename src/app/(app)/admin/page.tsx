@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   Building2,
+  CalendarDays,
   ChevronRight,
   ClipboardList,
   Layers,
@@ -234,6 +235,15 @@ function ManagementHome({
       description: "Quản lý vật phẩm, giá bán và trạng thái",
     },
   ];
+
+  if (role === "TEAM_LEAD") {
+    operationItems.push({
+      href: "/admin/campaigns",
+      icon: CalendarDays,
+      label: "Chiến dịch ngày",
+      description: "Chọn nhiệm vụ đặc biệt cho hôm nay",
+    });
+  }
 
   if (telegramEnabled) {
     operationItems.push({
