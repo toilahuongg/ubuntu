@@ -10,18 +10,23 @@ export function MonthlyGoalForm({
   taskId,
   yearMonth,
   currentGoal,
+  maxGoal = null,
   unitLabel = "lượt",
 }: {
   taskId: string;
   yearMonth: string;
   currentGoal: number | null;
+  maxGoal?: number | null;
   unitLabel?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [value, setValue] = useState(currentGoal?.toString() ?? "");
+  const fixedGoal = maxGoal === 1;
+  const [value, setValue] = useState(
+    fixedGoal ? "1" : currentGoal?.toString() ?? "",
+  );
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -48,22 +53,32 @@ export function MonthlyGoalForm({
       <input type="hidden" name="taskId" value={taskId} />
       <input type="hidden" name="yearMonth" value={yearMonth} />
       <div className="flex items-center gap-2">
-        <input
-          name="targetCount"
-          type="number"
-          min={1}
-          required
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder={`Số ${unitLabel} muốn hoàn thành`}
-          inputMode="numeric"
-          className="h-10 flex-1 rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
-        />
+        {fixedGoal ? (
+          <>
+            <input type="hidden" name="targetCount" value="1" />
+            <div className="flex h-10 flex-1 items-center rounded-lg border border-border bg-overlay-subtle px-3 text-sm">
+              1 {unitLabel}
+            </div>
+          </>
+        ) : (
+          <input
+            name="targetCount"
+            type="number"
+            min={1}
+            max={maxGoal ?? undefined}
+            required
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={`Số ${unitLabel} muốn hoàn thành`}
+            inputMode="numeric"
+            className="h-10 flex-1 rounded-lg bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+          />
+        )}
         <button
           type="submit"
           disabled={isPending}
           aria-busy={isPending}
-          className="btn-gradient h-10 min-w-24 rounded-xl px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          className="btn-gradient h-10 min-w-24 rounded-lg px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isPending ? "Đang lưu…" : currentGoal ? "Cập nhật" : "Đặt"}
         </button>

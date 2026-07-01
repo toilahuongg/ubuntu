@@ -23,7 +23,7 @@ export type TaskProgress = {
   kind: TaskProgressKind;
   current: number;
   target: number | null;
-  unitLabel: "lượt" | "ngày";
+  unitLabel: "lượt" | "ngày" | "lần";
   isGoalMissing: boolean;
   isGoalComplete: boolean;
 };

@@ -99,12 +99,20 @@ export function filterMembersForSelection(
   data: AdminOperationsView,
   selection: AdminOperationsSelection,
 ) {
-  return data.members.filter((member) => {
-    if (selection.regionId) return member.regionId === selection.regionId;
-    if (selection.zoneId) return member.zoneId === selection.zoneId;
-    if (selection.teamId) return member.teamId === selection.teamId;
-    return true;
-  });
+  return data.members
+    .filter((member) => {
+      if (selection.regionId) return member.regionId === selection.regionId;
+      if (selection.zoneId) return member.zoneId === selection.zoneId;
+      if (selection.teamId) return member.teamId === selection.teamId;
+      return true;
+    })
+    .toSorted((left, right) => {
+      const completionDelta =
+        right.summary.completionPercent - left.summary.completionPercent;
+      if (completionDelta !== 0) return completionDelta;
+
+      return left.fullName.localeCompare(right.fullName, "vi");
+    });
 }
 
 export function normalizeSelection(
@@ -135,6 +143,7 @@ export function normalizeSelection(
 export function getSelectionEmptyState(
   data: AdminOperationsView,
   selection: AdminOperationsSelection,
+  options: { allowTeamMemberProgress?: boolean } = {},
 ) {
   const role = data.scope.role;
   if (canSelectTeam(role) && data.tree.teams.length === 0) {
@@ -151,7 +160,11 @@ export function getSelectionEmptyState(
   }
 
   if (canSelectRegion(role)) {
-    if (!selection.zoneId && canSelectZone(role)) {
+    if (
+      !selection.zoneId &&
+      canSelectZone(role) &&
+      !(options.allowTeamMemberProgress && selection.teamId)
+    ) {
       return "Chọn địa vực để xem các khu vực.";
     }
     if (selection.zoneId && getRegionOptions(data, selection).length === 0) {

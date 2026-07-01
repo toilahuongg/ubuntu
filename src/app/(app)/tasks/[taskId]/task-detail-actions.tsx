@@ -11,6 +11,7 @@ type MonthlyGoalConfig = {
   taskId: string;
   yearMonth: string;
   currentGoal: number | null;
+  maxGoal: number | null;
   unitLabel: string;
 };
 
@@ -150,6 +151,7 @@ export function TaskDetailActions({
                           taskId={monthlyGoal.taskId}
                           yearMonth={monthlyGoal.yearMonth}
                           currentGoal={monthlyGoal.currentGoal}
+                          maxGoal={monthlyGoal.maxGoal}
                           unitLabel={monthlyGoal.unitLabel}
                         />
                       ) : null}

@@ -28,6 +28,7 @@ import {
   DEFAULT_LATE_WINDOW_DAYS,
   isDailyTaskType,
   normalizeTaskType,
+  type TaskType,
 } from "@/lib/tasks/constants";
 import { appliesToUser, isWithinLateWindow } from "@/lib/tasks/policy";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
@@ -54,6 +55,33 @@ export type SaveSubmissionResult = {
   taskJustCompleted: boolean;
 };
 
+type SubmissionMode = "increment" | "set";
+
+export function clampSubmissionCountForTaskType(
+  taskType: TaskType,
+  requestedCount: number,
+): number {
+  return taskType === "DAILY_PER_MEMBER" || taskType === "MONTHLY_PER_MEMBER"
+    ? Math.min(1, requestedCount)
+    : requestedCount;
+}
+
+export function shouldIgnoreDuplicateSingleCompletionTask({
+  existingCompletionCount,
+  mode,
+  taskType,
+}: {
+  existingCompletionCount: number;
+  mode: SubmissionMode;
+  taskType: TaskType;
+}): boolean {
+  return (
+    (taskType === "DAILY_PER_MEMBER" || taskType === "MONTHLY_PER_MEMBER") &&
+    mode === "increment" &&
+    existingCompletionCount > 0
+  );
+}
+
 export async function saveSubmission(
   actor: SessionUser,
   taskId: string,
@@ -62,7 +90,7 @@ export async function saveSubmission(
   options: {
     notify?: boolean;
     count?: number;
-    mode?: "increment" | "set";
+    mode?: SubmissionMode;
   } = {},
 ): Promise<SaveSubmissionResult> {
   const shouldNotify = options.notify ?? true;
@@ -112,7 +140,7 @@ export async function saveSubmission(
 
   const taskType = normalizeTaskType(taskRaw.taskType);
   const isDailyTask = isDailyTaskType(taskType);
-  const count = isDailyTask ? Math.min(1, requestedCount) : requestedCount;
+  const count = clampSubmissionCountForTaskType(taskType, requestedCount);
   const isClearingSubmission = mode === "set" && count === 0;
 
   if (taskType === "COUNT_TOTAL" && taskRaw.completedAt && !isClearingSubmission) {
@@ -154,6 +182,26 @@ export async function saveSubmission(
     const existing = (await SubmissionModel.findOne(filter)
       .session(session ?? null)
       .lean()) as SubmissionRecordModel | null;
+
+    if (taskType === "MONTHLY_PER_MEMBER" && count > 0) {
+      const yearMonth = dateKey.slice(0, 7);
+      const monthSubmissions = (await SubmissionModel.find({
+        completionCount: { $gt: 0 },
+        date: { $regex: `^${yearMonth}` },
+        subjectUserId: subjectRaw._id,
+        taskId: taskRaw._id,
+      })
+        .session(session ?? null)
+        .select({ date: 1 })
+        .lean()) as Array<{ date: string }>;
+
+      const hasOtherMonthlyCompletion = monthSubmissions.some(
+        (submission) => submission.date !== dateKey,
+      );
+      if (hasOtherMonthlyCompletion) {
+        throw new Error("Nhiệm vụ tháng đã được hoàn thành trong tháng này.");
+      }
+    }
 
     if (mode !== "set" && count === 0) {
       return {
@@ -293,7 +341,14 @@ export async function saveSubmission(
       };
     }
 
-    if (isDailyTask && mode === "increment" && existing) {
+    if (
+      shouldIgnoreDuplicateSingleCompletionTask({
+        existingCompletionCount: existing?.completionCount ?? 0,
+        mode,
+        taskType,
+      }) &&
+      existing
+    ) {
       await AuditLogModel.create(
         [
           {
@@ -582,7 +637,11 @@ export async function saveSubmission(
 
   const shouldSendNotification =
     shouldNotify &&
-    !(isDailyTask && !result.isFirstSubmission && mode === "increment");
+    !(
+      (taskType === "DAILY_PER_MEMBER" || taskType === "MONTHLY_PER_MEMBER") &&
+      !result.isFirstSubmission &&
+      mode === "increment"
+    );
 
   if (shouldSendNotification) {
     const decoratedSubjectName = await getDecoratedFullName(

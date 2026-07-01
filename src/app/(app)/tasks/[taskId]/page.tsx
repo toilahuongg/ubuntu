@@ -19,7 +19,9 @@ import { getTodayDateKey } from "@/lib/dates";
 import { listTaskActivitiesThisMonth } from "@/lib/tasks/activity-service";
 import { canProxySubmit } from "@/lib/permissions";
 import {
-  isDailyTaskType,
+  getTaskHeaderCompletionLabel,
+  getMonthlyGoalLimitForTaskType,
+  getTaskProgressUnitLabel,
   supportsMonthlyGoal,
   TASK_TYPE_LABELS,
 } from "@/lib/tasks/constants";
@@ -60,8 +62,12 @@ export default async function TaskDetailPage({
   const isCountTotal = detail.taskType === "COUNT_TOTAL";
   const hasMonthlyGoal =
     supportsMonthlyGoal(detail.taskType) && detail.isApplicableToActor;
-  const isDaily = isDailyTaskType(detail.taskType);
-  const progressUnit = isDaily ? "ngày" : "lượt";
+  const progressUnit = getTaskProgressUnitLabel(detail.taskType);
+  const monthlyGoalLimit = getMonthlyGoalLimitForTaskType(detail.taskType);
+  const headerCompletionCount =
+    detail.taskType === "MONTHLY_PER_MEMBER"
+      ? detail.monthlyCompletion
+      : detail.totalCompletions;
 
   const proxyCandidates = detail.rosterMembers.filter(
     (m) => m.id !== session.id && canProxySubmit(session, m),
@@ -92,6 +98,7 @@ export default async function TaskDetailPage({
                       taskId: detail.id,
                       yearMonth: detail.yearMonth,
                       currentGoal: detail.monthlyGoal,
+                      maxGoal: monthlyGoalLimit,
                       unitLabel: progressUnit,
                     }
                   : undefined
@@ -141,7 +148,10 @@ export default async function TaskDetailPage({
           )}
           <span className="flex items-center gap-1">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            {detail.totalCompletions} lượt hôm nay
+            {getTaskHeaderCompletionLabel(
+              detail.taskType,
+              headerCompletionCount,
+            )}
           </span>
           <span
             className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
@@ -215,6 +225,7 @@ export default async function TaskDetailPage({
             taskId={detail.id}
             subjectUserId={session.id}
             myCompletionCount={detail.myCompletionCount}
+            monthlyCompletion={detail.monthlyCompletion}
             status={detail.status}
             taskType={detail.taskType}
           />

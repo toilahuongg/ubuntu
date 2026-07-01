@@ -20,6 +20,7 @@ import {
 } from "./operations-dashboard.helpers";
 
 type OperationsDashboardProps = {
+  allowTeamMemberProgress?: boolean;
   data: AdminOperationsView;
   initialSelection?: AdminOperationsSelection;
   showMemberProgress?: boolean;
@@ -128,6 +129,7 @@ function buildCompletionTrend(members: AdminOperationsMember[]) {
 }
 
 export function OperationsDashboard({
+  allowTeamMemberProgress = false,
   data,
   initialSelection,
   showMemberProgress = false,
@@ -136,7 +138,9 @@ export function OperationsDashboard({
   const normalizedSelection = normalizeSelection(data, selection);
   const activeScopeLabel = getActiveScopeLabel(data, normalizedSelection);
   const activeMembers = filterMembersForSelection(data, normalizedSelection);
-  const emptyState = getSelectionEmptyState(data, normalizedSelection);
+  const emptyState = getSelectionEmptyState(data, normalizedSelection, {
+    allowTeamMemberProgress,
+  });
   const completionTrend = buildCompletionTrend(activeMembers);
   const todayCompletionCount =
     completionTrend.find((point) => point.date === data.dateKey)?.completed ?? 0;
@@ -173,7 +177,9 @@ export function OperationsDashboard({
                 Tiến độ thành viên
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Danh sách tiến độ tháng trong phạm vi đang chọn.
+                {allowTeamMemberProgress && normalizedSelection.teamId
+                  ? "Danh sách tiến độ tháng của toàn bộ thành viên trong chi hội."
+                  : "Danh sách tiến độ tháng trong phạm vi đang chọn."}
               </p>
             </div>
             <div className="flex items-center gap-2">

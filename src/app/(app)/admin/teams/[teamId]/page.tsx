@@ -37,6 +37,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
         description="Tiến độ thành viên trong chi hội"
       />
       <OperationsDashboard
+        allowTeamMemberProgress
         data={operations}
         initialSelection={{
           regionId: null,

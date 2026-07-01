@@ -79,7 +79,7 @@ describe("dashboard task progress", () => {
 
     expect(progress).toMatchObject({
       kind: "MONTHLY_MEMBER",
-      unitLabel: "lượt",
+      unitLabel: "lần",
       isGoalMissing: true,
       isGoalComplete: false,
     });

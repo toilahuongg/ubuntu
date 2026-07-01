@@ -5,6 +5,7 @@ import type { AdminOperationsView } from "@/lib/services/admin-operations-types"
 import {
   filterMembersForSelection,
   getActiveSummary,
+  getSelectionEmptyState,
   normalizeSelection,
 } from "./operations-dashboard.helpers";
 
@@ -163,6 +164,32 @@ describe("operations dashboard helpers", () => {
         regionId: null,
       }).map((member) => member.id),
     ).toEqual(["member-a2"]);
+  });
+
+  it("sorts filtered members by completion from high to low", () => {
+    expect(
+      filterMembersForSelection(view, {
+        teamId: "team-a",
+        zoneId: null,
+        regionId: null,
+      }).map((member) => member.id),
+    ).toEqual(["member-a2", "member-a1"]);
+  });
+
+  it("allows team member progress without selecting a zone", () => {
+    const selection = {
+      teamId: "team-a",
+      zoneId: null,
+      regionId: null,
+    };
+
+    expect(filterMembersForSelection(view, selection).map((member) => member.id))
+      .toEqual(["member-a2", "member-a1"]);
+    expect(
+      getSelectionEmptyState(view, selection, {
+        allowTeamMemberProgress: true,
+      }),
+    ).toBeNull();
   });
 
   it("drops invalid child selections when the parent changes", () => {

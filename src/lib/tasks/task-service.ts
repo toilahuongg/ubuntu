@@ -32,6 +32,7 @@ import {
   DEFAULT_EXP_REWARD,
   DEFAULT_LATE_WINDOW_DAYS,
   DEFAULT_POINT_REWARD,
+  getMonthlyGoalLimitForTaskType,
   normalizeTaskType,
   supportsMonthlyGoal,
   type TaskType,
@@ -234,6 +235,10 @@ export async function setMonthlyGoal(
   if (!task) throw new Error("Nhiệm vụ không còn tồn tại.");
   if (!supportsMonthlyGoal(task.taskType)) {
     throw new Error("Nhiệm vụ này không hỗ trợ đặt mục tiêu theo tháng.");
+  }
+  const goalLimit = getMonthlyGoalLimitForTaskType(task.taskType);
+  if (goalLimit !== null && targetCount > goalLimit) {
+    throw new Error("Nhiệm vụ tháng chỉ được đặt mục tiêu 1 lần.");
   }
 
   await MonthlyGoalModel.updateOne(

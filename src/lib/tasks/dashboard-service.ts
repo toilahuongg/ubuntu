@@ -20,6 +20,7 @@ import { getUserProgress } from "@/lib/services/gamification-service";
 import {
   DEFAULT_EXP_REWARD,
   DEFAULT_POINT_REWARD,
+  getTaskProgressUnitLabel,
   isDailyTaskType,
   normalizeTaskType,
   supportsMonthlyGoal,
@@ -254,8 +255,7 @@ export function buildTaskProgress(input: {
 }): TaskProgress {
   const taskType = normalizeTaskType(input.taskType);
   const supportsGoal = supportsMonthlyGoal(taskType);
-  const unitLabel: TaskProgress["unitLabel"] =
-    isDailyTaskType(taskType) ? "ngày" : "lượt";
+  const unitLabel = getTaskProgressUnitLabel(taskType);
   return {
     kind:
       taskType === "COUNT_TOTAL"

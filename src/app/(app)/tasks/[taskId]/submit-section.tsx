@@ -9,19 +9,25 @@ import {
   submitTaskViaApi,
   type StreakBonusResult,
 } from "@/lib/tasks/client-submit";
-import { isDailyTaskType, type TaskType } from "@/lib/tasks/constants";
+import {
+  getTaskSubmitCopy,
+  isDailyTaskType,
+  type TaskType,
+} from "@/lib/tasks/constants";
 import type { TaskStatus } from "@/lib/tasks/types";
 
 export function SubmitSection({
   taskId,
   subjectUserId,
   myCompletionCount,
+  monthlyCompletion,
   status,
   taskType,
 }: {
   taskId: string;
   subjectUserId: string;
   myCompletionCount: number;
+  monthlyCompletion: number;
   status: TaskStatus;
   taskType: TaskType;
 }) {
@@ -52,7 +58,7 @@ export function SubmitSection({
         setSuccess(
           alreadySubmittedToday
             ? "Đã bỏ hoàn thành hôm nay."
-            : "Đã nộp hoàn thành hôm nay.",
+            : copy.successLabel,
         );
         router.refresh();
       } else if (result.status === "timeout_unknown") {
@@ -68,15 +74,23 @@ export function SubmitSection({
   const isLocked = status === "LOCKED" || status === "COMPLETED";
   const isCompleted = status === "COMPLETED";
   const isDaily = isDailyTaskType(taskType);
+  const isMonthly = taskType === "MONTHLY_PER_MEMBER";
+  const copy = getTaskSubmitCopy(taskType);
   const alreadySubmittedToday = isDaily && myCompletionCount > 0;
-  const submitDisabled = isPending || (isLocked && !alreadySubmittedToday);
+  const alreadyCompletedPeriod =
+    isMonthly && monthlyCompletion > 0 && !alreadySubmittedToday;
+  const displayCount = isMonthly ? monthlyCompletion : myCompletionCount;
+  const submitDisabled =
+    isPending || alreadyCompletedPeriod || (isLocked && !alreadySubmittedToday);
   const submitLabel = isCompleted
     ? "Đã hoàn thành"
+    : alreadyCompletedPeriod
+      ? copy.completedLabel
     : alreadySubmittedToday
       ? "Bỏ hoàn thành hôm nay"
       : isLocked
-      ? "Đã khoá"
-      : "Nộp nhanh hôm nay";
+        ? "Đã khoá"
+        : copy.actionLabel;
 
   return (
     <div className="glass-card p-4 space-y-4">
@@ -87,17 +101,15 @@ export function SubmitSection({
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">
-            {isDaily ? "Hoàn thành hôm nay" : "Số lần hoàn thành hôm nay"}
+            {copy.heading}
           </p>
           <p className="text-xs text-muted-foreground">
-            {isDaily
-              ? myCompletionCount > 0
-                ? "Đã nộp hôm nay"
-                : "Chưa nộp hôm nay"
-              : `Đã nộp ${myCompletionCount} lần`}
+            {displayCount > 0
+              ? copy.countLabel(displayCount)
+              : copy.pendingLabel}
           </p>
         </div>
-        {myCompletionCount > 0 && (
+        {displayCount > 0 && (
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-overlay-medium">
             <Check className="h-4 w-4" />
           </div>
