@@ -379,7 +379,6 @@ export function buildTaskCard(
 ): TaskCard {
   const taskId = t._id.toString();
   const taskType = normalizeTaskType(t.taskType);
-  const scope = taskToScope(t);
   const applicable = ctx.lookup.applicableUsersByTaskId.get(taskId) ?? [];
   const taskSubs = ctx.lookup.submissionsByTaskId.get(taskId) ?? [];
   const isApplicableToActor =
