@@ -529,6 +529,7 @@ export async function buildDashboardView(
           : 0,
     },
     cards,
+    campaign: null,
     goalNotice,
     roster,
     tasks: sortTasksForDisplay(filteredAllTasks).map(mapTask),
@@ -636,6 +637,7 @@ export async function buildMemberDashboard(
   return {
     date: dateKey,
     cards,
+    campaign: null,
     goalNotice,
     dailyScripture: getDailyScripture(dateKey),
     equipped: progress.equipped,
@@ -724,6 +726,7 @@ export async function buildMemberPrayerDashboard(
   return {
     date: dateKey,
     cards,
+    campaign: null,
     goalNotice,
     dailyScripture: getDailyScripture(dateKey),
     currentLevelXp: progress.currentLevelXp,
@@ -854,6 +857,7 @@ export async function buildLeaderPrayerDashboard(
           : 0,
     },
     cards,
+    campaign: null,
     goalNotice,
     roster,
     tasks: sortTasksForDisplay(prayerAllTasks).map(mapTask),
