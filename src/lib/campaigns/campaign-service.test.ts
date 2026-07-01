@@ -6,6 +6,7 @@ import {
   isCampaignRole,
 } from "@/lib/campaigns/constants";
 import {
+  assertCampaignOnlyTaskCanSubmit,
   assertCanManageDailyCampaign,
   buildCampaignReportRows,
   normalizeCampaignTaskIds,
@@ -131,5 +132,36 @@ describe("campaign report rows", () => {
         ],
       },
     ]);
+  });
+});
+
+describe("campaign-only submission guard", () => {
+  it("rejects campaign-only tasks outside the campaign", () => {
+    expect(() =>
+      assertCampaignOnlyTaskCanSubmit({
+        campaignOnly: true,
+        taskId: "task-a",
+        campaignTaskIds: ["task-b"],
+      }),
+    ).toThrow(
+      "Nhiệm vụ chiến dịch chỉ được nộp khi nằm trong chiến dịch ngày này.",
+    );
+  });
+
+  it("allows normal tasks and included campaign-only tasks", () => {
+    expect(() =>
+      assertCampaignOnlyTaskCanSubmit({
+        campaignOnly: false,
+        taskId: "task-a",
+        campaignTaskIds: [],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertCampaignOnlyTaskCanSubmit({
+        campaignOnly: true,
+        taskId: "task-a",
+        campaignTaskIds: ["task-a"],
+      }),
+    ).not.toThrow();
   });
 });

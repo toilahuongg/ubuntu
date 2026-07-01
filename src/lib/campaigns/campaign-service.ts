@@ -123,6 +123,18 @@ export async function getDailyCampaignRecordForTeam(
   }).lean()) as DailyCampaignRecord | null;
 }
 
+export function assertCampaignOnlyTaskCanSubmit(input: {
+  campaignOnly: boolean;
+  taskId: string;
+  campaignTaskIds: string[];
+}) {
+  if (!input.campaignOnly) return;
+  if (input.campaignTaskIds.includes(input.taskId)) return;
+  throw new Error(
+    "Nhiệm vụ chiến dịch chỉ được nộp khi nằm trong chiến dịch ngày này.",
+  );
+}
+
 export async function saveDailyCampaign(
   actor: SessionUser,
   input: { date: string; taskIds: string[] },

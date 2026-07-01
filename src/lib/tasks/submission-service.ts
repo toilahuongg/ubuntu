@@ -2,6 +2,10 @@ import "server-only";
 
 import mongoose from "mongoose";
 
+import {
+  assertCampaignOnlyTaskCanSubmit,
+  getDailyCampaignRecordForTeam,
+} from "@/lib/campaigns/campaign-service";
 import type { SessionUser } from "@/lib/domain";
 import { getTodayDateKey } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
@@ -138,6 +142,16 @@ export async function saveSubmission(
 
   assertCanProxySubmit(actor, subjectSession);
 
+  const campaign =
+    taskRaw.campaignOnly && subjectSession.teamId
+      ? await getDailyCampaignRecordForTeam(subjectSession.teamId, dateKey)
+      : null;
+  assertCampaignOnlyTaskCanSubmit({
+    campaignOnly: !!taskRaw.campaignOnly,
+    taskId: taskRaw._id.toString(),
+    campaignTaskIds: campaign?.taskIds.map((id) => id.toString()) ?? [],
+  });
+
   const taskType = normalizeTaskType(taskRaw.taskType);
   const isDailyTask = isDailyTaskType(taskType);
   const count = clampSubmissionCountForTaskType(taskType, requestedCount);
@@ -148,7 +162,7 @@ export async function saveSubmission(
   }
 
   const lateWindowDays = taskRaw.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS;
-  if (!isTaskScheduledForDate(taskRaw, dateKey)) {
+  if (!taskRaw.campaignOnly && !isTaskScheduledForDate(taskRaw, dateKey)) {
     throw new Error("Nhiệm vụ này không được lên lịch cho ngày đã chọn.");
   }
   if (!isWithinLateWindow(dateKey, lateWindowDays)) {
