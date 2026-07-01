@@ -4,6 +4,7 @@ import {
   classifyPushSubscribeError,
   getIOSWebPushInstallStatus,
   persistPushSubscription,
+  resolvePushRefreshPlan,
 } from "@/lib/push/use-web-push";
 
 describe("getIOSWebPushInstallStatus", () => {
@@ -153,5 +154,25 @@ describe("persistPushSubscription", () => {
       message: "Chưa đăng nhập.",
       status: 401,
     });
+  });
+});
+
+describe("resolvePushRefreshPlan", () => {
+  it("does not recreate a missing subscription during refresh after notifications were turned off", () => {
+    expect(
+      resolvePushRefreshPlan({
+        permission: "granted",
+        hasSubscription: false,
+      }),
+    ).toBe("default");
+  });
+
+  it("keeps an existing granted subscription active during refresh", () => {
+    expect(
+      resolvePushRefreshPlan({
+        permission: "granted",
+        hasSubscription: true,
+      }),
+    ).toBe("persist");
   });
 });

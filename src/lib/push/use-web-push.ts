@@ -48,6 +48,8 @@ type PushDebugEntry = {
   details: PushDebugDetails;
 };
 
+type PushRefreshPlan = "persist" | "default";
+
 declare global {
   interface Window {
     __ubuntuPushDebugLogs?: PushDebugEntry[];
@@ -239,6 +241,17 @@ export function classifyPushSubscribeError(error: unknown): PushSubscribeResult 
   return { ok: false, reason: "error" };
 }
 
+export function resolvePushRefreshPlan(input: {
+  permission: NotificationPermission;
+  hasSubscription: boolean;
+}): PushRefreshPlan {
+  if (input.permission === "granted" && input.hasSubscription) {
+    return "persist";
+  }
+
+  return "default";
+}
+
 export async function persistPushSubscription(
   subscription: PushSubscription,
   userAgent: string,
@@ -333,22 +346,16 @@ export function useWebPush() {
     }
     try {
       const reg = await getReadyServiceWorkerRegistration();
-      let sub = await reg.pushManager.getSubscription();
+      const sub = await reg.pushManager.getSubscription();
       logPushDebug("refresh:subscription", getSubscriptionDebug(sub));
 
-      if (Notification.permission === "granted") {
-        if (!sub) {
-          logPushDebug("refresh:subscribe_missing:start");
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(vapidKey),
-          });
-          logPushDebug(
-            "refresh:subscribe_missing:success",
-            getSubscriptionDebug(sub),
-          );
-        }
-
+      if (
+        resolvePushRefreshPlan({
+          permission: Notification.permission,
+          hasSubscription: Boolean(sub),
+        }) === "persist" &&
+        sub
+      ) {
         const result = await persistPushSubscription(sub, navigator.userAgent);
         logPushDebug("refresh:persist_result", result);
         setStatus(result.ok ? "subscribed" : "default");
