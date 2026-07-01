@@ -7,6 +7,7 @@ import {
 } from "@/lib/campaigns/constants";
 import {
   assertCanManageDailyCampaign,
+  buildCampaignReportRows,
   normalizeCampaignTaskIds,
 } from "@/lib/campaigns/campaign-service";
 import type { SessionUser } from "@/lib/domain";
@@ -82,5 +83,53 @@ describe("campaign-only task input", () => {
       scheduledMonthDays: [],
       targetCount: null,
     });
+  });
+});
+
+describe("campaign report rows", () => {
+  it("marks a user complete only when all applicable campaign tasks are complete", () => {
+    const rows = buildCampaignReportRows({
+      taskIds: ["task-a", "task-b"],
+      users: [
+        { id: "u1", fullName: "A", role: "NGV" },
+        { id: "u2", fullName: "B", role: "NGV" },
+      ],
+      applicableUserIdsByTaskId: new Map([
+        ["task-a", new Set(["u1", "u2"])],
+        ["task-b", new Set(["u1", "u2"])],
+      ]),
+      completionByTaskUser: new Map([
+        ["task-a:u1", 1],
+        ["task-b:u1", 1],
+        ["task-a:u2", 1],
+      ]),
+    });
+
+    expect(rows).toEqual([
+      {
+        id: "u1",
+        fullName: "A",
+        role: "NGV",
+        completed: 2,
+        total: 2,
+        isComplete: true,
+        statuses: [
+          { taskId: "task-a", applicable: true, completionCount: 1 },
+          { taskId: "task-b", applicable: true, completionCount: 1 },
+        ],
+      },
+      {
+        id: "u2",
+        fullName: "B",
+        role: "NGV",
+        completed: 1,
+        total: 2,
+        isComplete: false,
+        statuses: [
+          { taskId: "task-a", applicable: true, completionCount: 1 },
+          { taskId: "task-b", applicable: true, completionCount: 0 },
+        ],
+      },
+    ]);
   });
 });

@@ -77,6 +77,15 @@ export function MemberDashboard({
 
       <GoalNoticeBanner notice={data.goalNotice} />
 
+      {data.campaign && data.campaign.cards.length > 0 && (
+        <TaskCardSection
+          title="Chiến dịch hôm nay"
+          cards={data.campaign.cards}
+          userId={userId}
+          variant="member"
+        />
+      )}
+
       <TaskCardSection
         title="Nhiệm vụ hôm nay"
         cards={todayCards}

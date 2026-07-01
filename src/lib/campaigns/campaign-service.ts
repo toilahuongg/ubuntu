@@ -15,6 +15,7 @@ import { normalizeTaskType } from "@/lib/tasks/constants";
 import { appliesToUser, type ScopeContext } from "@/lib/tasks/policy";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
 import { taskToScope } from "@/lib/tasks/task-service";
+import type { CampaignReportEntry } from "@/lib/tasks/types";
 import { toObjectId } from "@/lib/utils/ids";
 
 export function assertCanManageDailyCampaign(
@@ -71,6 +72,55 @@ export function isTaskEligibleForCampaign(
   return campaignRoleUserShapes(teamId).some((user) =>
     appliesToUser(scope, user),
   );
+}
+
+export function buildCampaignReportRows(input: {
+  taskIds: string[];
+  users: Array<{
+    id: string;
+    fullName: string;
+    role: CampaignReportEntry["role"];
+  }>;
+  applicableUserIdsByTaskId: Map<string, Set<string>>;
+  completionByTaskUser: Map<string, number>;
+}): CampaignReportEntry[] {
+  return input.users.map((user) => {
+    const statuses = input.taskIds.map((taskId) => {
+      const applicable =
+        input.applicableUserIdsByTaskId.get(taskId)?.has(user.id) ?? false;
+      const completionCount =
+        input.completionByTaskUser.get(`${taskId}:${user.id}`) ?? 0;
+      return { taskId, applicable, completionCount };
+    });
+    const applicableStatuses = statuses.filter((status) => status.applicable);
+    const completed = applicableStatuses.filter(
+      (status) => status.completionCount > 0,
+    ).length;
+
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      role: user.role,
+      completed,
+      total: applicableStatuses.length,
+      isComplete:
+        applicableStatuses.length > 0 &&
+        completed === applicableStatuses.length,
+      statuses,
+    };
+  });
+}
+
+export async function getDailyCampaignRecordForTeam(
+  teamId: string | null | undefined,
+  dateKey: string,
+): Promise<DailyCampaignRecord | null> {
+  if (!teamId) return null;
+  await connectToDatabase();
+  return (await DailyCampaignModel.findOne({
+    date: dateKey,
+    teamId: toObjectId(teamId),
+  }).lean()) as DailyCampaignRecord | null;
 }
 
 export async function saveDailyCampaign(

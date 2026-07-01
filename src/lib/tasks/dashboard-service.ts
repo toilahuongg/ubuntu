@@ -1,5 +1,11 @@
 import "server-only";
 
+import {
+  buildCampaignReportRows,
+  getDailyCampaignRecordForTeam,
+  isTaskEligibleForCampaign,
+} from "@/lib/campaigns/campaign-service";
+import { isCampaignRole } from "@/lib/campaigns/constants";
 import { getDailyScripture } from "@/lib/daily-scripture";
 import type { Role, SerializedUser, SessionUser, TaskScope } from "@/lib/domain";
 import { createDeadlineAt, getYearMonthFromDateKey } from "@/lib/dates";
@@ -38,6 +44,7 @@ import type {
   DashboardGoalNotice,
   DashboardRosterEntry,
   DashboardView,
+  DailyCampaignView,
   LeaderDashboardView,
   MemberDashboardView,
   ScopeLabel,
@@ -82,6 +89,10 @@ type DashboardLookup = {
   completedSubmissionCount: number;
   submissionByTaskUser: Map<string, SubmissionRecordModel>;
   submissionsByTaskId: Map<string, SubmissionRecordModel[]>;
+};
+
+type CampaignDashboardUser = DashboardVisibleUser & {
+  fullName: string;
 };
 
 async function loadScopeDataForVisibleUsers(
@@ -418,6 +429,126 @@ export function buildTaskCard(
   };
 }
 
+async function buildDailyCampaignView(input: {
+  actor: SessionUser;
+  dateKey: string;
+  users: CampaignDashboardUser[];
+  dttUserIdsSet: Set<string>;
+  visibilityOverrides: Map<string, boolean>;
+}): Promise<DailyCampaignView | null> {
+  const { actor, dateKey, dttUserIdsSet, users, visibilityOverrides } = input;
+  const campaign = await getDailyCampaignRecordForTeam(actor.teamId, dateKey);
+  if (!campaign || campaign.taskIds.length === 0 || !actor.teamId) {
+    return null;
+  }
+  const teamId = actor.teamId;
+  const campaignUsers = users.filter((user) => isCampaignRole(user.role));
+  if (campaignUsers.length === 0) {
+    return null;
+  }
+
+  const campaignTaskIdStrings = campaign.taskIds.map((id) => id.toString());
+  const campaignTasksRaw = (await TaskModel.find({
+    _id: { $in: campaign.taskIds },
+    isActive: true,
+    teamId: toObjectId(teamId),
+  }).lean()) as TaskRecord[];
+  const taskById = new Map(
+    campaignTasksRaw.map((task) => [task._id.toString(), task]),
+  );
+  const campaignTasks = campaignTaskIdStrings
+    .map((taskId) => taskById.get(taskId))
+    .filter((task): task is TaskRecord =>
+      Boolean(task && isTaskEligibleForCampaign(task, teamId, dateKey)),
+    )
+    .filter((task) => normalizeTaskType(task.taskType) !== "COUNT_TOTAL");
+
+  if (campaignTasks.length === 0) {
+    return null;
+  }
+
+  const userIds = campaignUsers.map((user) => toObjectId(user.id));
+  const taskIds = campaignTasks.map((task) => task._id);
+  const [submissions, reminderPreferences] = await Promise.all([
+    SubmissionModel.find({
+      date: dateKey,
+      subjectUserId: { $in: userIds },
+      taskId: { $in: taskIds },
+    }).lean() as Promise<SubmissionRecordModel[]>,
+    TaskReminderPreferenceModel.find({
+      taskId: { $in: taskIds },
+      userId: toObjectId(actor.id),
+    })
+      .select({ enabled: 1, reminderTime: 1, taskId: 1 })
+      .lean(),
+  ]);
+  const reminderByTaskId = new Map(
+    reminderPreferences.map((p) => [
+      p.taskId.toString(),
+      { enabled: p.enabled, reminderTime: p.reminderTime },
+    ]),
+  );
+
+  const dashboardUsers = campaignUsers.map((user) => ({
+    ...user,
+    isDttUser: dttUserIdsSet.has(user.id),
+  }));
+  const lookup = buildDashboardLookup(
+    campaignTasks,
+    dashboardUsers,
+    submissions,
+    visibilityOverrides,
+  );
+  const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
+    await loadProgressAggregates(
+      campaignTasks,
+      campaignUsers.map((user) => user.id),
+      dateKey,
+    );
+  const actorShape = userShape(actor, dttUserIdsSet);
+  const actorCampaignTasks = campaignTasks.filter((task) => {
+    const taskId = task._id.toString();
+    const override = visibilityOverrides.get(`${taskId}:${actor.id}`);
+    if (override !== undefined) return override;
+    return appliesToUser(taskToScope(task), actorShape);
+  });
+  const cards = actorCampaignTasks.map((task) =>
+    buildTaskCard(task, {
+      actorId: actor.id,
+      actorShape,
+      dateKey,
+      lookup,
+      totalByTask,
+      monthlyByTaskUser,
+      goalByTaskUser,
+      reminderByTaskId,
+    }),
+  );
+  const completionByTaskUser = new Map<string, number>();
+  for (const submission of submissions) {
+    const taskId = submission.taskId.toString();
+    const userId = submission.subjectUserId.toString();
+    completionByTaskUser.set(
+      buildSubmissionKey(taskId, userId),
+      submission.completionCount ?? 0,
+    );
+  }
+  const taskIdStrings = campaignTasks.map((task) => task._id.toString());
+
+  return {
+    id: campaign._id.toString(),
+    date: dateKey,
+    taskIds: taskIdStrings,
+    cards,
+    report: buildCampaignReportRows({
+      taskIds: taskIdStrings,
+      users: campaignUsers,
+      applicableUserIdsByTaskId: lookup.applicableUserIdsByTaskId,
+      completionByTaskUser,
+    }),
+  };
+}
+
 export async function buildDashboardView(
   actor: SessionUser,
   dateKey: string,
@@ -431,8 +562,20 @@ export async function buildDashboardView(
   const filteredAllTasks = allTasks.filter(
     (t) => normalizeTaskType(t.taskType) !== "COUNT_TOTAL",
   );
+  const campaign = await buildDailyCampaignView({
+    actor,
+    dateKey,
+    dttUserIdsSet,
+    users: visibleUsers,
+    visibilityOverrides,
+  });
+  const campaignTaskIds = new Set(campaign?.taskIds ?? []);
 
-  const sortedTasks = sortTasksForDisplay(filteredRelevantTasks);
+  const sortedTasks = sortTasksForDisplay(
+    filteredRelevantTasks.filter(
+      (task) => !campaignTaskIds.has(task._id.toString()),
+    ),
+  );
   const taskObjectIds = sortedTasks.map((t) => t._id);
   const reminderPreferences =
     taskObjectIds.length > 0
@@ -530,7 +673,7 @@ export async function buildDashboardView(
           : 0,
     },
     cards,
-    campaign: null,
+    campaign,
     goalNotice,
     roster,
     tasks: sortTasksForDisplay(filteredAllTasks).map(mapTask),
@@ -568,7 +711,10 @@ export async function buildMemberDashboard(
   actor: SessionUser,
   dateKey: string,
 ): Promise<MemberDashboardView> {
-  const [{ relevantTasks, submissions, visibilityOverrides }, progress] = await Promise.all([
+  const [
+    { relevantTasks, submissions, visibilityOverrides, dttUserIdsSet },
+    progress,
+  ] = await Promise.all([
     loadVisibleTasksAndSubs(actor, dateKey),
     getUserProgress(actor.id),
   ]);
@@ -579,11 +725,32 @@ export async function buildMemberDashboard(
     regionId: actor.regionId ?? null,
     role: actor.role,
   };
+  const campaign = await buildDailyCampaignView({
+    actor,
+    dateKey,
+    dttUserIdsSet,
+    users: [
+      {
+        id: actor.id,
+        fullName: actor.fullName,
+        teamId: actor.teamId ?? null,
+        zoneId: actor.zoneId ?? null,
+        regionId: actor.regionId ?? null,
+        role: actor.role,
+      },
+    ],
+    visibilityOverrides,
+  });
+  const campaignTaskIds = new Set(campaign?.taskIds ?? []);
   const personalTasks = relevantTasks.filter((t) => {
     const taskId = t._id.toString();
     const override = visibilityOverrides.get(`${taskId}:${actor.id}`);
     const isApplicable = override !== undefined ? override : appliesToUser(taskToScope(t), actorShape);
-    return isApplicable && normalizeTaskType(t.taskType) !== "COUNT_TOTAL";
+    return (
+      isApplicable &&
+      normalizeTaskType(t.taskType) !== "COUNT_TOTAL" &&
+      !campaignTaskIds.has(taskId)
+    );
   });
 
   const sortedPersonal = sortTasksForDisplay(personalTasks);
@@ -638,7 +805,7 @@ export async function buildMemberDashboard(
   return {
     date: dateKey,
     cards,
-    campaign: null,
+    campaign,
     goalNotice,
     dailyScripture: getDailyScripture(dateKey),
     equipped: progress.equipped,
