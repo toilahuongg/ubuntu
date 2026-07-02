@@ -4,6 +4,7 @@ import type { AdminOperationsView } from "@/lib/services/admin-operations-types"
 
 import {
   filterMembersForSelection,
+  getDisplayMemberProgress,
   getActiveSummary,
   getSelectionEmptyState,
   normalizeSelection,
@@ -174,6 +175,30 @@ describe("operations dashboard helpers", () => {
         regionId: null,
       }).map((member) => member.id),
     ).toEqual(["member-a2", "member-a1"]);
+  });
+
+  it("sorts members by selected task completion from high to low", () => {
+    const selectedTaskView: AdminOperationsView = {
+      ...view,
+      members: [
+        {
+          ...view.members[0],
+          taskProgresses: [{ assigned: 10, completed: 8, taskId: "task-a" }],
+        },
+        {
+          ...view.members[1],
+          taskProgresses: [{ assigned: 10, completed: 2, taskId: "task-a" }],
+        },
+      ],
+    };
+    const members = filterMembersForSelection(selectedTaskView, {
+      teamId: "team-a",
+      zoneId: null,
+      regionId: null,
+    });
+
+    expect(getDisplayMemberProgress(members, "task-a").map((item) => item.member.id))
+      .toEqual(["member-a1", "member-a2"]);
   });
 
   it("allows team member progress without selecting a zone", () => {

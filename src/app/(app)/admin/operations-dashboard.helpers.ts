@@ -1,4 +1,5 @@
 import type {
+  AdminOperationsMember,
   AdminOperationsRegionNode,
   AdminOperationsSelection,
   AdminOperationsSummary,
@@ -112,6 +113,68 @@ export function filterMembersForSelection(
       if (completionDelta !== 0) return completionDelta;
 
       return left.fullName.localeCompare(right.fullName, "vi");
+    });
+}
+
+export type DisplayMemberProgress = {
+  assigned: number;
+  completed: number;
+  completionPercent: number;
+  member: AdminOperationsMember;
+  status: AdminOperationsMember["status"];
+};
+
+export function getDisplayMemberProgress(
+  members: AdminOperationsMember[],
+  selectedTaskId: string | null,
+): DisplayMemberProgress[] {
+  return members
+    .map((member) => {
+      if (!selectedTaskId) {
+        return {
+          assigned: member.summary.assigned,
+          completed: member.summary.completed,
+          completionPercent: member.summary.completionPercent,
+          member,
+          status: member.status,
+        };
+      }
+
+      const progress = member.taskProgresses?.find(
+        (item) => item.taskId === selectedTaskId,
+      ) ?? { assigned: 0, completed: 0 };
+      const completionPercent =
+        progress.assigned > 0
+          ? Math.round((progress.completed / progress.assigned) * 100)
+          : 0;
+      let status: AdminOperationsMember["status"];
+
+      if (progress.assigned === 0) {
+        status = "idle";
+      } else if (progress.completed >= progress.assigned) {
+        status = "complete";
+      } else if (progress.completed === 0) {
+        status = "needs_attention";
+      } else {
+        status = "in_progress";
+      }
+
+      return {
+        assigned: progress.assigned,
+        completed: progress.completed,
+        completionPercent,
+        member,
+        status,
+      };
+    })
+    .toSorted((left, right) => {
+      if (left.completed !== right.completed) {
+        return right.completed - left.completed;
+      }
+      if (left.assigned !== right.assigned) {
+        return right.assigned - left.assigned;
+      }
+      return left.member.fullName.localeCompare(right.member.fullName, "vi");
     });
 }
 

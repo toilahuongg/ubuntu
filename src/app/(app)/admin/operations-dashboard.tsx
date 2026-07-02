@@ -15,6 +15,7 @@ import { AnalyticsChart } from "@/components/analytics-chart";
 import {
   filterMembersForSelection,
   getActiveScopeLabel,
+  getDisplayMemberProgress,
   getSelectionEmptyState,
   normalizeSelection,
 } from "./operations-dashboard.helpers";
@@ -147,6 +148,10 @@ export function OperationsDashboard({
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
   const [selectedCompletionDate, setSelectedCompletionDate] = useState(data.dateKey);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const displayMemberProgress = getDisplayMemberProgress(
+    activeMembers,
+    selectedTaskId,
+  );
 
   return (
     <div className="space-y-4">
@@ -211,33 +216,9 @@ export function OperationsDashboard({
             <EmptyCard text={emptyState} />
           ) : (
             <div className="glass-card divide-y divide-border/60 overflow-hidden">
-              {activeMembers.map((member) => {
+              {displayMemberProgress.map((progress) => {
+                const { member } = progress;
                 const isOpen = openMemberId === member.id;
-
-                let assigned = member.summary.assigned;
-                let completed = member.summary.completed;
-                let completionPercent = member.summary.completionPercent;
-                let status = member.status;
-
-                if (selectedTaskId) {
-                  const progress = member.taskProgresses?.find(
-                    (p) => p.taskId === selectedTaskId,
-                  ) ?? { assigned: 0, completed: 0 };
-                  assigned = progress.assigned;
-                  completed = progress.completed;
-                  completionPercent =
-                    assigned > 0 ? Math.round((completed / assigned) * 100) : 0;
-
-                  if (assigned === 0) {
-                    status = "idle";
-                  } else if (completed >= assigned) {
-                    status = "complete";
-                  } else if (completed === 0) {
-                    status = "needs_attention";
-                  } else {
-                    status = "in_progress";
-                  }
-                }
 
                 return (
                   <div key={member.id}>
@@ -269,17 +250,17 @@ export function OperationsDashboard({
                         <div className="mt-3 h-2 rounded-full bg-muted">
                           <div
                             className={`h-full rounded-full ${
-                              status === "needs_attention"
+                              progress.status === "needs_attention"
                                 ? "bg-amber-500"
-                                : status === "complete"
+                                : progress.status === "complete"
                                   ? "bg-emerald-500"
                                   : "bg-primary"
                             }`}
-                            style={{ width: `${completionPercent}%` }}
+                            style={{ width: `${progress.completionPercent}%` }}
                           />
                         </div>
                         <p className="mt-2 text-[11px] text-muted-foreground">
-                          {completed}/{assigned} task slot hoàn thành trong tháng
+                          {progress.completed}/{progress.assigned} task slot hoàn thành trong tháng
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center justify-end">
