@@ -41,11 +41,13 @@ export function TaskTickButton({
 
   const isLocked = status === "LOCKED";
   const isDone = optimisticCount > 0;
+  const isCompletedMonthlyTask = taskType === "MONTHLY_PER_MEMBER" && isDone;
   const shouldRenderChecked = isDone && taskType !== "COUNT_TOTAL";
   const isTaskCompleted = status === "COMPLETED";
   const disabled =
     isPending ||
     isLocked ||
+    isCompletedMonthlyTask ||
     isGoalComplete ||
     (isTaskCompleted && !isDone);
 
@@ -87,6 +89,8 @@ export function TaskTickButton({
   const label = isDone
     ? taskType === "COUNT_TOTAL"
       ? "Đánh dấu thêm lượt cầu nguyện"
+      : taskType === "MONTHLY_PER_MEMBER"
+        ? "Đã hoàn thành tháng này"
       : "Bỏ hoàn thành"
     : isGoalComplete
       ? "Đã đạt mục tiêu"

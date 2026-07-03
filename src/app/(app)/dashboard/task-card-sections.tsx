@@ -135,6 +135,9 @@ function TaskCardRow({
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
                 {card.completionCount}/{card.totalCount}
+                {card.taskType === "MONTHLY_PER_MEMBER"
+                  ? " tháng này"
+                  : " hôm nay"}
               </span>
             ) : null}
             <span className="flex items-center gap-1">
@@ -208,10 +211,10 @@ function TabButton({
 }
 
 function isCardDone(card: TaskCard) {
-  if (
-    card.taskType === "MONTHLY_PER_MEMBER" ||
-    card.taskType === "WEEKLY_PER_MEMBER"
-  ) {
+  if (card.taskType === "MONTHLY_PER_MEMBER") {
+    return card.progress.isGoalComplete || card.myCompletionCount > 0;
+  }
+  if (card.taskType === "WEEKLY_PER_MEMBER") {
     return card.progress.isGoalComplete;
   }
   if (card.taskType === "COUNT_TOTAL") {

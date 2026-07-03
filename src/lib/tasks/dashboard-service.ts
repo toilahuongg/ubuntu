@@ -77,6 +77,34 @@ type VisibleScopeData = {
   dttUserIdsSet: Set<string>;
 };
 
+export function buildDashboardSubmissionDateFilter(
+  tasks: TaskRecord[],
+  dateKey: string,
+) {
+  const monthlyTasks = tasks.filter(
+    (task) => normalizeTaskType(task.taskType) === "MONTHLY_PER_MEMBER",
+  );
+  const dailyScopedTasks = tasks.filter(
+    (task) => normalizeTaskType(task.taskType) !== "MONTHLY_PER_MEMBER",
+  );
+  const clauses = [];
+
+  if (monthlyTasks.length > 0) {
+    clauses.push({
+      date: { $regex: `^${getYearMonthFromDateKey(dateKey)}` },
+      taskId: { $in: monthlyTasks.map((task) => task._id) },
+    });
+  }
+  if (dailyScopedTasks.length > 0) {
+    clauses.push({
+      date: dateKey,
+      taskId: { $in: dailyScopedTasks.map((task) => task._id) },
+    });
+  }
+
+  return clauses.length === 1 ? clauses[0] : { $or: clauses };
+}
+
 type DashboardVisibleUser = Pick<
   SerializedUser,
   "id" | "teamId" | "zoneId" | "regionId" | "role"
@@ -161,11 +189,12 @@ async function loadScopeDataForVisibleUsers(
     );
   });
 
-  const submissions = (await SubmissionModel.find({
-    date: dateKey,
-    taskId: { $in: relevantTasks.map((t) => t._id) },
-    subjectUserId: { $in: visibleUsers.map((u) => toObjectId(u.id)) },
-  }).lean()) as SubmissionRecordModel[];
+  const submissions = relevantTasks.length > 0
+    ? ((await SubmissionModel.find({
+        ...buildDashboardSubmissionDateFilter(relevantTasks, dateKey),
+        subjectUserId: { $in: visibleUsers.map((u) => toObjectId(u.id)) },
+      }).lean()) as SubmissionRecordModel[])
+    : [];
 
   return { visibleUsers, relevantTasks, allTasks, submissions, visibilityOverrides, dttUserIdsSet };
 }

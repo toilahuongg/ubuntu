@@ -5,6 +5,7 @@ import type { TaskRecord } from "@/lib/models";
 import type { SerializedUser } from "@/lib/domain";
 import {
   buildDashboardGoalNotice,
+  buildDashboardSubmissionDateFilter,
   buildTaskProgress,
   isTaskRelevantForVisibleUsers,
 } from "@/lib/tasks/dashboard-service";
@@ -63,7 +64,7 @@ function makeTask(
     submissionMessage: "",
     targetCount: null,
     targetRoles: input.targetRoles ?? ["MEMBER"],
-    taskType: "MONTHLY_PER_MEMBER",
+    taskType: input.taskType ?? "MONTHLY_PER_MEMBER",
     teamId: new Types.ObjectId(),
     title: input.title,
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -72,6 +73,30 @@ function makeTask(
 }
 
 describe("dashboard task progress", () => {
+  it("loads monthly task submissions from the whole selected month", () => {
+    const monthlyTask = makeTask({
+      _id: new Types.ObjectId(),
+      deadlineTime: "21:00",
+      taskType: "MONTHLY_PER_MEMBER",
+      title: "Monthly",
+    });
+    const dailyTask = makeTask({
+      _id: new Types.ObjectId(),
+      deadlineTime: "21:00",
+      taskType: "DAILY_PER_MEMBER",
+      title: "Daily",
+    });
+
+    expect(
+      buildDashboardSubmissionDateFilter([monthlyTask, dailyTask], "2026-04-20"),
+    ).toEqual({
+      $or: [
+        { date: { $regex: "^2026-04" }, taskId: { $in: [monthlyTask._id] } },
+        { date: "2026-04-20", taskId: { $in: [dailyTask._id] } },
+      ],
+    });
+  });
+
   it("marks monthly tasks without a goal as missing their monthly goal", () => {
     const progress = buildTaskProgress({
       taskType: "MONTHLY_PER_MEMBER",
