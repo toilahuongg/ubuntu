@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { appliesToUser, type ScopeContext } from "@/lib/tasks/policy";
+import {
+  appliesToUser,
+  isWithinTaskOrgScope,
+  type ScopeContext,
+} from "@/lib/tasks/policy";
 
 const regionTask: ScopeContext = {
   regionId: "region-a",
@@ -109,5 +113,22 @@ describe("task targeting policy", () => {
       };
       expect(appliesToUser(taskContext, userScope)).toBe(false);
     });
+  });
+});
+
+describe("task org scope policy", () => {
+  it("matches organization scope independently from target roles", () => {
+    expect(
+      isWithinTaskOrgScope(
+        { ...regionTask, targetRoles: ["REGIONAL_LEAD"] },
+        member,
+      ),
+    ).toBe(true);
+    expect(
+      isWithinTaskOrgScope(
+        { ...regionTask, targetRoles: ["REGIONAL_LEAD"] },
+        { ...member, regionId: "region-b" },
+      ),
+    ).toBe(false);
   });
 });

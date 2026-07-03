@@ -2,9 +2,11 @@ import { Types } from "mongoose";
 import { describe, expect, it } from "vitest";
 
 import type { TaskRecord } from "@/lib/models";
+import type { SerializedUser } from "@/lib/domain";
 import {
   buildDashboardGoalNotice,
   buildTaskProgress,
+  isTaskRelevantForVisibleUsers,
 } from "@/lib/tasks/dashboard-service";
 import { sortTasksForDisplay } from "@/lib/tasks/task-service";
 import type { TaskCard, TaskProgress } from "@/lib/tasks/types";
@@ -60,7 +62,7 @@ function makeTask(
     sortOrder: input.sortOrder ?? null,
     submissionMessage: "",
     targetCount: null,
-    targetRoles: ["MEMBER"],
+    targetRoles: input.targetRoles ?? ["MEMBER"],
     taskType: "MONTHLY_PER_MEMBER",
     teamId: new Types.ObjectId(),
     title: input.title,
@@ -210,5 +212,29 @@ describe("task display order", () => {
       "Second",
       "Fallback task",
     ]);
+  });
+});
+
+describe("personalized task visibility", () => {
+  it("treats an explicit visible override as relevant even when the user's role is not targeted", () => {
+    const task = makeTask({
+      _id: new Types.ObjectId(),
+      deadlineTime: "21:00",
+      targetRoles: ["TEAM_LEAD"],
+      title: "Leader-only task",
+    });
+    const user: SerializedUser = {
+      id: new Types.ObjectId().toString(),
+      fullName: "Member",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: task.teamId.toString(),
+      zoneId: null,
+      regionId: null,
+    };
+
+    const visibilityOverrides = new Map([[`${task._id.toString()}:${user.id}`, true]]);
+
+    expect(isTaskRelevantForVisibleUsers(task, [user], visibilityOverrides)).toBe(true);
   });
 });

@@ -5,8 +5,11 @@ import { getSessionUser } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
 import { canPersonalizeTasks } from "@/lib/permissions";
 import { getUserById } from "@/lib/services/organization-service";
+import { TaskModel } from "@/lib/models/task";
 import { UserTaskVisibilityModel } from "@/lib/models/user-task-visibility";
 import { connectToDatabase } from "@/lib/mongoose";
+import { isWithinTaskOrgScope } from "@/lib/tasks/policy";
+import { taskToScope } from "@/lib/tasks/task-service";
 import { toObjectId } from "@/lib/utils/ids";
 
 export async function toggleTaskVisibilityAction(
@@ -24,6 +27,14 @@ export async function toggleTaskVisibilityAction(
 
     if (!canPersonalizeTasks(actor, targetUser)) {
       throw new Error("Bạn không có quyền cấu hình hiển thị nhiệm vụ cho thành viên này.");
+    }
+
+    const task = await TaskModel.findOne({
+      _id: toObjectId(taskId),
+      isActive: true,
+    }).lean();
+    if (!task || !isWithinTaskOrgScope(taskToScope(task), targetUser)) {
+      throw new Error("Nhiệm vụ không thuộc phạm vi của thành viên này.");
     }
 
     await UserTaskVisibilityModel.updateOne(

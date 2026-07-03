@@ -235,6 +235,40 @@ describe("reminder service scheduling", () => {
     expect(due).toMatchObject([{ chatId: null, taskId: ids.task.toString() }]);
     expect(withGoal).toHaveLength(0);
   });
+
+  it("uses visible overrides for monthly-goal reminders when the user's role is not targeted", () => {
+    const reminders = buildDueMonthlyGoalReminderCandidatesFromData({
+      goals: [],
+      preferences: [preference({ reminderTime: "16:00" })],
+      sentLogs: [],
+      sweepAt: new Date("2026-04-03T09:00:00.000Z"),
+      tasks: [task({ taskType: "MONTHLY_PER_MEMBER", targetRoles: ["TEAM_LEAD"] })],
+      users: [user()],
+      visibilityOverrides: new Map([[`${ids.task.toString()}:${ids.user.toString()}`, true]]),
+      yearMonth: "2026-04",
+    });
+
+    expect(reminders).toHaveLength(1);
+    expect(reminders[0]).toMatchObject({
+      taskId: ids.task.toString(),
+      userId: ids.user.toString(),
+    });
+  });
+
+  it("honors hidden overrides for monthly-goal reminders even when the user's role is targeted", () => {
+    const reminders = buildDueMonthlyGoalReminderCandidatesFromData({
+      goals: [],
+      preferences: [preference({ reminderTime: "16:00" })],
+      sentLogs: [],
+      sweepAt: new Date("2026-04-03T09:00:00.000Z"),
+      tasks: [task({ taskType: "MONTHLY_PER_MEMBER", targetRoles: ["MEMBER"] })],
+      users: [user()],
+      visibilityOverrides: new Map([[`${ids.task.toString()}:${ids.user.toString()}`, false]]),
+      yearMonth: "2026-04",
+    });
+
+    expect(reminders).toHaveLength(0);
+  });
 });
 
 describe("reminder service DTT enrollment awareness", () => {

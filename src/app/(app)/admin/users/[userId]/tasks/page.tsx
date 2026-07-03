@@ -27,11 +27,24 @@ export default async function MemberTasksPage({
     redirect("/admin/users");
   }
 
-  // Lấy danh sách tất cả nhiệm vụ đang hoạt động trong nhóm
-  const tasks = await TaskModel.find({
-    isActive: true,
-    teamId: toObjectId(targetUser.teamId ?? ""),
-  }).lean();
+  const scopeClauses: Record<string, unknown>[] = [];
+  if (targetUser.teamId) {
+    scopeClauses.push({ scope: "TEAM", teamId: toObjectId(targetUser.teamId) });
+  }
+  if (targetUser.zoneId) {
+    scopeClauses.push({ scope: "ZONE", zoneId: toObjectId(targetUser.zoneId) });
+  }
+  if (targetUser.regionId) {
+    scopeClauses.push({ scope: "REGION", regionId: toObjectId(targetUser.regionId) });
+  }
+
+  // Lấy danh sách tất cả nhiệm vụ đang hoạt động trong phạm vi tổ chức của thành viên
+  const tasks = scopeClauses.length > 0
+    ? await TaskModel.find({
+        isActive: true,
+        $or: scopeClauses,
+      }).lean()
+    : [];
 
   // Lấy ghi đè cấu hình hiển thị hiện tại
   const overrides = await UserTaskVisibilityModel.find({

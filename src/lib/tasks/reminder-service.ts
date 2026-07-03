@@ -154,6 +154,19 @@ function recordUserShape(user: ReminderUserLike, dttUserIdsSet?: Set<string>) {
   };
 }
 
+function isTaskApplicableToReminderUser(input: {
+  dttUserIdsSet?: Set<string>;
+  scope: ScopeContext;
+  taskId: string;
+  user: ReminderUserLike;
+  visibilityOverrides?: Map<string, boolean>;
+}) {
+  const userId = input.user._id.toString();
+  const override = input.visibilityOverrides?.get(pairKey(input.taskId, userId));
+  if (override !== undefined) return override;
+  return appliesToUser(input.scope, recordUserShape(input.user, input.dttUserIdsSet));
+}
+
 function pairKey(taskId: string, userId: string) {
   return `${taskId}:${userId}`;
 }
@@ -248,6 +261,7 @@ export function buildDueMonthlyGoalReminderCandidatesFromData(input: {
   sweepAt: Date;
   tasks: TaskRecord[];
   users: ReminderUserLike[];
+  visibilityOverrides?: Map<string, boolean>;
   windowMinutes?: number;
   yearMonth: string;
 }): ReminderCandidate[] {
@@ -277,7 +291,17 @@ export function buildDueMonthlyGoalReminderCandidatesFromData(input: {
       const key = pairKey(taskId, userId);
       if (sentPairs.has(key)) continue;
       if (goalPairs.has(key)) continue;
-      if (!appliesToUser(scope, recordUserShape(user, input.dttUserIdsSet))) continue;
+      if (
+        !isTaskApplicableToReminderUser({
+          dttUserIdsSet: input.dttUserIdsSet,
+          scope,
+          taskId,
+          user,
+          visibilityOverrides: input.visibilityOverrides,
+        })
+      ) {
+        continue;
+      }
 
       const schedule = resolveEffectiveReminderTime({
         defaultReminderTime: task.deadlineTime,
@@ -346,7 +370,14 @@ export async function setTaskReminderPreference(
   await connectToDatabase();
   const task = (await TaskModel.findById(input.taskId).lean()) as TaskRecord | null;
   if (!task) throw new Error("Nhiệm vụ không còn tồn tại.");
-  if (!appliesToUser(taskToScope(task), userShape(actor))) {
+  const override = await UserTaskVisibilityModel.findOne({
+    taskId: toObjectId(input.taskId),
+    userId: toObjectId(actor.id),
+  }).lean();
+  const isApplicable = override !== null
+    ? override.isVisible
+    : appliesToUser(taskToScope(task), userShape(actor));
+  if (!isApplicable) {
     throw new Error("Bạn không có quyền đặt nhắc cho nhiệm vụ này.");
   }
 
@@ -476,7 +507,7 @@ export async function getMonthlyGoalReminderCandidates(
 
   const taskIds = tasks.map((task) => task._id);
   const userIds = users.map((user) => user._id);
-  const [sentLogs, goals, preferences, dttEnrollments] = await Promise.all([
+  const [sentLogs, goals, preferences, dttEnrollments, visibilities] = await Promise.all([
     ReminderLogModel.find({
       date: yearMonth,
       taskId: { $in: taskIds },
@@ -487,8 +518,15 @@ export async function getMonthlyGoalReminderCandidates(
     }).lean() as Promise<MonthlyGoalRecord[]>,
     getPreferences(taskIds, userIds),
     DttEnrollmentModel.find({ userId: { $in: userIds } }).lean(),
+    UserTaskVisibilityModel.find({
+      userId: { $in: userIds },
+      taskId: { $in: taskIds },
+    }).lean(),
   ]);
   const dttUserIdsSet = new Set(dttEnrollments.map((e) => e.userId.toString()));
+  const visibilityOverrides = new Map<string, boolean>(
+    visibilities.map((v) => [`${v.taskId.toString()}:${v.userId.toString()}`, v.isVisible])
+  );
 
   return buildDueMonthlyGoalReminderCandidatesFromData({
     dttUserIdsSet,
@@ -498,6 +536,7 @@ export async function getMonthlyGoalReminderCandidates(
     sweepAt,
     tasks,
     users,
+    visibilityOverrides,
     windowMinutes: options.windowMinutes,
     yearMonth,
   });

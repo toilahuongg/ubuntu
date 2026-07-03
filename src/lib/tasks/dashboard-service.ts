@@ -95,6 +95,20 @@ type CampaignDashboardUser = DashboardVisibleUser & {
   fullName: string;
 };
 
+export function isTaskRelevantForVisibleUsers(
+  task: TaskRecord,
+  users: SerializedUser[],
+  visibilityOverrides: Map<string, boolean>,
+  dttUserIdsSet?: Set<string>,
+) {
+  const scope = taskToScope(task);
+  return users.some((u) => {
+    const override = visibilityOverrides.get(`${task._id.toString()}:${u.id}`);
+    if (override === true) return true;
+    return appliesToUser(scope, userShape(u, dttUserIdsSet));
+  });
+}
+
 async function loadScopeDataForVisibleUsers(
   dateKey: string,
   visibleUsers: SerializedUser[],
@@ -132,13 +146,18 @@ async function loadScopeDataForVisibleUsers(
 
   const dttUserIdsSet = new Set(dttEnrollments.map((e) => e.userId.toString()));
 
+  const visibilities = await UserTaskVisibilityModel.find({
+    userId: { $in: visibleUsers.map((u) => toObjectId(u.id)) },
+    taskId: { $in: allTasks.map((t) => t._id) },
+  }).lean();
+  const visibilityOverrides = new Map<string, boolean>(
+    visibilities.map((v) => [`${v.taskId.toString()}:${v.userId.toString()}`, v.isVisible])
+  );
+
   const relevantTasks = allTasks.filter((t) => {
-    const scope = taskToScope(t);
     return (
       isTaskScheduledForDate(t, dateKey) &&
-      visibleUsers.some((u) => {
-        return appliesToUser(scope, userShape(u, dttUserIdsSet));
-      })
+      isTaskRelevantForVisibleUsers(t, visibleUsers, visibilityOverrides, dttUserIdsSet)
     );
   });
 
@@ -147,14 +166,6 @@ async function loadScopeDataForVisibleUsers(
     taskId: { $in: relevantTasks.map((t) => t._id) },
     subjectUserId: { $in: visibleUsers.map((u) => toObjectId(u.id)) },
   }).lean()) as SubmissionRecordModel[];
-
-  const visibilities = await UserTaskVisibilityModel.find({
-    userId: { $in: visibleUsers.map((u) => toObjectId(u.id)) },
-    taskId: { $in: allTasks.map((t) => t._id) },
-  }).lean();
-  const visibilityOverrides = new Map<string, boolean>(
-    visibilities.map((v) => [`${v.taskId.toString()}:${v.userId.toString()}`, v.isVisible])
-  );
 
   return { visibleUsers, relevantTasks, allTasks, submissions, visibilityOverrides, dttUserIdsSet };
 }

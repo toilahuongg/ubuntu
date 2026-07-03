@@ -85,6 +85,21 @@ export function appliesToUser(
   return false;
 }
 
+export function isWithinTaskOrgScope(
+  task: Pick<ScopeContext, "scope" | "teamId" | "zoneId" | "regionId">,
+  user: Pick<UserScope, "teamId" | "zoneId" | "regionId">,
+): boolean {
+  if (!user.teamId) return false;
+  if (task.scope === "TEAM") return task.teamId === user.teamId;
+  if (task.scope === "ZONE") {
+    return !!user.zoneId && task.zoneId === user.zoneId;
+  }
+  if (task.scope === "REGION") {
+    return !!user.regionId && task.regionId === user.regionId;
+  }
+  return false;
+}
+
 export function canManageTask(
   actor: SessionUser,
   task: ScopeContext,
