@@ -29,7 +29,6 @@ export function canManageTasks(user: SessionUser) {
 export function canManageDtt(user: SessionUser) {
   if (isAdmin(user)) return true;
   if (isTeamLead(user)) return !!user.teamId;
-  if (isZoneLead(user)) return !!user.zoneId;
   if (isRegionalLead(user)) return !!user.regionId;
   return false;
 }
@@ -38,13 +37,6 @@ export function canPersonalizeTasks(actor: SessionUser, subject: SessionUser) {
   if (isAdmin(actor)) return true;
   if (isTeamLead(actor)) {
     return !!actor.teamId && actor.teamId === subject.teamId;
-  }
-  if (isZoneLead(actor)) {
-    return (
-      isMemberLike(subject) &&
-      !!actor.zoneId &&
-      actor.zoneId === subject.zoneId
-    );
   }
   return false;
 }

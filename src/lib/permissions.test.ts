@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canCreateInteraction,
   canManageCustomer,
+  canManageDtt,
   canManageTasks,
   canPersonalizeTasks,
   canProxySubmit,
@@ -299,6 +300,21 @@ describe("canManageTasks", () => {
   });
 });
 
+describe("canManageDtt", () => {
+  it("denies zone leads", () => {
+    expect(
+      canManageDtt({
+        fullName: "Zone Lead",
+        id: "zone-lead",
+        role: "ZONE_LEAD",
+        status: "ACTIVE",
+        teamId: "team-a",
+        zoneId: "zone-a",
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("canPersonalizeTasks", () => {
   const subject = {
     fullName: "Member",
@@ -310,7 +326,7 @@ describe("canPersonalizeTasks", () => {
     regionId: "region-a",
   };
 
-  it("allows admin, team lead (same team), and zone lead (same zone)", () => {
+  it("allows admin and team lead (same team)", () => {
     expect(
       canPersonalizeTasks(
         {
@@ -336,6 +352,9 @@ describe("canPersonalizeTasks", () => {
       ),
     ).toBe(true);
 
+  });
+
+  it("denies zone leads, regional leads, and leads from other scopes", () => {
     expect(
       canPersonalizeTasks(
         {
@@ -347,10 +366,8 @@ describe("canPersonalizeTasks", () => {
         },
         subject,
       ),
-    ).toBe(true);
-  });
+    ).toBe(false);
 
-  it("denies regional leads and leads from other scopes", () => {
     expect(
       canPersonalizeTasks(
         {

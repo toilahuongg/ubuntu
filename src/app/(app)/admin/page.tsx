@@ -213,28 +213,33 @@ function ManagementHome({
 }) {
   const isAdmin = role === "ADMIN";
   const primaryTeam = snapshot.teams[0];
-  const operationItems: NavItem[] = [
-    {
-      href: "/templates",
-      icon: ClipboardList,
-      label: "Nhiệm vụ",
-      description: isAdmin
-        ? "Quản lý mẫu nhiệm vụ toàn hệ thống"
-        : "Quản lý mẫu nhiệm vụ trong nhóm",
-    },
-    {
-      href: "/admin/dtt",
-      icon: Shield,
-      label: "Trường học ĐTT",
-      description: "Quản lý lớp học, học viên và gán nhanh nhiệm vụ",
-    },
-    {
+  const operationItems: NavItem[] = [];
+
+  if (role !== "ZONE_LEAD") {
+    operationItems.push(
+      {
+        href: "/templates",
+        icon: ClipboardList,
+        label: "Nhiệm vụ",
+        description: isAdmin
+          ? "Quản lý mẫu nhiệm vụ toàn hệ thống"
+          : "Quản lý mẫu nhiệm vụ trong nhóm",
+      },
+      {
+        href: "/admin/dtt",
+        icon: Shield,
+        label: "Trường học ĐTT",
+        description: "Quản lý lớp học, học viên và gán nhanh nhiệm vụ",
+      },
+    );
+  }
+
+  operationItems.push({
       href: "/admin/cosmetics",
       icon: ShoppingBag,
       label: "Cửa hàng",
       description: "Quản lý vật phẩm, giá bán và trạng thái",
-    },
-  ];
+  });
 
   if (role === "TEAM_LEAD") {
     operationItems.push({
