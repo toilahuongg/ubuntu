@@ -147,4 +147,34 @@ describe("leaderboard service", () => {
     });
     expect(pipeline).toContainEqual({ $limit: 5 });
   });
+
+  it("multiplies pointReward by completionCount in monthly points pipeline", async () => {
+    mocks.aggregate.mockResolvedValue([]);
+    mocks.zoneFind.mockReturnValue({
+      select: () => ({
+        lean: () => Promise.resolve([]),
+      }),
+    });
+
+    await getTopZones(10);
+
+    expect(mocks.aggregate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          $group: {
+            _id: "$subjectUserId",
+            monthlyXp: {
+              $sum: {
+                $multiply: [
+                  { $ifNull: ["$task.pointReward", 0] },
+                  { $ifNull: ["$completionCount", 1] },
+                ],
+              },
+            },
+          },
+        }),
+      ]),
+    );
+  });
 });
+

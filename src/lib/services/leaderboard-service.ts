@@ -59,7 +59,14 @@ function buildMonthlyPointsPipeline(yearMonth: string) {
     {
       $group: {
         _id: "$subjectUserId",
-        monthlyXp: { $sum: { $ifNull: ["$task.pointReward", 0] } },
+        monthlyXp: {
+          $sum: {
+            $multiply: [
+              { $ifNull: ["$task.pointReward", 0] },
+              { $ifNull: ["$completionCount", 1] },
+            ],
+          },
+        },
       },
     },
     { $match: { monthlyXp: { $gt: 0 } } },
