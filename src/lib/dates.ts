@@ -1,3 +1,4 @@
+import { subDays, addDays } from "date-fns";
 import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
 
 import { DEFAULT_TIMEZONE } from "@/lib/domain";
@@ -52,4 +53,22 @@ export function getIsoWeekdayFromDateKey(dateKey: string) {
     ),
     10,
   );
+}
+
+export function getWeekRangeFromDateKey(dateKey: string, startDayOfWeek: number) {
+  const currentWeekday = getIsoWeekdayFromDateKey(dateKey); // 1 = Monday, 7 = Sunday
+  let delta = currentWeekday - startDayOfWeek;
+  if (delta < 0) {
+    delta += 7;
+  }
+
+  const tz = getAppTimezone();
+  const dateObj = fromZonedTime(`${dateKey}T00:00:00`, tz);
+  const startDateObj = subDays(dateObj, delta);
+  const endDateObj = addDays(startDateObj, 6);
+
+  const startStr = formatInTimeZone(startDateObj, tz, "yyyy-MM-dd");
+  const endStr = formatInTimeZone(endDateObj, tz, "yyyy-MM-dd");
+
+  return { startStr, endStr };
 }
