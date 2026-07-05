@@ -5,6 +5,7 @@ const dttClassSchema = new Schema(
     name: { required: true, trim: true, type: String },
     teamId: { ref: "Team", required: true, type: Schema.Types.ObjectId, index: true },
     createdBy: { ref: "User", required: true, type: Schema.Types.ObjectId },
+    startDayOfWeek: { required: true, type: Number, default: 1, min: 1, max: 7 },
   },
   { timestamps: true }
 );
@@ -16,9 +17,11 @@ export type DttClassRecord = {
   name: string;
   teamId: Types.ObjectId;
   createdBy: Types.ObjectId;
+  startDayOfWeek: number;
   createdAt: Date;
   updatedAt: Date;
 };
 
 export const DttClassModel =
   models.DttClass || model("DttClass", dttClassSchema);
+

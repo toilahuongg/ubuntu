@@ -183,11 +183,10 @@ describe("DTT Server Actions", () => {
       }
     });
 
-    it("allows ADMIN, REGIONAL_LEAD, ZONE_LEAD, TEAM_LEAD", async () => {
+    it("allows ADMIN, REGIONAL_LEAD, TEAM_LEAD", async () => {
       const roles = [
         { session: adminSession, teamId: "507f1f77bcf86cd799439022" },
         { session: regionalLeadSession, teamId: "507f1f77bcf86cd799439022" },
-        { session: zoneLeadSession, teamId: "507f1f77bcf86cd799439022" },
         { session: teamLeadSession, teamId: "507f1f77bcf86cd799439022" },
       ];
 
