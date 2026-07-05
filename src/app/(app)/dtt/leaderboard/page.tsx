@@ -3,7 +3,7 @@ import { Trophy } from "lucide-react";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { canManageDtt } from "@/lib/permissions";
-import { DttClassModel } from "@/lib/models/dtt-class";
+import { DttClassModel, type DttClassRecord } from "@/lib/models/dtt-class";
 import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
 import { connectToDatabase } from "@/lib/mongoose";
 import { getDttClassLeaderboard } from "@/lib/services/leaderboard-service";
@@ -125,7 +125,7 @@ export default async function DttLeaderboardPage({
   }
 
   let activeClassId: string | undefined = undefined;
-  let classes: any[] = [];
+  let classes: DttClassRecord[] = [];
 
   const resolvedSearchParams = await searchParams;
   const classParam = getSingleParam(resolvedSearchParams.classId);
@@ -133,10 +133,15 @@ export default async function DttLeaderboardPage({
 
   if (isManager) {
     const teamId = session.teamId ? toObjectId(session.teamId) : null;
-    classes = teamId ? await DttClassModel.find({ teamId }).lean() : [];
+    classes = teamId ? (await DttClassModel.find({ teamId }).lean()) as DttClassRecord[] : [];
     
     if (classParam) {
-      activeClassId = classParam;
+      const exists = classes.some((c) => c._id.toString() === classParam);
+      if (exists) {
+        activeClassId = classParam;
+      } else {
+        activeClassId = classes.length > 0 ? classes[0]._id.toString() : undefined;
+      }
     } else if (classes.length > 0) {
       activeClassId = classes[0]._id.toString();
     }

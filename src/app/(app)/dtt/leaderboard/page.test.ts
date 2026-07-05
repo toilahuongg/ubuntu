@@ -15,7 +15,7 @@ vi.mock("@/lib/auth/session", () => ({
 }));
 
 vi.mock("@/lib/permissions", () => ({
-  canManageDtt: (user: any) => mockCanManageDtt(user),
+  canManageDtt: (user: unknown) => mockCanManageDtt(user),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -147,5 +147,27 @@ describe("DttLeaderboardPage", () => {
     const str = JSON.stringify(result);
     expect(str).toContain("Enrolled Class");
     expect(str).toContain("Thứ Ba");
+  });
+
+  it("falls back to the first class if manager visits with classId that does not belong to team", async () => {
+    const session = { id: "60c72b2f9b1d8b2d88888881", role: "TEAM_LEAD", status: "ACTIVE", teamId: "60c72b2f9b1d8b2d88888882" };
+    mockGetSessionUser.mockResolvedValue(session);
+    mockCanManageDtt.mockReturnValue(true);
+    mockEnrollmentFindOne.mockResolvedValue(null);
+    mockClassFind.mockResolvedValue([
+      { _id: "60c72b2f9b1d8b2d88888883", name: "Class 1", teamId: "60c72b2f9b1d8b2d88888882", startDayOfWeek: 1 },
+      { _id: "60c72b2f9b1d8b2d88888884", name: "Class 2", teamId: "60c72b2f9b1d8b2d88888882", startDayOfWeek: 1 },
+    ]);
+    mockGetDttClassLeaderboard.mockResolvedValue({
+      classInfo: { name: "Class 1", startDayOfWeek: 1, startStr: "2026-07-01", endStr: "2026-07-07" },
+      entries: [],
+      tasks: [],
+    });
+
+    const result = await DttLeaderboardPage({ searchParams: Promise.resolve({ classId: "60c72b2f9b1d8b2d88888889" }) });
+    
+    expect(mockGetDttClassLeaderboard).toHaveBeenCalledWith("60c72b2f9b1d8b2d88888883", undefined);
+    const str = JSON.stringify(result);
+    expect(str).toContain("Class 1");
   });
 });
