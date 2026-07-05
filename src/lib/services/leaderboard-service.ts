@@ -277,10 +277,118 @@ export function getLeaderboardMonthLabel(now = new Date()): string {
 export async function getDttClassLeaderboard(
   classId: string,
   taskId?: string,
-): Promise<any> {
+): Promise<{
+  classInfo: { name: string; startDayOfWeek: number; startStr: string; endStr: string };
+  entries: LeaderboardEntry[];
+  tasks: { id: string; title: string }[];
+}> {
   await connectToDatabase();
 
   const classDoc = await DttClassModel.findById(classId).lean();
   if (!classDoc) throw new Error("Không tìm thấy lớp học.");
+
+  const startDayOfWeek = classDoc.startDayOfWeek ?? 1;
+  const { startStr, endStr } = getWeekRangeFromDateKey(getTodayDateKey(), startDayOfWeek);
+
+  const dttTasks = await TaskModel.find({
+    teamId: classDoc.teamId,
+    isActive: true,
+    isDtt: true,
+  }).select({ title: 1 }).lean();
+
+  const enrollments = await DttEnrollmentModel.find({ classId }).lean();
+  const studentUserIds = enrollments.map((e) => e.userId);
+
+  if (studentUserIds.length === 0) {
+    return {
+      classInfo: { name: classDoc.name, startDayOfWeek, startStr, endStr },
+      entries: [],
+      tasks: dttTasks.map((t) => ({ id: t._id.toString(), title: t.title })),
+    };
+  }
+
+  const matchQuery: Record<string, unknown> = {
+    subjectUserId: { $in: studentUserIds },
+    date: { $gte: startStr, $lte: endStr },
+  };
+
+  let aggregated: { _id: string; totalXp: number }[] = [];
+
+  if (!taskId || taskId === "weekly-total") {
+    const activeDttTaskIds = dttTasks.map((t) => t._id);
+    matchQuery.taskId = { $in: activeDttTaskIds };
+
+    const results = await SubmissionModel.aggregate([
+      { $match: matchQuery },
+      {
+        $lookup: {
+          as: "task",
+          foreignField: "_id",
+          from: "tasks",
+          localField: "taskId",
+        },
+      },
+      { $unwind: "$task" },
+      {
+        $group: {
+          _id: "$subjectUserId",
+          totalXp: {
+            $sum: {
+              $multiply: [
+                { $ifNull: ["$task.pointReward", 0] },
+                { $ifNull: ["$completionCount", 1] },
+              ],
+            },
+          },
+        },
+      },
+      { $match: { totalXp: { $gt: 0 } } },
+      { $sort: { totalXp: -1 } },
+    ]);
+    aggregated = results.map((r) => ({ _id: r._id.toString(), totalXp: r.totalXp }));
+  } else {
+    matchQuery.taskId = toObjectId(taskId);
+
+    const results = await SubmissionModel.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: "$subjectUserId",
+          totalXp: { $sum: { $ifNull: ["$completionCount", 1] } },
+        },
+      },
+      { $match: { totalXp: { $gt: 0 } } },
+      { $sort: { totalXp: -1 } },
+    ]);
+    aggregated = results.map((r) => ({ _id: r._id.toString(), totalXp: r.totalXp }));
+  }
+
+  const users = await UserModel.find({ _id: { $in: studentUserIds } }).lean();
+  const aggregatedMap = new Map(aggregated.map((r) => [r._id, r.totalXp]));
+
+  const studentsWithScores = users.map((u) => {
+    const totalXp = aggregatedMap.get(u._id.toString()) ?? 0;
+    return { user: u, totalXp };
+  });
+
+  studentsWithScores.sort((a, b) => b.totalXp - a.totalXp);
+
+  const formattedEntries = studentsWithScores.map((row, index) =>
+    toLeaderboardEntry(row.user as UserRecord, row.totalXp, index + 1)
+  );
+
+  const equippedMap = await getEquippedPayloadsForUsers(
+    formattedEntries.map((e) => e.id),
+  );
+  const finalEntries = formattedEntries.map((e) => {
+    const eq = equippedMap.get(e.id);
+    return eq ? { ...e, equipped: serializeEquipped(eq) } : e;
+  });
+
+  return {
+    classInfo: { name: classDoc.name, startDayOfWeek, startStr, endStr },
+    entries: finalEntries,
+    tasks: dttTasks.map((t) => ({ id: t._id.toString(), title: t.title })),
+  };
 }
 

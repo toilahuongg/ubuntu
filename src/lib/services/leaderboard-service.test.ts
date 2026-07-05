@@ -211,6 +211,244 @@ describe("leaderboard service", () => {
 
       await expect(getDttClassLeaderboard("60c72b2f9b1d8b2d88888888")).rejects.toThrow("Không tìm thấy lớp học.");
     });
+
+    it("returns empty entries if there are no student enrollments", async () => {
+      mocks.dttClassFindById.mockReturnValue({
+        lean: () =>
+          Promise.resolve({
+            _id: objectId("class-1"),
+            name: "Lớp 1",
+            teamId: objectId("team-1"),
+            startDayOfWeek: 2,
+          }),
+      });
+
+      mocks.taskFind.mockReturnValue({
+        select: () => ({
+          lean: () =>
+            Promise.resolve([
+              { _id: objectId("task-1"), title: "Task 1" },
+            ]),
+        }),
+      });
+
+      mocks.dttEnrollmentFind.mockReturnValue({
+        lean: () => Promise.resolve([]),
+      });
+
+      const result = await getDttClassLeaderboard("class-1");
+
+      expect(result).toEqual({
+        classInfo: {
+          name: "Lớp 1",
+          startDayOfWeek: 2,
+          startStr: "2026-06-01",
+          endStr: "2026-06-07",
+        },
+        entries: [],
+        tasks: [{ id: "task-1", title: "Task 1" }],
+      });
+
+      expect(mocks.taskFind).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isActive: true,
+          isDtt: true,
+        })
+      );
+      expect(mocks.taskFind.mock.calls[0]?.[0]?.teamId?.toString()).toBe("team-1");
+
+      expect(mocks.dttEnrollmentFind).toHaveBeenCalledWith({
+        classId: "class-1",
+      });
+    });
+
+    it("calculates weekly total scores correctly when no taskId is provided", async () => {
+      mocks.dttClassFindById.mockReturnValue({
+        lean: () =>
+          Promise.resolve({
+            _id: objectId("class-1"),
+            name: "Lớp 1",
+            teamId: objectId("team-1"),
+            startDayOfWeek: 2,
+          }),
+      });
+
+      mocks.taskFind.mockReturnValue({
+        select: () => ({
+          lean: () =>
+            Promise.resolve([
+              { _id: objectId("task-1"), title: "Task 1" },
+            ]),
+        }),
+      });
+
+      mocks.dttEnrollmentFind.mockReturnValue({
+        lean: () =>
+          Promise.resolve([
+            { userId: objectId("user-1"), classId: "class-1" },
+            { userId: objectId("user-2"), classId: "class-1" },
+          ]),
+      });
+
+      mocks.userFind.mockReturnValue({
+        lean: () =>
+          Promise.resolve([
+            { _id: objectId("user-1"), fullName: "Student 1", level: 2, gender: "male" },
+            { _id: objectId("user-2"), fullName: "Student 2", level: 3, gender: "female" },
+          ]),
+      });
+
+      mocks.aggregate.mockResolvedValue([
+        { _id: objectId("user-2"), totalXp: 200 },
+        { _id: objectId("user-1"), totalXp: 150 },
+      ]);
+
+      const result = await getDttClassLeaderboard("class-1");
+
+      expect(result).toEqual({
+        classInfo: {
+          name: "Lớp 1",
+          startDayOfWeek: 2,
+          startStr: "2026-06-01",
+          endStr: "2026-06-07",
+        },
+        entries: [
+          {
+            fullName: "Student 2",
+            id: "user-2",
+            level: 3,
+            levelInfo: { icon: "/levels/3.png", nameVi: "Cấp 3" },
+            rank: 1,
+            totalXp: 200,
+          },
+          {
+            fullName: "Student 1",
+            id: "user-1",
+            level: 2,
+            levelInfo: { icon: "/levels/2.png", nameVi: "Cấp 2" },
+            rank: 2,
+            totalXp: 150,
+          },
+        ],
+        tasks: [{ id: "task-1", title: "Task 1" }],
+      });
+
+      expect(mocks.aggregate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: expect.objectContaining({
+              date: { $gte: "2026-06-01", $lte: "2026-06-07" },
+            }),
+          }),
+          expect.objectContaining({
+            $group: {
+              _id: "$subjectUserId",
+              totalXp: {
+                $sum: {
+                  $multiply: [
+                    { $ifNull: ["$task.pointReward", 0] },
+                    { $ifNull: ["$completionCount", 1] },
+                  ],
+                },
+              },
+            },
+          }),
+        ])
+      );
+    });
+
+    it("calculates specific task completion counts correctly when taskId is provided", async () => {
+      const targetTaskId = "60c72b2f9b1d8b2d11111111";
+
+      mocks.dttClassFindById.mockReturnValue({
+        lean: () =>
+          Promise.resolve({
+            _id: objectId("class-1"),
+            name: "Lớp 1",
+            teamId: objectId("team-1"),
+            startDayOfWeek: 2,
+          }),
+      });
+
+      mocks.taskFind.mockReturnValue({
+        select: () => ({
+          lean: () =>
+            Promise.resolve([
+              { _id: objectId(targetTaskId), title: "Task 1" },
+            ]),
+        }),
+      });
+
+      mocks.dttEnrollmentFind.mockReturnValue({
+        lean: () =>
+          Promise.resolve([
+            { userId: objectId("user-1"), classId: "class-1" },
+            { userId: objectId("user-2"), classId: "class-1" },
+          ]),
+      });
+
+      mocks.userFind.mockReturnValue({
+        lean: () =>
+          Promise.resolve([
+            { _id: objectId("user-1"), fullName: "Student 1", level: 2, gender: "male" },
+            { _id: objectId("user-2"), fullName: "Student 2", level: 3, gender: "female" },
+          ]),
+      });
+
+      mocks.aggregate.mockResolvedValue([
+        { _id: objectId("user-1"), totalXp: 3 },
+      ]);
+
+      const result = await getDttClassLeaderboard("class-1", targetTaskId);
+
+      expect(result).toEqual({
+        classInfo: {
+          name: "Lớp 1",
+          startDayOfWeek: 2,
+          startStr: "2026-06-01",
+          endStr: "2026-06-07",
+        },
+        entries: [
+          {
+            fullName: "Student 1",
+            id: "user-1",
+            level: 2,
+            levelInfo: { icon: "/levels/2.png", nameVi: "Cấp 2" },
+            rank: 1,
+            totalXp: 3,
+          },
+          {
+            fullName: "Student 2",
+            id: "user-2",
+            level: 3,
+            levelInfo: { icon: "/levels/3.png", nameVi: "Cấp 3" },
+            rank: 2,
+            totalXp: 0,
+          },
+        ],
+        tasks: [{ id: targetTaskId, title: "Task 1" }],
+      });
+
+      expect(mocks.aggregate).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            $match: expect.objectContaining({
+              date: { $gte: "2026-06-01", $lte: "2026-06-07" },
+            }),
+          }),
+          expect.objectContaining({
+            $group: {
+              _id: "$subjectUserId",
+              totalXp: { $sum: { $ifNull: ["$completionCount", 1] } },
+            },
+          }),
+        ])
+      );
+
+      const aggregateCall = mocks.aggregate.mock.calls[0]?.[0] as Array<Record<string, unknown>> | undefined;
+      const matchStage = aggregateCall?.find((stage) => stage.$match) as { $match: { taskId: { toString(): string } } } | undefined;
+      expect(matchStage?.$match.taskId.toString()).toBe(targetTaskId);
+    });
   });
 });
 
