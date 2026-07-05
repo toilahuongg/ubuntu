@@ -233,7 +233,8 @@ describe("DTT Server Actions", () => {
       expect(res.ok).toBe(true);
       expect(mocks.classFindOneAndUpdate).toHaveBeenCalledWith(
         { _id: expect.any(Object), teamId: expect.any(Object) },
-        { name: "Lớp ĐTT K02", startDayOfWeek: 3 }
+        { name: "Lớp ĐTT K02", startDayOfWeek: 3 },
+        { runValidators: true }
       );
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/dtt");
     });

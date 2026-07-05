@@ -71,6 +71,8 @@ export async function updateClassAction(classId: string, name: string, startDayO
     }, {
       name: name.trim(),
       startDayOfWeek,
+    }, {
+      runValidators: true,
     });
 
     if (!updated) {
