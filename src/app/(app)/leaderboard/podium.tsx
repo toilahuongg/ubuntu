@@ -108,9 +108,11 @@ const VARIANT_META = {
 export function Podium({
   items,
   variant = "royal",
+  unit = "điểm",
 }: {
   items: PodiumItem[];
   variant?: PodiumDesignVariant;
+  unit?: string;
 }) {
   const topThree = items.slice(0, 3).map((item, index) => ({
     ...item,
@@ -151,6 +153,7 @@ export function Podium({
                       score={item.score}
                       standClass={style.stand}
                       variant={variant}
+                      unit={unit}
                     />
                   ) : null}
                 </div>
@@ -167,6 +170,7 @@ export function Podium({
             item={item}
             podiumRank={item.podiumRank}
             variant={variant}
+            unit={unit}
           />
         ))}
       </div>
@@ -183,7 +187,7 @@ export function Podium({
                   {item.subtitle}
                 </p>
               </div>
-              <XpValue xp={item.score} variant={variant} />
+              <XpValue xp={item.score} variant={variant} unit={unit} />
             </div>
           ))}
         </div>
@@ -197,11 +201,13 @@ export function PodiumReviewCard({
   title,
   icon,
   variant,
+  unit,
 }: {
   items: PodiumItem[];
   title: string;
   icon: ReactNode;
   variant: PodiumDesignVariant;
+  unit?: string;
 }) {
   return (
     <section className="glass-card overflow-hidden">
@@ -214,7 +220,7 @@ export function PodiumReviewCard({
           {VARIANT_META[variant].label}
         </span>
       </header>
-      <Podium items={items} variant={variant} />
+      <Podium items={items} variant={variant} unit={unit} />
     </section>
   );
 }
@@ -244,15 +250,17 @@ function RankBadge({
 function XpValue({
   xp,
   variant,
+  unit = "điểm",
 }: {
   xp: number;
   variant: PodiumDesignVariant;
+  unit?: string;
 }) {
   return (
     <span className={`text-sm font-bold tabular-nums ${variant === "neon" ? "text-lime-100" : ""}`}>
       {xp.toLocaleString("vi-VN")}
       <span className={`ml-0.5 text-[10px] font-normal ${variant === "neon" ? "text-lime-100/65" : "text-muted-foreground"}`}>
-        điểm
+        {unit}
       </span>
     </span>
   );
@@ -263,11 +271,13 @@ function ScoreStand({
   score,
   standClass,
   variant,
+  unit = "điểm",
 }: {
   rank: PodiumRank;
   score: number;
   standClass: string;
   variant: PodiumDesignVariant;
+  unit?: string;
 }) {
   return (
     <div
@@ -278,7 +288,7 @@ function ScoreStand({
       <p className="relative text-2xl font-bold tabular-nums leading-none">
         {score.toLocaleString("vi-VN")}
       </p>
-      <p className="relative text-sm font-medium opacity-75">điểm</p>
+      <p className="relative text-sm font-medium opacity-75">{unit}</p>
     </div>
   );
 }
@@ -339,10 +349,12 @@ function MobilePodiumCard({
   item,
   podiumRank,
   variant,
+  unit,
 }: {
   item: PodiumItem & { podiumRank: PodiumRank };
   podiumRank: PodiumRank;
   variant: PodiumDesignVariant;
+  unit?: string;
 }) {
   const style = variant === "neon" ? NEON_PODIUM_STYLES[podiumRank] : PODIUM_STYLES[podiumRank];
 
@@ -368,7 +380,7 @@ function MobilePodiumCard({
             {item.subtitle}
           </p>
         </div>
-        <XpValue xp={item.score} variant={variant} />
+        <XpValue xp={item.score} variant={variant} unit={unit} />
       </div>
     </article>
   );

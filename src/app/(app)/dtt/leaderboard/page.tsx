@@ -188,6 +188,8 @@ export default async function DttLeaderboardPage({
     userToPodiumItem(entry, entry.id === session.id)
   );
 
+  const unit = taskParam && taskParam !== "weekly-total" ? "lần" : "điểm";
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
       <div className="space-y-3">
@@ -208,7 +210,7 @@ export default async function DttLeaderboardPage({
       </div>
 
       <Section title="Thành viên học tập" icon={<Trophy className="h-4 w-4" />}>
-        {entries.length === 0 ? <EmptyRow /> : <Podium items={podiumItems} />}
+        {entries.length === 0 ? <EmptyRow /> : <Podium items={podiumItems} unit={unit} />}
       </Section>
     </div>
   );
