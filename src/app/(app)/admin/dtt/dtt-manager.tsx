@@ -8,6 +8,7 @@ import { DttTaskTab } from "./dtt-task-tab";
 type ClassItem = {
   id: string;
   name: string;
+  startDayOfWeek: number;
 };
 
 type EnrollmentItem = {

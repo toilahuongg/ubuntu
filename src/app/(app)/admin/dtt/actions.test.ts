@@ -127,7 +127,7 @@ describe("DTT Server Actions", () => {
     it("redirects to login if session is missing", async () => {
       mocks.getSessionUser.mockResolvedValueOnce(null);
 
-      const res = await createClassAction("Lớp A");
+      const res = await createClassAction("Lớp A", 1);
       expect(res.ok).toBe(false);
       if (!res.ok) {
         expect(res.error).toContain("Redirected to /login");
@@ -137,7 +137,7 @@ describe("DTT Server Actions", () => {
     it("rejects non-management roles", async () => {
       mocks.getSessionUser.mockResolvedValueOnce(memberSession);
 
-      const res = await createClassAction("Lớp A");
+      const res = await createClassAction("Lớp A", 1);
       expect(res.ok).toBe(false);
       if (!res.ok) {
         expect(res.error).toBe("Bạn không có quyền quản lý.");
@@ -150,7 +150,7 @@ describe("DTT Server Actions", () => {
         teamId: undefined,
       });
 
-      const res = await createClassAction("Lớp A");
+      const res = await createClassAction("Lớp A", 1);
       expect(res.ok).toBe(false);
       if (!res.ok) {
         expect(res.error).toBe("Bạn không có quyền quản lý.");
@@ -163,7 +163,7 @@ describe("DTT Server Actions", () => {
         zoneId: undefined,
       });
 
-      const res = await createClassAction("Lớp A");
+      const res = await createClassAction("Lớp A", 1);
       expect(res.ok).toBe(false);
       if (!res.ok) {
         expect(res.error).toBe("Bạn không có quyền quản lý.");
@@ -176,7 +176,7 @@ describe("DTT Server Actions", () => {
         regionId: undefined,
       });
 
-      const res = await createClassAction("Lớp A");
+      const res = await createClassAction("Lớp A", 1);
       expect(res.ok).toBe(false);
       if (!res.ok) {
         expect(res.error).toBe("Bạn không có quyền quản lý.");
@@ -197,7 +197,7 @@ describe("DTT Server Actions", () => {
         });
         mocks.classCreate.mockResolvedValueOnce({});
 
-        const res = await createClassAction("Lớp A");
+        const res = await createClassAction("Lớp A", 1);
         expect(res.ok).toBe(true);
       }
     });
@@ -208,12 +208,13 @@ describe("DTT Server Actions", () => {
       mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
       mocks.classCreate.mockResolvedValueOnce({ _id: "new-class-id" });
 
-      const res = await createClassAction("  Lớp ĐTT K01  ");
+      const res = await createClassAction("  Lớp ĐTT K01  ", 2);
 
       expect(res.ok).toBe(true);
       expect(mocks.connectToDatabase).toHaveBeenCalled();
       expect(mocks.classCreate).toHaveBeenCalledWith({
         name: "Lớp ĐTT K01",
+        startDayOfWeek: 2,
         teamId: expect.any(Object),
         createdBy: expect.any(Object),
       });
@@ -227,12 +228,12 @@ describe("DTT Server Actions", () => {
       mocks.classFindOneAndUpdate.mockResolvedValueOnce({});
 
       const classId = "507f1f77bcf86cd799439019";
-      const res = await updateClassAction(classId, "  Lớp ĐTT K02  ");
+      const res = await updateClassAction(classId, "  Lớp ĐTT K02  ", 3);
 
       expect(res.ok).toBe(true);
       expect(mocks.classFindOneAndUpdate).toHaveBeenCalledWith(
         { _id: expect.any(Object), teamId: expect.any(Object) },
-        { name: "Lớp ĐTT K02" }
+        { name: "Lớp ĐTT K02", startDayOfWeek: 3 }
       );
       expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/dtt");
     });
@@ -241,7 +242,7 @@ describe("DTT Server Actions", () => {
       mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
       mocks.classFindOneAndUpdate.mockResolvedValueOnce(null);
 
-      const res = await updateClassAction("507f1f77bcf86cd799439019", "Lớp lạ");
+      const res = await updateClassAction("507f1f77bcf86cd799439019", "Lớp lạ", 1);
 
       expect(res.ok).toBe(false);
       if (!res.ok) {

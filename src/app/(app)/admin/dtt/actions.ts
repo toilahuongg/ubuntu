@@ -47,12 +47,13 @@ async function assertClassInTeam(classId: string, teamId: ReturnType<typeof toOb
   }
 }
 
-export async function createClassAction(name: string): Promise<ActionResult> {
+export async function createClassAction(name: string, startDayOfWeek: number): Promise<ActionResult> {
   return runAction(async () => {
     const { session, teamId } = await requireManagerTeam();
 
     await DttClassModel.create({
       name: name.trim(),
+      startDayOfWeek,
       teamId,
       createdBy: toObjectId(session.id),
     });
@@ -61,7 +62,7 @@ export async function createClassAction(name: string): Promise<ActionResult> {
   });
 }
 
-export async function updateClassAction(classId: string, name: string): Promise<ActionResult> {
+export async function updateClassAction(classId: string, name: string, startDayOfWeek: number): Promise<ActionResult> {
   return runAction(async () => {
     const { teamId } = await requireManagerTeam();
     const updated = await DttClassModel.findOneAndUpdate({
@@ -69,6 +70,7 @@ export async function updateClassAction(classId: string, name: string): Promise<
       teamId,
     }, {
       name: name.trim(),
+      startDayOfWeek,
     });
 
     if (!updated) {

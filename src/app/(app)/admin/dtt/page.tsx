@@ -46,6 +46,7 @@ export default async function DttManagementPage() {
   const formattedClasses = classes.map((c) => ({
     id: c._id.toString(),
     name: c.name,
+    startDayOfWeek: c.startDayOfWeek ?? 1,
   }));
 
   const formattedEnrollments = enrollments.map((e) => {

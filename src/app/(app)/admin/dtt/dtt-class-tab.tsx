@@ -16,6 +16,7 @@ import { ConfirmDeleteButton, FormError, FormSuccess } from "../_shared";
 type ClassItem = {
   id: string;
   name: string;
+  startDayOfWeek: number;
 };
 
 type EnrollmentItem = {
@@ -33,6 +34,16 @@ type NonDttMember = {
   role: string;
 };
 
+const WEEKDAY_LABELS = [
+  { value: 1, label: "Thứ hai" },
+  { value: 2, label: "Thứ ba" },
+  { value: 3, label: "Thứ tư" },
+  { value: 4, label: "Thứ năm" },
+  { value: 5, label: "Thứ sáu" },
+  { value: 6, label: "Thứ bảy" },
+  { value: 7, label: "Chủ nhật" }
+];
+
 export function DttClassTab({
   classes,
   enrollments,
@@ -49,12 +60,14 @@ export function DttClassTab({
 
   // Forms state
   const [newClassName, setNewClassName] = useState("");
+  const [newClassStartDay, setNewClassStartDay] = useState<number>(1);
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [selectedClassId, setSelectedClassId] = useState("");
 
   // Edit class state
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [editingClassName, setEditingClassName] = useState("");
+  const [editingClassStartDay, setEditingClassStartDay] = useState<number>(1);
 
   const ROLE_LABELS: Record<string, string> = {
     ADMIN: "Quản trị viên",
@@ -73,10 +86,11 @@ export function DttClassTab({
     setError(null);
     setSuccess(null);
     startTransition(async () => {
-      const res = await createClassAction(newClassName);
+      const res = await createClassAction(newClassName, newClassStartDay);
       if (res.ok) {
         setSuccess(`Đã tạo lớp học "${newClassName.trim()}" thành công.`);
         setNewClassName("");
+        setNewClassStartDay(1);
         router.refresh();
       } else {
         setError(res.error);
@@ -90,9 +104,9 @@ export function DttClassTab({
     setError(null);
     setSuccess(null);
     startTransition(async () => {
-      const res = await updateClassAction(classId, editingClassName);
+      const res = await updateClassAction(classId, editingClassName, editingClassStartDay);
       if (res.ok) {
-        setSuccess(`Đã đổi tên lớp thành "${editingClassName.trim()}".`);
+        setSuccess(`Đã cập nhật lớp thành công.`);
         setEditingClassId(null);
         router.refresh();
       } else {
@@ -173,6 +187,18 @@ export function DttClassTab({
                 required
                 className="h-10 w-full rounded-lg border border-border bg-overlay-subtle px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
               />
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Thứ bắt đầu tuần</label>
+                <select
+                  value={newClassStartDay}
+                  onChange={(e) => setNewClassStartDay(Number(e.target.value))}
+                  className="form-select w-full"
+                >
+                  {WEEKDAY_LABELS.map(d => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
               <button
                 type="submit"
                 disabled={isPending || !newClassName.trim()}
@@ -253,41 +279,56 @@ export function DttClassTab({
                   {/* Class Header */}
                   <div className="flex items-center justify-between border-b border-border/40 bg-overlay-subtle/50 px-4 py-3">
                     {editingClassId === classItem.id ? (
-                      <div className="flex items-center gap-2 flex-1 max-w-xs">
+                      <div className="flex items-center gap-2 flex-1 max-w-md">
                         <input
                           type="text"
                           value={editingClassName}
                           onChange={(e) => setEditingClassName(e.target.value)}
-                          className="h-8 w-full rounded-lg bg-overlay-subtle border border-border px-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                          className="h-8 w-full max-w-[150px] rounded-lg bg-overlay-subtle border border-border px-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
                         />
+                        <select
+                          value={editingClassStartDay}
+                          onChange={(e) => setEditingClassStartDay(Number(e.target.value))}
+                          className="h-8 rounded-lg bg-overlay-subtle border border-border px-2 text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                        >
+                          {WEEKDAY_LABELS.map(d => (
+                            <option key={d.value} value={d.value}>{d.label}</option>
+                          ))}
+                        </select>
                         <button
                           onClick={() => handleUpdateClass(classItem.id)}
-                          className="rounded-md bg-primary px-2 py-1 text-xs font-semibold text-background hover:bg-primary/95"
+                          className="rounded-md bg-primary px-2 py-1 text-xs font-semibold text-background hover:bg-primary/95 shrink-0"
                         >
                           Lưu
                         </button>
                         <button
                           onClick={() => setEditingClassId(null)}
-                          className="p-1 text-muted-foreground hover:text-foreground"
+                          className="p-1 text-muted-foreground hover:text-foreground shrink-0"
                         >
                           <X className="h-4 w-4" />
                         </button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 min-w-0">
-                        <h4 className="font-semibold text-sm truncate text-foreground">{classItem.name}</h4>
-                        <span className="inline-flex shrink-0 items-center rounded-md border border-primary/10 bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
-                          {classStudents.length} học viên
-                        </span>
-                        <button
-                          onClick={() => {
-                            setEditingClassId(classItem.id);
-                            setEditingClassName(classItem.name);
-                          }}
-                          className="text-[10px] font-medium text-muted-foreground hover:text-primary transition-colors ml-1"
-                        >
-                          Đổi tên
-                        </button>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold text-sm truncate text-foreground">{classItem.name}</h4>
+                          <span className="inline-flex shrink-0 items-center rounded-md border border-primary/10 bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                            {classStudents.length} học viên
+                          </span>
+                          <button
+                            onClick={() => {
+                              setEditingClassId(classItem.id);
+                              setEditingClassName(classItem.name);
+                              setEditingClassStartDay(classItem.startDayOfWeek);
+                            }}
+                            className="text-[10px] font-medium text-muted-foreground hover:text-primary transition-colors ml-1"
+                          >
+                            Sửa
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Bắt đầu tuần: {WEEKDAY_LABELS.find(d => d.value === classItem.startDayOfWeek)?.label ?? "Thứ hai"}
+                        </p>
                       </div>
                     )}
 
