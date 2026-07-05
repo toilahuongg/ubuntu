@@ -55,7 +55,10 @@ export function getIsoWeekdayFromDateKey(dateKey: string) {
   );
 }
 
-export function getWeekRangeFromDateKey(dateKey: string, startDayOfWeek: number) {
+export function getWeekRangeFromDateKey(
+  dateKey: string,
+  startDayOfWeek: number,
+): { startStr: string; endStr: string } {
   const currentWeekday = getIsoWeekdayFromDateKey(dateKey); // 1 = Monday, 7 = Sunday
   let delta = currentWeekday - startDayOfWeek;
   if (delta < 0) {
@@ -63,7 +66,7 @@ export function getWeekRangeFromDateKey(dateKey: string, startDayOfWeek: number)
   }
 
   const tz = getAppTimezone();
-  const dateObj = fromZonedTime(`${dateKey}T00:00:00`, tz);
+  const dateObj = fromZonedTime(`${dateKey}T12:00:00`, tz);
   const startDateObj = subDays(dateObj, delta);
   const endDateObj = addDays(startDateObj, 6);
 
