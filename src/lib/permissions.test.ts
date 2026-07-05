@@ -351,10 +351,9 @@ describe("canPersonalizeTasks", () => {
         subject,
       ),
     ).toBe(true);
-
   });
 
-  it("denies zone leads, regional leads, and leads from other scopes", () => {
+  it("allows zone leads for members of the same zone", () => {
     expect(
       canPersonalizeTasks(
         {
@@ -366,8 +365,10 @@ describe("canPersonalizeTasks", () => {
         },
         subject,
       ),
-    ).toBe(false);
+    ).toBe(true);
+  });
 
+  it("denies zone leads from other zones, regional leads, and other scopes", () => {
     expect(
       canPersonalizeTasks(
         {
@@ -404,6 +405,27 @@ describe("canPersonalizeTasks", () => {
           zoneId: "zone-b",
         },
         subject,
+      ),
+    ).toBe(false);
+  });
+
+  it("denies zone leads for non-member roles even in the same zone", () => {
+    expect(
+      canPersonalizeTasks(
+        {
+          fullName: "Zone Lead",
+          id: "zone-lead",
+          role: "ZONE_LEAD",
+          status: "ACTIVE",
+          zoneId: "zone-a",
+        },
+        {
+          fullName: "Regional Lead",
+          id: "regional-lead",
+          role: "REGIONAL_LEAD",
+          status: "ACTIVE",
+          zoneId: "zone-a",
+        },
       ),
     ).toBe(false);
   });

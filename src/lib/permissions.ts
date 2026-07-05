@@ -38,6 +38,9 @@ export function canPersonalizeTasks(actor: SessionUser, subject: SessionUser) {
   if (isTeamLead(actor)) {
     return !!actor.teamId && actor.teamId === subject.teamId;
   }
+  if (isZoneLead(actor)) {
+    return isMemberLike(subject) && !!actor.zoneId && actor.zoneId === subject.zoneId;
+  }
   return false;
 }
 
