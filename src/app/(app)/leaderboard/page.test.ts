@@ -12,7 +12,7 @@ vi.mock("@/lib/auth/session", () => ({
 }));
 
 vi.mock("@/lib/permissions", () => ({
-  canManageDtt: (user: any) => mockCanManageDtt(user),
+  canManageDtt: (user: unknown) => mockCanManageDtt(user),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -43,6 +43,7 @@ vi.mock("@/lib/services/leaderboard-service", () => ({
 }));
 
 // Helper to recursively search for text in React element tree
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function hasText(node: any, text: string): boolean {
   if (!node) return false;
   if (typeof node === "string") return node.includes(text);
@@ -60,7 +61,7 @@ function hasText(node: any, text: string): boolean {
       }
       try {
         if (hasText(node[key], text)) return true;
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
