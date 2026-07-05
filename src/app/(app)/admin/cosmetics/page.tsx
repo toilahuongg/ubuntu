@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
-import { canAccessManagement } from "@/lib/permissions";
+import { canAccessManagement, canManageShop } from "@/lib/permissions";
 import { listAllCosmetics } from "@/lib/services/cosmetics-admin-service";
 import { serializeCosmetic } from "@/lib/cosmetics/serialize";
 
@@ -15,6 +15,7 @@ export default async function AdminCosmeticsPage() {
   if (!session) redirect("/login");
   if (!canAccessManagement(session)) redirect("/admin");
 
+  const canEdit = canManageShop(session);
   const cosmetics = await listAllCosmetics();
 
   const serialized = cosmetics.map((c) => ({
@@ -31,7 +32,7 @@ export default async function AdminCosmeticsPage() {
         title={`Cửa hàng (${cosmetics.length})`}
         description="Quản lý vật phẩm, giá bán, trạng thái bán và cấp cho người dùng"
       />
-      <CosmeticsManager cosmetics={serialized} />
+      <CosmeticsManager cosmetics={serialized} canEdit={canEdit} />
     </>
   );
 }

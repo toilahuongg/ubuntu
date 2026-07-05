@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { Types } from "mongoose";
 
 import { getSessionUser } from "@/lib/auth/session";
-import { canAccessManagement } from "@/lib/permissions";
+import { canManageShop } from "@/lib/permissions";
 import { CosmeticModel, type CosmeticRecord } from "@/lib/models";
 import { connectToDatabase } from "@/lib/mongoose";
 import { getAdminSnapshot } from "@/lib/services/organization-service";
@@ -19,7 +19,7 @@ export default async function EditCosmeticPage({
 }) {
   const session = await getSessionUser();
   if (!session) redirect("/login");
-  if (!canAccessManagement(session)) redirect("/admin");
+  if (!canManageShop(session)) redirect("/admin/cosmetics");
 
   const { id } = await params;
   if (!Types.ObjectId.isValid(id)) notFound();

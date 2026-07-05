@@ -33,8 +33,10 @@ const SLOT_LABELS: Record<CosmeticSlot, string> = {
 
 export function CosmeticsManager({
   cosmetics,
+  canEdit,
 }: {
   cosmetics: CosmeticRow[];
+  canEdit: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -55,12 +57,14 @@ export function CosmeticsManager({
         </div>
       ) : null}
 
-      <Link
-        href="/admin/cosmetics/new"
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90"
-      >
-        <Plus className="h-4 w-4" /> Thêm trang bị mới
-      </Link>
+      {canEdit && (
+        <Link
+          href="/admin/cosmetics/new"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+        >
+          <Plus className="h-4 w-4" /> Thêm trang bị mới
+        </Link>
+      )}
 
       <div className="space-y-2">
         {cosmetics.length === 0 ? (
@@ -83,22 +87,26 @@ export function CosmeticsManager({
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  <Link
-                    href={`/admin/cosmetics/${row.id}#grant`}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-overlay-subtle hover:text-foreground"
-                    aria-label="Cấp cho người dùng"
-                    title="Cấp cho người dùng"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                  </Link>
-                  <Link
-                    href={`/admin/cosmetics/${row.id}`}
-                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-overlay-subtle hover:text-foreground"
-                    aria-label="Sửa"
-                    title="Sửa"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Link>
+                  {canEdit && (
+                    <Link
+                      href={`/admin/cosmetics/${row.id}#grant`}
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-overlay-subtle hover:text-foreground"
+                      aria-label="Cấp cho người dùng"
+                      title="Cấp cho người dùng"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Link>
+                  )}
+                  {canEdit && (
+                    <Link
+                      href={`/admin/cosmetics/${row.id}`}
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-overlay-subtle hover:text-foreground"
+                      aria-label="Sửa"
+                      title="Sửa"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Link>
+                  )}
                 </div>
               </div>
 
@@ -129,15 +137,22 @@ export function CosmeticsManager({
                     : "Không bán"}
                   {row.unlockLevel ? ` · Cấp ${row.unlockLevel}` : ""}
                 </span>
-                <label className="inline-flex cursor-pointer items-center gap-1.5">
-                  <input
-                    type="checkbox"
-                    checked={row.active}
-                    onChange={() => toggleActive(row)}
-                    disabled={pending}
-                  />
-                  <span>{row.active ? "Đang bán" : "Tạm ngưng"}</span>
-                </label>
+                {canEdit && (
+                  <label className="inline-flex cursor-pointer items-center gap-1.5">
+                    <input
+                      type="checkbox"
+                      checked={row.active}
+                      onChange={() => toggleActive(row)}
+                      disabled={pending}
+                    />
+                    <span>{row.active ? "Đang bán" : "Tạm ngưng"}</span>
+                  </label>
+                )}
+                {!canEdit && (
+                  <span className="text-[11px] text-muted-foreground">
+                    {row.active ? "Đang bán" : "Tạm ngưng"}
+                  </span>
+                )}
               </div>
             </div>
           ))

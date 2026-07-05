@@ -234,12 +234,14 @@ function ManagementHome({
     );
   }
 
-  operationItems.push({
+  if (role !== "ZONE_LEAD") {
+    operationItems.push({
       href: "/admin/cosmetics",
       icon: ShoppingBag,
       label: "Cửa hàng",
       description: "Quản lý vật phẩm, giá bán và trạng thái",
-  });
+    });
+  }
 
   if (role === "TEAM_LEAD") {
     operationItems.push({

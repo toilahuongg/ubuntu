@@ -33,6 +33,12 @@ export function canManageDtt(user: SessionUser) {
   return false;
 }
 
+export function canManageShop(user: SessionUser) {
+  if (isAdmin(user)) return true;
+  if (isTeamLead(user)) return !!user.teamId;
+  return false;
+}
+
 export function canPersonalizeTasks(actor: SessionUser, subject: SessionUser) {
   if (isAdmin(actor)) return true;
   if (isTeamLead(actor)) {
