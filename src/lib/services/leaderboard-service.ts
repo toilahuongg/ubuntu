@@ -2,14 +2,24 @@ import "server-only";
 
 import { formatInTimeZone } from "date-fns-tz";
 
-import { getAppTimezone, getCurrentYearMonth } from "@/lib/dates";
+import {
+  getAppTimezone,
+  getCurrentYearMonth,
+  getTodayDateKey,
+  getWeekRangeFromDateKey,
+} from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
+  DttClassModel,
+  DttEnrollmentModel,
   RegionModel,
   SubmissionModel,
+  TaskModel,
+  UserModel,
   ZoneModel,
   type UserRecord,
 } from "@/lib/models";
+import { toObjectId } from "@/lib/utils/ids";
 import { getLevelInfo } from "@/lib/level-utils";
 import type { LeaderboardEntry } from "@/lib/services/gamification-service";
 import { getEquippedPayloadsForUsers } from "@/lib/services/cosmetics-service";
@@ -263,3 +273,14 @@ export async function getTopZones(
 export function getLeaderboardMonthLabel(now = new Date()): string {
   return formatInTimeZone(now, getAppTimezone(), "MM/yyyy");
 }
+
+export async function getDttClassLeaderboard(
+  classId: string,
+  taskId?: string,
+): Promise<any> {
+  await connectToDatabase();
+
+  const classDoc = await DttClassModel.findById(classId).lean();
+  if (!classDoc) throw new Error("Không tìm thấy lớp học.");
+}
+

@@ -4,11 +4,20 @@ const mocks = vi.hoisted(() => ({
   aggregate: vi.fn(),
   regionFind: vi.fn(),
   zoneFind: vi.fn(),
+  dttClassFindById: vi.fn(),
+  dttEnrollmentFind: vi.fn(),
+  taskFind: vi.fn(),
+  userFind: vi.fn(),
 }));
 
 vi.mock("@/lib/dates", () => ({
   getAppTimezone: () => "Asia/Ho_Chi_Minh",
   getCurrentYearMonth: () => "2026-06",
+  getWeekRangeFromDateKey: () => ({
+    startStr: "2026-06-01",
+    endStr: "2026-06-07",
+  }),
+  getTodayDateKey: () => "2026-06-03",
 }));
 
 vi.mock("@/lib/mongoose", () => ({
@@ -40,11 +49,24 @@ vi.mock("@/lib/models", () => ({
   ZoneModel: {
     find: mocks.zoneFind,
   },
+  DttClassModel: {
+    findById: mocks.dttClassFindById,
+  },
+  DttEnrollmentModel: {
+    find: mocks.dttEnrollmentFind,
+  },
+  TaskModel: {
+    find: mocks.taskFind,
+  },
+  UserModel: {
+    find: mocks.userFind,
+  },
 }));
 
 import {
   getTopZoneLeads,
   getTopZones,
+  getDttClassLeaderboard,
 } from "@/lib/services/leaderboard-service";
 
 function objectId(value: string) {
@@ -58,6 +80,10 @@ describe("leaderboard service", () => {
     mocks.aggregate.mockReset();
     mocks.regionFind.mockReset();
     mocks.zoneFind.mockReset();
+    mocks.dttClassFindById.mockReset();
+    mocks.dttEnrollmentFind.mockReset();
+    mocks.taskFind.mockReset();
+    mocks.userFind.mockReset();
   });
 
   it("ranks zones by monthly XP from active users in each zone", async () => {
@@ -175,6 +201,16 @@ describe("leaderboard service", () => {
         }),
       ]),
     );
+  });
+
+  describe("getDttClassLeaderboard", () => {
+    it("throws if the class is not found", async () => {
+      mocks.dttClassFindById.mockReturnValue({
+        lean: () => Promise.resolve(null),
+      });
+
+      await expect(getDttClassLeaderboard("60c72b2f9b1d8b2d88888888")).rejects.toThrow("Không tìm thấy lớp học.");
+    });
   });
 });
 
