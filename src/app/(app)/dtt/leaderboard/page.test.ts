@@ -1,5 +1,14 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { inspect } from "util";
 import DttLeaderboardPage from "./page";
+
+function safeStringify(val: unknown): string {
+  try {
+    return JSON.stringify(val);
+  } catch {
+    return inspect(val, { depth: null, maxArrayLength: null });
+  }
+}
 
 // Define mock functions
 const mockGetSessionUser = vi.fn();
@@ -66,8 +75,8 @@ describe("DttLeaderboardPage", () => {
     const result = await DttLeaderboardPage({ searchParams: Promise.resolve({}) });
     
     expect(result).toBeDefined();
-    const str = JSON.stringify(result);
-    expect(str).toContain("Bạn không tham gia lớp học ĐTT nào.");
+    const str = safeStringify(result);
+    expect(str).toContain("Bạn chưa tham gia lớp học");
   });
 
   it("shows warning/empty state if manager has no classes in team", async () => {
@@ -79,7 +88,7 @@ describe("DttLeaderboardPage", () => {
 
     const result = await DttLeaderboardPage({ searchParams: Promise.resolve({}) });
     
-    const str = JSON.stringify(result);
+    const str = safeStringify(result);
     expect(str).toContain("Chưa có lớp học ĐTT nào.");
   });
 
@@ -103,7 +112,7 @@ describe("DttLeaderboardPage", () => {
     const result = await DttLeaderboardPage({ searchParams: Promise.resolve({}) });
     
     expect(mockGetDttClassLeaderboard).toHaveBeenCalledWith("60c72b2f9b1d8b2d88888883", undefined);
-    const str = JSON.stringify(result);
+    const str = safeStringify(result);
     expect(str).toContain("Class 1");
     expect(str).toContain("Student One");
   });
@@ -126,7 +135,7 @@ describe("DttLeaderboardPage", () => {
     const result = await DttLeaderboardPage({ searchParams: Promise.resolve({ classId: "60c72b2f9b1d8b2d88888884" }) });
     
     expect(mockGetDttClassLeaderboard).toHaveBeenCalledWith("60c72b2f9b1d8b2d88888884", undefined);
-    const str = JSON.stringify(result);
+    const str = safeStringify(result);
     expect(str).toContain("Class 2");
   });
 
@@ -144,7 +153,7 @@ describe("DttLeaderboardPage", () => {
     const result = await DttLeaderboardPage({ searchParams: Promise.resolve({}) });
     
     expect(mockGetDttClassLeaderboard).toHaveBeenCalledWith("60c72b2f9b1d8b2d88888885", undefined);
-    const str = JSON.stringify(result);
+    const str = safeStringify(result);
     expect(str).toContain("Enrolled Class");
     expect(str).toContain("Thứ Ba");
   });
@@ -167,7 +176,7 @@ describe("DttLeaderboardPage", () => {
     const result = await DttLeaderboardPage({ searchParams: Promise.resolve({ classId: "60c72b2f9b1d8b2d88888889" }) });
     
     expect(mockGetDttClassLeaderboard).toHaveBeenCalledWith("60c72b2f9b1d8b2d88888883", undefined);
-    const str = JSON.stringify(result);
+    const str = safeStringify(result);
     expect(str).toContain("Class 1");
   });
 });

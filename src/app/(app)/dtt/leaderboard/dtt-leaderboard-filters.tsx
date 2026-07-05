@@ -58,7 +58,7 @@ export function DttLeaderboardFilters({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className={`grid grid-cols-1 gap-3 ${showClassSelect && classes.length > 0 ? "sm:grid-cols-2" : ""}`}>
       {showClassSelect && classes.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <label className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
