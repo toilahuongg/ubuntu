@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { Crown, Layers, MapPin, Sparkles, Trophy, Users } from "lucide-react";
+import Link from "next/link";
+import { Crown, GraduationCap, Layers, MapPin, Sparkles, Trophy, Users } from "lucide-react";
 
 import { LevelAvatar } from "@/components/level-avatar";
 import { getSessionUser } from "@/lib/auth/session";
@@ -19,6 +20,9 @@ import type { LeaderboardEntry } from "@/lib/services/gamification-service";
 import { CosmeticName } from "@/components/cosmetic-name";
 import { ResponsiveNameTicker } from "./responsive-name-ticker";
 import { LeaderboardBoardSelect } from "./leaderboard-board-select";
+import { canManageDtt } from "@/lib/permissions";
+import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
+import { connectToDatabase } from "@/lib/mongoose";
 
 const LEADERBOARD_BOARDS = [
   {
@@ -82,7 +86,15 @@ export default async function LeaderboardPage({
   searchParams: Promise<{ board?: string | string[] | undefined }>;
 }) {
   const session = await getSessionUser();
-  if (!session) redirect("/login");
+  if (!session) {
+    redirect("/login");
+    return null;
+  }
+
+  await connectToDatabase();
+  const isManager = canManageDtt(session);
+  const enrollment = await DttEnrollmentModel.findOne({ userId: session.id }).lean();
+  const isEnrolled = !!enrollment;
 
   const boardParam = await searchParams;
   const activeBoard = normalizeBoard(boardParam.board);
@@ -120,6 +132,23 @@ export default async function LeaderboardPage({
           boards={LEADERBOARD_BOARDS.map(({ label, value }) => ({ label, value }))}
         />
       </div>
+
+      {(isEnrolled || isManager) && (
+        <div className="glass-card p-4 flex items-center justify-between border-primary/20 bg-primary/5 hover:bg-primary/10 transition-colors">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/10 p-2 rounded-lg">
+              <GraduationCap className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-foreground">Bảng xếp hạng Lớp học ĐTT</h4>
+              <p className="text-xs text-muted-foreground">Xem xếp hạng học viên theo tuần học của lớp bạn</p>
+            </div>
+          </div>
+          <Link href="/dtt/leaderboard" className="btn-gradient px-4 py-2 text-xs font-semibold">
+            Xem ngay
+          </Link>
+        </div>
+      )}
 
       <Section title={activeBoardMeta.label} icon={activeBoardMeta.icon}>
         {entries.length === 0 ? <EmptyRow /> : null}
