@@ -10,9 +10,9 @@ export function calculateInteractionScore(
 ): InteractionScore {
   switch (outcome) {
     case "SIMPLE":
-      return { exp: 5, points: 5 };
-    case "EFFECTIVE":
       return { exp: 50, points: 50 };
+    case "EFFECTIVE":
+      return { exp: 100, points: 100 };
     case "BAPTIZED":
       return { exp: 1000, points: 1000 };
     case "NONE":

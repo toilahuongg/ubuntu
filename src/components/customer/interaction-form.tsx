@@ -14,6 +14,7 @@ import {
   SHARED_CONTENTS,
   SHARED_CONTENT_LABELS,
 } from "@/lib/customer/constants";
+import { calculateInteractionScore } from "@/lib/customer/scoring";
 import type { InteractionOutcome } from "@/lib/customer/constants";
 import type { CustomerCaregiverOption } from "@/lib/services/customer-service";
 
@@ -49,14 +50,7 @@ export function InteractionForm({
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const previewPoints =
-    outcome === "SIMPLE"
-      ? { points: 5, exp: 5 }
-      : outcome === "EFFECTIVE"
-        ? { points: 50, exp: 50 }
-        : outcome === "BAPTIZED"
-          ? { points: 500, exp: 500 }
-          : { points: 0, exp: 0 };
+  const previewPoints = calculateInteractionScore(outcome as InteractionOutcome);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

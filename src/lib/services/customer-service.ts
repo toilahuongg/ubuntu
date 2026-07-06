@@ -16,6 +16,7 @@ import {
   canManageCustomer,
   canViewCustomer,
   isAdmin,
+  isManager,
   isRegionalLead,
   isTeamLead,
   isZoneLead,
@@ -40,6 +41,7 @@ export type CustomerListFilters = {
   occupation?: Occupation;
   personality?: Personality;
   query?: string;
+  scope?: "personal" | "managed";
   sort?:
     | "NEWEST"
     | "OLDEST"
@@ -156,7 +158,14 @@ function startOfTomorrow() {
   return date;
 }
 
-async function buildScopeCondition(actor: SessionUser) {
+async function buildScopeCondition(
+  actor: SessionUser,
+  scope?: "personal" | "managed",
+) {
+  if (scope === "personal" || !isManager(actor)) {
+    return { caregiverIds: toObjectId(actor.id) };
+  }
+
   if (isAdmin(actor)) return null;
 
   if (isTeamLead(actor) && actor.teamId) {
@@ -201,7 +210,7 @@ async function buildListFilter(
 ) {
   const baseFilter: Record<string, unknown> = {};
   const andConditions: Record<string, unknown>[] = [];
-  const scopeCondition = await buildScopeCondition(actor);
+  const scopeCondition = await buildScopeCondition(actor, filters?.scope);
   if (scopeCondition) andConditions.push(scopeCondition);
 
   if (filters?.heartStatus) {

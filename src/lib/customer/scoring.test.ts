@@ -7,14 +7,14 @@ describe("calculateInteractionScore", () => {
     expect(calculateInteractionScore("NONE")).toEqual({ points: 0, exp: 0 });
   });
 
-  it("returns +5 points and +5 exp for SIMPLE", () => {
-    expect(calculateInteractionScore("SIMPLE")).toEqual({ points: 5, exp: 5 });
+  it("returns +50 points and +50 exp for SIMPLE", () => {
+    expect(calculateInteractionScore("SIMPLE")).toEqual({ points: 50, exp: 50 });
   });
 
-  it("returns +50 points and +50 exp for EFFECTIVE", () => {
+  it("returns +100 points and +100 exp for EFFECTIVE", () => {
     expect(calculateInteractionScore("EFFECTIVE")).toEqual({
-      points: 50,
-      exp: 50,
+      points: 100,
+      exp: 100,
     });
   });
 

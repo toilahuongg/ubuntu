@@ -20,6 +20,15 @@ export function isRegionalLead(user: SessionUser) {
   return user.role === "REGIONAL_LEAD";
 }
 
+export function isManager(user: SessionUser) {
+  return (
+    user.role === "ADMIN" ||
+    user.role === "TEAM_LEAD" ||
+    user.role === "ZONE_LEAD" ||
+    user.role === "REGIONAL_LEAD"
+  );
+}
+
 export function canManageTasks(user: SessionUser) {
   if (isAdmin(user)) return true;
   if (isTeamLead(user)) return !!user.teamId;

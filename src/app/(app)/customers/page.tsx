@@ -3,13 +3,15 @@ import { redirect } from "next/navigation";
 import { Filter, Heart, Plus, SlidersHorizontal } from "lucide-react";
 
 import { getSessionUser } from "@/lib/auth/session";
+import { ROLE_LABELS } from "@/lib/domain";
 import {
   listAssignableCustomerCaregivers,
   listCustomers,
   type CustomerListFilters,
 } from "@/lib/services/customer-service";
-import { canManageCustomer } from "@/lib/permissions";
+import { canManageCustomer, isManager } from "@/lib/permissions";
 import { CustomerCard } from "@/components/customer/customer-card";
+import { CustomerTabSelect, type CustomerTabValue } from "./customer-tab-select";
 
 type CustomersSearchParams = {
   [key: string]: string | string[] | undefined;
@@ -52,12 +54,14 @@ function pickParam<T extends readonly string[]>(
 }
 
 function parseFilters(searchParams: CustomersSearchParams): CustomerListFilters {
+  const tab = firstParam(searchParams, "tab");
   return {
     caregiverId: firstParam(searchParams, "caregiverId") || undefined,
     interactionRecency: pickParam(
       firstParam(searchParams, "recency"),
       INTERACTION_RECENCY_OPTIONS.map((option) => option.value),
     ),
+    scope: tab === "managed" ? "managed" : "personal",
     sort:
       pickParam(
         firstParam(searchParams, "sort"),
@@ -87,6 +91,9 @@ export default async function CustomersPage({
     listAssignableCustomerCaregivers(session),
   ]);
   const activeFilterCount = countActiveFilters(filters);
+  const userIsManager = isManager(session);
+  const activeTab: CustomerTabValue =
+    userIsManager && filters.scope === "managed" ? "managed" : "personal";
 
   return (
     <div className="mx-auto max-w-2xl space-y-5 animate-slide-up">
@@ -97,7 +104,11 @@ export default async function CustomersPage({
           </h1>
           <p className="text-xs text-muted-foreground">
             {customers.length} học viên
-            {activeFilterCount > 0 ? ` theo ${activeFilterCount} bộ lọc` : " đang quản lý"}
+            {activeFilterCount > 0
+              ? ` theo ${activeFilterCount} bộ lọc`
+              : activeTab === "managed"
+              ? " thuộc nơi quản lý"
+              : " của bản thân"}
           </p>
         </div>
         {canManageCustomer(session) && (
@@ -111,7 +122,17 @@ export default async function CustomersPage({
         )}
       </div>
 
+      {userIsManager && (
+        <CustomerTabSelect
+          activeTab={activeTab}
+          roleLabel={ROLE_LABELS[session.role]}
+        />
+      )}
+
       <form action="/customers" className="glass-card p-3 sm:p-4" method="get">
+        {filters.scope && (
+          <input type="hidden" name="tab" value={filters.scope} />
+        )}
         <details
           className="group sm:pointer-events-none sm:open"
           open={activeFilterCount > 0 ? true : undefined}
@@ -192,7 +213,7 @@ export default async function CustomersPage({
             {activeFilterCount > 0 && (
               <Link
                 className="inline-flex min-h-10 items-center justify-center rounded-xl bg-overlay-subtle px-4 py-2 text-xs font-semibold ring-1 ring-border transition hover:bg-overlay-medium"
-                href="/customers"
+                href={`/customers${filters.scope === "managed" ? "?tab=managed" : ""}`}
               >
                 Xóa lọc
               </Link>
@@ -213,7 +234,9 @@ export default async function CustomersPage({
           <p className="text-sm font-medium">
             {activeFilterCount > 0
               ? "Không có học viên phù hợp."
-              : "Chưa có học viên nào."}
+              : activeTab === "managed"
+              ? "Chưa có học viên nào trong phạm vi quản lý."
+              : "Chưa có học viên nào do bạn trực tiếp chăm sóc."}
           </p>
           <p className="mt-1 max-w-xs text-xs text-muted-foreground">
             {activeFilterCount > 0
