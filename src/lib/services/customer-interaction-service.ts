@@ -226,100 +226,82 @@ async function syncCustomerInteractionSummary(
 }
 
 async function syncInteractionRewards(input: {
-  caregiverId: string;
+  targetCaregiverIds: string[];
   customerName: string;
   interactionId: unknown;
   newScore: { exp: number; points: number };
-  oldScore: { exp: number; points: number };
-  oldCaregiverId?: string;
   session?: mongoose.ClientSession;
 }) {
-  const oldCaregiverId = input.oldCaregiverId ?? input.caregiverId;
-
-  if (oldCaregiverId !== input.caregiverId) {
-    await Promise.all([
-      XpTransactionModel.deleteMany({
-        source: "customer_interaction",
-        sourceId: input.interactionId,
-        userId: toObjectId(oldCaregiverId),
-      }, input.session ? { session: input.session } : undefined),
-      PointTransactionModel.deleteMany({
-        source: "customer_interaction_reward",
-        sourceId: input.interactionId,
-        userId: toObjectId(oldCaregiverId),
-      }, input.session ? { session: input.session } : undefined),
-    ]);
-
-    await syncUserRewardDelta(
-      oldCaregiverId,
-      -input.oldScore.exp,
-      -input.oldScore.points,
-      input.session,
-    );
-    await syncUserRewardDelta(
-      input.caregiverId,
-      input.newScore.exp,
-      input.newScore.points,
-      input.session,
-    );
-  } else {
-    const expDelta = input.newScore.exp - input.oldScore.exp;
-    const pointDelta = input.newScore.points - input.oldScore.points;
-
-    if (expDelta !== 0 || pointDelta !== 0) {
-      await syncUserRewardDelta(
-        input.caregiverId,
-        expDelta,
-        pointDelta,
-        input.session,
-      );
-    }
-  }
-
-  if (input.newScore.exp > 0) {
-    await XpTransactionModel.updateOne(
-      {
-        source: "customer_interaction",
-        sourceId: input.interactionId,
-        userId: toObjectId(input.caregiverId),
-      },
-      {
-        $set: {
-          amount: input.newScore.exp,
-          description: `Chăm sóc học viên: ${input.customerName}`,
-        },
-      },
-      { session: input.session, upsert: true },
-    );
-  } else {
-    await XpTransactionModel.deleteMany({
+  const [oldXpTx, oldPointTx] = await Promise.all([
+    XpTransactionModel.find({
       source: "customer_interaction",
-      sourceId: input.interactionId,
-      userId: toObjectId(input.caregiverId),
-    }, input.session ? { session: input.session } : undefined);
+      sourceId: toObjectId(input.interactionId),
+    })
+      .session(input.session ?? null)
+      .lean(),
+    PointTransactionModel.find({
+      source: "customer_interaction_reward",
+      sourceId: toObjectId(input.interactionId),
+    })
+      .session(input.session ?? null)
+      .lean(),
+  ]);
+
+  // Revert old balances
+  for (const tx of oldXpTx) {
+    await syncUserRewardDelta(tx.userId.toString(), -tx.amount, 0, input.session);
+  }
+  for (const tx of oldPointTx) {
+    await syncUserRewardDelta(tx.userId.toString(), 0, -tx.amount, input.session);
   }
 
-  if (input.newScore.points > 0) {
-    await PointTransactionModel.updateOne(
-      {
-        source: "customer_interaction_reward",
-        sourceId: input.interactionId,
-        userId: toObjectId(input.caregiverId),
-      },
-      {
-        $set: {
-          amount: input.newScore.points,
-          description: `Thưởng chăm sóc học viên: ${input.customerName}`,
-        },
-      },
-      { session: input.session, upsert: true },
-    );
-  } else {
-    await PointTransactionModel.deleteMany({
+  // Delete old transactions
+  await Promise.all([
+    XpTransactionModel.deleteMany({
+      source: "customer_interaction",
+      sourceId: toObjectId(input.interactionId),
+    }).session(input.session ?? null),
+    PointTransactionModel.deleteMany({
       source: "customer_interaction_reward",
-      sourceId: input.interactionId,
-      userId: toObjectId(input.caregiverId),
-    }, input.session ? { session: input.session } : undefined);
+      sourceId: toObjectId(input.interactionId),
+    }).session(input.session ?? null),
+  ]);
+
+  // Create new transactions if score > 0
+  if (input.newScore.exp > 0 || input.newScore.points > 0) {
+    for (const userId of input.targetCaregiverIds) {
+      if (input.newScore.exp > 0) {
+        await XpTransactionModel.create(
+          [
+            {
+              amount: input.newScore.exp,
+              description: `Chăm sóc học viên: ${input.customerName}`,
+              source: "customer_interaction",
+              sourceId: toObjectId(input.interactionId),
+              userId: toObjectId(userId),
+            },
+          ],
+          input.session ? { session: input.session } : undefined,
+        );
+        await syncUserRewardDelta(userId, input.newScore.exp, 0, input.session);
+      }
+
+      if (input.newScore.points > 0) {
+        await PointTransactionModel.create(
+          [
+            {
+              amount: input.newScore.points,
+              description: `Thưởng chăm sóc học viên: ${input.customerName}`,
+              source: "customer_interaction_reward",
+              sourceId: toObjectId(input.interactionId),
+              userId: toObjectId(userId),
+            },
+          ],
+          input.session ? { session: input.session } : undefined,
+        );
+        await syncUserRewardDelta(userId, 0, input.newScore.points, input.session);
+      }
+    }
   }
 }
 
@@ -343,11 +325,19 @@ async function syncUserRewardDelta(
   ).lean()) as UserRecord | null;
 
   if (updatedUser) {
-    await UserModel.updateOne(
-      { _id: toObjectId(caregiverId) },
-      { $set: { level: getLevelFromXp(updatedUser.totalXp) } },
-      session ? { session } : undefined,
-    );
+    const newLevel = getLevelFromXp(updatedUser.totalXp);
+    if (newLevel !== updatedUser.level) {
+      await UserModel.updateOne(
+        { _id: toObjectId(caregiverId) },
+        { $set: { level: newLevel } },
+        session ? { session } : undefined,
+      );
+      try {
+        await grantLevelUnlocks(caregiverId, newLevel, session);
+      } catch (err) {
+        console.error("[cosmetics] grantLevelUnlocks failed", err);
+      }
+    }
   }
 }
 
@@ -460,68 +450,26 @@ export async function createInteraction(
       session ? { session } : undefined,
     );
 
-    let newLevel: number | null = null;
-    let leveledUp = false;
-
-    if (score.exp > 0 || score.points > 0) {
-      if (score.exp > 0) {
-        await XpTransactionModel.create(
-          [
-            {
-              amount: score.exp,
-              description: `Chăm sóc học viên: ${customer.name}`,
-              source: "customer_interaction",
-              sourceId: interaction._id,
-              userId: toObjectId(interactionCaregiverId),
-            },
-          ],
-          session ? { session } : undefined,
-        );
-      }
-
-      if (score.points > 0) {
-        await PointTransactionModel.create(
-          [
-            {
-              amount: score.points,
-              description: `Thưởng chăm sóc học viên: ${customer.name}`,
-              source: "customer_interaction_reward",
-              sourceId: interaction._id,
-              userId: toObjectId(interactionCaregiverId),
-            },
-          ],
-          session ? { session } : undefined,
-        );
-      }
-
-      const updatedUser = (await UserModel.findByIdAndUpdate(
-        interactionCaregiverId,
-        {
-          $inc: {
-            totalXp: score.exp,
-            pointBalance: score.points,
-          },
-        },
-        { new: true, session },
-      ).lean()) as UserRecord | null;
-
-      if (updatedUser) {
-        newLevel = getLevelFromXp(updatedUser.totalXp);
-        if (newLevel !== updatedUser.level) {
-          leveledUp = true;
-          await UserModel.updateOne(
-            { _id: toObjectId(interactionCaregiverId) },
-            { $set: { level: newLevel } },
-            session ? { session } : undefined,
-          );
-          try {
-            await grantLevelUnlocks(interactionCaregiverId, newLevel, session);
-          } catch (err) {
-            console.error("[cosmetics] grantLevelUnlocks failed", err);
-          }
-        }
-      }
+    let targetCaregiverIds = (customer.caregiverIds ?? []).map((id) => id.toString());
+    if (targetCaregiverIds.length === 0) {
+      targetCaregiverIds = [caregiver.id];
     }
+
+    const actorBefore = await UserModel.findById(caregiver.id).session(session ?? null).lean();
+    const levelBefore = actorBefore?.level ?? 1;
+
+    await syncInteractionRewards({
+      targetCaregiverIds,
+      customerName: customer.name,
+      interactionId: interaction._id,
+      newScore: score,
+      session,
+    });
+
+    const actorAfter = await UserModel.findById(caregiver.id).session(session ?? null).lean();
+    const levelAfter = actorAfter?.level ?? 1;
+    const leveledUp = levelAfter > levelBefore;
+    const newLevel = leveledUp ? levelAfter : null;
 
     return {
       expAwarded: score.exp,
@@ -624,13 +572,16 @@ export async function updateInteraction(
       throw new Error("Cập nhật tương tác thất bại.");
     }
 
+    let targetCaregiverIds = (customer.caregiverIds ?? []).map((id) => id.toString());
+    if (targetCaregiverIds.length === 0) {
+      targetCaregiverIds = [interactionCaregiverId];
+    }
+
     await syncInteractionRewards({
-      caregiverId: interactionCaregiverId,
+      targetCaregiverIds,
       customerName: customer.name,
       interactionId: interaction._id,
       newScore,
-      oldScore,
-      oldCaregiverId: interaction.caregiverId.toString(),
       session,
     });
     await syncCustomerInteractionSummary(interaction.customerId.toString(), session);
@@ -687,11 +638,10 @@ export async function deleteInteraction(
       session ? { session } : undefined,
     );
     await syncInteractionRewards({
-      caregiverId: interaction.caregiverId.toString(),
+      targetCaregiverIds: [],
       customerName: customer.name,
       interactionId: interaction._id,
       newScore: { exp: 0, points: 0 },
-      oldScore,
       session,
     });
     await syncCustomerInteractionSummary(interaction.customerId.toString(), session);
