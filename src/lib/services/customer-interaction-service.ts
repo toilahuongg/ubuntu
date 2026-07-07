@@ -228,20 +228,21 @@ async function syncCustomerInteractionSummary(
 async function syncInteractionRewards(input: {
   targetCaregiverIds: string[];
   customerName: string;
-  interactionId: unknown;
+  interactionId: string | mongoose.Types.ObjectId | { toString(): string };
   newScore: { exp: number; points: number };
   session?: mongoose.ClientSession;
 }) {
+  const interactionObjectId = toObjectId(input.interactionId.toString());
   const [oldXpTx, oldPointTx] = await Promise.all([
     XpTransactionModel.find({
       source: "customer_interaction",
-      sourceId: toObjectId(input.interactionId),
+      sourceId: interactionObjectId,
     })
       .session(input.session ?? null)
       .lean(),
     PointTransactionModel.find({
       source: "customer_interaction_reward",
-      sourceId: toObjectId(input.interactionId),
+      sourceId: interactionObjectId,
     })
       .session(input.session ?? null)
       .lean(),
@@ -259,11 +260,11 @@ async function syncInteractionRewards(input: {
   await Promise.all([
     XpTransactionModel.deleteMany({
       source: "customer_interaction",
-      sourceId: toObjectId(input.interactionId),
+      sourceId: interactionObjectId,
     }).session(input.session ?? null),
     PointTransactionModel.deleteMany({
       source: "customer_interaction_reward",
-      sourceId: toObjectId(input.interactionId),
+      sourceId: interactionObjectId,
     }).session(input.session ?? null),
   ]);
 
@@ -277,7 +278,7 @@ async function syncInteractionRewards(input: {
               amount: input.newScore.exp,
               description: `Chăm sóc học viên: ${input.customerName}`,
               source: "customer_interaction",
-              sourceId: toObjectId(input.interactionId),
+              sourceId: interactionObjectId,
               userId: toObjectId(userId),
             },
           ],
@@ -293,7 +294,7 @@ async function syncInteractionRewards(input: {
               amount: input.newScore.points,
               description: `Thưởng chăm sóc học viên: ${input.customerName}`,
               source: "customer_interaction_reward",
-              sourceId: toObjectId(input.interactionId),
+              sourceId: interactionObjectId,
               userId: toObjectId(userId),
             },
           ],
