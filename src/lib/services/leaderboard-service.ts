@@ -68,7 +68,13 @@ function buildMonthlyPointsPipeline(yearMonth: string) {
   return [
     {
       $match: {
-        source: { $in: ["task_reward", "task_streak_bonus_reward"] },
+        source: {
+          $in: [
+            "task_reward",
+            "task_streak_bonus_reward",
+            "customer_interaction_reward",
+          ],
+        },
         createdAt: { $gte: startOfMonth, $lt: endOfMonth },
       },
     },

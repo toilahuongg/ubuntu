@@ -191,7 +191,13 @@ describe("leaderboard service", () => {
       expect.arrayContaining([
         expect.objectContaining({
           $match: expect.objectContaining({
-            source: { $in: ["task_reward", "task_streak_bonus_reward"] },
+            source: {
+              $in: [
+                "task_reward",
+                "task_streak_bonus_reward",
+                "customer_interaction_reward",
+              ],
+            },
           }),
         }),
         expect.objectContaining({
