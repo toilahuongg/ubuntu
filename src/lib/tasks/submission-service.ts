@@ -247,12 +247,15 @@ export async function saveSubmission(
 
       let newLevel: number | null = null;
       let leveledUp = false;
-      if (expReward > 0 || pointReward > 0) {
-        if (expReward > 0) {
+      const totalExpToDeduct = existing.completionCount * expReward;
+      const totalPointsToDeduct = existing.completionCount * pointReward;
+
+      if (totalExpToDeduct > 0 || totalPointsToDeduct > 0) {
+        if (totalExpToDeduct > 0) {
           await XpTransactionModel.create(
             [
               {
-                amount: -expReward,
+                amount: -totalExpToDeduct,
                 description: `Huỷ hoàn thành: ${taskRaw.title}`,
                 source: "task_completion",
                 sourceId: taskRaw._id,
@@ -262,11 +265,11 @@ export async function saveSubmission(
             session ? { session } : undefined,
           );
         }
-        if (pointReward > 0) {
+        if (totalPointsToDeduct > 0) {
           await PointTransactionModel.create(
             [
               {
-                amount: -pointReward,
+                amount: -totalPointsToDeduct,
                 description: `Huỷ thưởng nhiệm vụ: ${taskRaw.title}`,
                 source: "task_reward",
                 sourceId: taskRaw._id,
@@ -281,8 +284,8 @@ export async function saveSubmission(
           subjectRaw._id,
           {
             $inc: {
-              totalXp: -expReward,
-              pointBalance: -pointReward,
+              totalXp: -totalExpToDeduct,
+              pointBalance: -totalPointsToDeduct,
             },
           },
           { new: true, session },
@@ -347,7 +350,7 @@ export async function saveSubmission(
         submissionId: existing._id.toString(),
         completionCount: 0,
         isFirstSubmission: false,
-        xpAwarded: -expReward,
+        xpAwarded: -totalExpToDeduct,
         streakBonus: EMPTY_TASK_STREAK_BONUS,
         newLevel,
         leveledUp,
@@ -432,19 +435,21 @@ export async function saveSubmission(
 
     const previousCount = existing?.completionCount ?? 0;
     const countAwarded = mode === "set"
-      ? Math.max(0, updated.completionCount - previousCount)
+      ? updated.completionCount - previousCount
       : count;
 
-    if (countAwarded > 0 && (expReward > 0 || pointReward > 0)) {
+    if (countAwarded !== 0 && (expReward > 0 || pointReward > 0)) {
       const totalExp = countAwarded * expReward;
       const totalPoints = countAwarded * pointReward;
       xpAwarded = totalExp;
-      if (totalExp > 0) {
+      if (totalExp !== 0) {
         await XpTransactionModel.create(
           [
             {
               amount: totalExp,
-              description: `Hoàn thành: ${taskRaw.title}`,
+              description: totalExp > 0
+                ? `Hoàn thành: ${taskRaw.title}`
+                : `Giảm hoàn thành: ${taskRaw.title}`,
               source: "task_completion",
               sourceId: taskRaw._id,
               userId: subjectRaw._id,
@@ -453,12 +458,14 @@ export async function saveSubmission(
           session ? { session } : undefined,
         );
       }
-      if (totalPoints > 0) {
+      if (totalPoints !== 0) {
         await PointTransactionModel.create(
           [
             {
               amount: totalPoints,
-              description: `Thưởng nhiệm vụ: ${taskRaw.title}`,
+              description: totalPoints > 0
+                ? `Thưởng nhiệm vụ: ${taskRaw.title}`
+                : `Giảm thưởng nhiệm vụ: ${taskRaw.title}`,
               source: "task_reward",
               sourceId: taskRaw._id,
               userId: subjectRaw._id,
@@ -468,7 +475,7 @@ export async function saveSubmission(
         );
       }
 
-      if (isDailyTask) {
+      if (countAwarded > 0 && isDailyTask) {
         const yearMonth = dateKey.slice(0, 7);
         const monthSubmissions = (await SubmissionModel.find({
           completionCount: { $gt: 0 },
@@ -555,7 +562,7 @@ export async function saveSubmission(
 
       xpAwarded += streakBonus.bonusExp;
 
-      const updatedUser = (await UserModel.findByIdAndUpdate(
+      let updatedUser = (await UserModel.findByIdAndUpdate(
         subjectRaw._id,
         {
           $inc: {
@@ -566,19 +573,39 @@ export async function saveSubmission(
         { new: true, session },
       ).lean()) as UserRecord | null;
 
+      if (
+        updatedUser &&
+        (updatedUser.totalXp < 0 ||
+          ((updatedUser as UserRecord & { pointBalance?: number })
+            .pointBalance ?? 0) < 0)
+      ) {
+        updatedUser = (await UserModel.findByIdAndUpdate(
+          subjectRaw._id,
+          {
+            $max: {
+              totalXp: 0,
+              pointBalance: 0,
+            },
+          },
+          { new: true, session },
+        ).lean()) as UserRecord | null;
+      }
+
       if (updatedUser) {
         newLevel = getLevelFromXp(updatedUser.totalXp);
         if (newLevel !== updatedUser.level) {
-          leveledUp = true;
+          leveledUp = newLevel > updatedUser.level;
           await UserModel.updateOne(
             { _id: subjectRaw._id },
             { $set: { level: newLevel } },
             session ? { session } : undefined,
           );
-          try {
-            await grantLevelUnlocks(subjectRaw._id, newLevel, session);
-          } catch (err) {
-            console.error("[cosmetics] grantLevelUnlocks failed", err);
+          if (newLevel > updatedUser.level) {
+            try {
+              await grantLevelUnlocks(subjectRaw._id, newLevel, session);
+            } catch (err) {
+              console.error("[cosmetics] grantLevelUnlocks failed", err);
+            }
           }
         }
       }
