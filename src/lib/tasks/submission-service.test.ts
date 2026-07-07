@@ -223,4 +223,71 @@ describe("saveSubmission points/XP subtraction and deletion", () => {
     }).lean();
     expect(submission?.completionCount).toBe(3);
   });
+
+  it("handles the user specific sequence: start 525, set 2, set 1, set 2", async () => {
+    const team = await TeamModel.create({
+      code: "TEST_TEAM_SUB_3",
+      name: "Test Team Sub 3",
+    });
+
+    const user = await UserModel.create({
+      fullName: "Sub User 3",
+      role: "MEMBER",
+      status: "ACTIVE",
+      totalXp: 525,
+      pointBalance: 525,
+      teamId: team._id,
+    });
+
+    const task = await TaskModel.create({
+      title: "Task 3",
+      taskType: "WEEKLY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      expReward: 10,
+      pointReward: 10,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+    });
+
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    // 1. Set to 2 completions (award 2 * 10 = 20)
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-07", {
+      count: 2,
+      mode: "set",
+    });
+    let u = await UserModel.findById(user._id).lean();
+    expect(u?.pointBalance).toBe(545);
+
+    // 2. Change to 1 completion (deduct 10 points)
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-07", {
+      count: 1,
+      mode: "set",
+    });
+    u = await UserModel.findById(user._id).lean();
+    expect(u?.pointBalance).toBe(535);
+
+    // 3. Change back to 2 completions (award 10 points)
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-07", {
+      count: 2,
+      mode: "set",
+    });
+    u = await UserModel.findById(user._id).lean();
+    expect(u?.pointBalance).toBe(545);
+
+    const txs = await PointTransactionModel.find({ userId: user._id }).lean();
+    console.log("Point Transactions: ", txs.map(t => ({ amount: t.amount, source: t.source, desc: t.description })));
+    expect(txs.length).toBe(3);
+  });
 });
+

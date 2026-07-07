@@ -1,4 +1,8 @@
-export const DEFAULT_SUBMISSION_REVALIDATION_PATHS = ["/dashboard"] as const;
+export const DEFAULT_SUBMISSION_REVALIDATION_PATHS = [
+  "/dashboard",
+  "/leaderboard",
+  "/dtt/leaderboard",
+] as const;
 
 export function resolveSubmissionRevalidationPaths(
   paths?: readonly string[],
