@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   dttEnrollmentFind: vi.fn(),
   taskFind: vi.fn(),
   userFind: vi.fn(),
+  userFindById: vi.fn(),
 }));
 
 vi.mock("@/lib/dates", () => ({
@@ -63,6 +64,7 @@ vi.mock("@/lib/models", () => ({
   },
   UserModel: {
     find: mocks.userFind,
+    findById: mocks.userFindById,
   },
 }));
 
@@ -70,6 +72,7 @@ import {
   getTopZoneLeads,
   getTopZones,
   getDttClassLeaderboard,
+  getUserLeaderboardResult,
 } from "@/lib/services/leaderboard-service";
 
 function objectId(value: string) {
@@ -87,6 +90,7 @@ describe("leaderboard service", () => {
     mocks.dttEnrollmentFind.mockReset();
     mocks.taskFind.mockReset();
     mocks.userFind.mockReset();
+    mocks.userFindById.mockReset();
   });
 
   it("ranks zones by monthly XP from active users in each zone", async () => {
@@ -455,6 +459,88 @@ describe("leaderboard service", () => {
       const aggregateCall = mocks.aggregate.mock.calls[0]?.[0] as Array<Record<string, unknown>> | undefined;
       const matchStage = aggregateCall?.find((stage) => stage.$match) as { $match: { taskId: { toString(): string } } } | undefined;
       expect(matchStage?.$match.taskId.toString()).toBe(targetTaskId);
+    });
+  });
+
+  describe("getUserLeaderboardResult", () => {
+    it("returns null if user not found", async () => {
+      mocks.userFindById.mockReturnValue({
+        lean: () => Promise.resolve(null),
+      });
+      const res = await getUserLeaderboardResult("user-id", "members");
+      expect(res).toBeNull();
+    });
+
+    it("returns user role ranking and entry correctly", async () => {
+      mocks.userFindById.mockReturnValue({
+        lean: () => Promise.resolve({
+          _id: objectId("user-id"),
+          fullName: "User A",
+          role: "MEMBER",
+          gender: "male",
+          level: 3,
+        }),
+      });
+      mocks.aggregate.mockResolvedValue([
+        { _id: objectId("other-id"), monthlyXp: 200 },
+        { _id: objectId("user-id"), monthlyXp: 150 },
+      ]);
+
+      const res = await getUserLeaderboardResult("user-id", "members");
+      expect(res).toEqual({
+        type: "user",
+        rank: 2,
+        totalXp: 150,
+        userEntry: {
+          fullName: "User A",
+          id: "user-id",
+          level: 3,
+          levelInfo: {
+            icon: "/levels/3.png",
+            nameVi: "Cấp 3",
+          },
+          rank: 2,
+          totalXp: 150,
+        },
+      });
+    });
+
+    it("returns region ranking and entry correctly", async () => {
+      mocks.userFindById.mockReturnValue({
+        lean: () => Promise.resolve({
+          _id: objectId("user-id"),
+          fullName: "User A",
+          role: "MEMBER",
+          regionId: objectId("region-a"),
+        }),
+      });
+      mocks.aggregate.mockResolvedValue([
+        { _id: objectId("region-b"), memberCount: 1, totalXp: 500 },
+        { _id: objectId("region-a"), memberCount: 1, totalXp: 300 },
+      ]);
+      mocks.regionFind.mockReturnValue({
+        select: () => ({
+          lean: () => Promise.resolve([
+            { _id: objectId("region-a"), code: "KVA", name: "Khu vực A" },
+            { _id: objectId("region-b"), code: "KVB", name: "Khu vực B" },
+          ]),
+        }),
+      });
+
+      const res = await getUserLeaderboardResult("user-id", "regions");
+      expect(res).toEqual({
+        type: "region",
+        rank: 2,
+        totalXp: 300,
+        regionEntry: {
+          id: "region-a",
+          name: "Khu vực A",
+          code: "KVA",
+          rank: 2,
+          totalXp: 300,
+          memberCount: 1,
+        },
+      });
     });
   });
 });

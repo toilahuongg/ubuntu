@@ -399,3 +399,161 @@ export async function getDttClassLeaderboard(
   };
 }
 
+const BOARD_TO_ROLE: Record<string, string> = {
+  tdm: "TDM",
+  members: "MEMBER",
+  ngv: "NGV",
+  "zone-leads": "ZONE_LEAD",
+  leads: "REGIONAL_LEAD",
+};
+
+export type PersonalLeaderboardResult = {
+  type: "user" | "region" | "zone";
+  rank: number;
+  totalXp: number;
+  userEntry?: LeaderboardEntry;
+  regionEntry?: RegionLeaderboardEntry;
+  zoneEntry?: ZoneLeaderboardEntry;
+};
+
+async function getRoleLeaderboardRankAndScore(
+  user: UserRecord,
+  role: string,
+): Promise<{ rank: number; totalXp: number; entry: LeaderboardEntry } | null> {
+  const userId = user._id.toString();
+  await connectToDatabase();
+  const yearMonth = getCurrentYearMonth();
+
+  const aggregated = (await PointTransactionModel.aggregate([
+    ...buildMonthlyPointsPipeline(yearMonth),
+    {
+      $lookup: {
+        as: "user",
+        foreignField: "_id",
+        from: "users",
+        localField: "_id",
+      },
+    },
+    { $unwind: "$user" },
+    {
+      $match: {
+        "user.role": role,
+        "user.status": "ACTIVE",
+      },
+    },
+    { $sort: { monthlyXp: -1 } },
+  ])) as { _id: unknown; monthlyXp: number }[];
+
+  const userIndex = aggregated.findIndex(
+    (row) => (row._id as { toString(): string }).toString() === userId,
+  );
+
+  let rank: number;
+  let totalXp: number;
+
+  if (userIndex !== -1) {
+    rank = userIndex + 1;
+    totalXp = aggregated[userIndex].monthlyXp;
+  } else {
+    rank = aggregated.length + 1;
+    totalXp = 0;
+  }
+
+  const entry = toLeaderboardEntry(user, totalXp, rank);
+  const equippedMap = await getEquippedPayloadsForUsers([userId]);
+  const eq = equippedMap.get(userId);
+  if (eq) {
+    entry.equipped = serializeEquipped(eq);
+  }
+
+  return { rank, totalXp, entry };
+}
+
+export async function getUserLeaderboardResult(
+  userId: string,
+  activeBoard: string,
+): Promise<PersonalLeaderboardResult | null> {
+  await connectToDatabase();
+  const user = (await UserModel.findById(userId).lean()) as UserRecord | null;
+  if (!user) return null;
+
+  if (activeBoard === "regions") {
+    if (!user.regionId) return null;
+    const allRegions = await getTopRegions(999);
+    const userRegion = allRegions.find((r) => r.id === user.regionId?.toString());
+    if (!userRegion) {
+      const region = await RegionModel.findById(user.regionId)
+        .select({ code: 1, name: 1 })
+        .lean();
+      if (!region) return null;
+      return {
+        type: "region",
+        rank: allRegions.length + 1,
+        totalXp: 0,
+        regionEntry: {
+          id: (region._id as { toString(): string }).toString(),
+          name: region.name,
+          code: region.code,
+          rank: allRegions.length + 1,
+          totalXp: 0,
+          memberCount: 0,
+        },
+      };
+    }
+    return {
+      type: "region",
+      rank: userRegion.rank,
+      totalXp: userRegion.totalXp,
+      regionEntry: userRegion,
+    };
+  }
+
+  if (activeBoard === "zones") {
+    if (!user.zoneId) return null;
+    const allZones = await getTopZones(999);
+    const userZone = allZones.find((z) => z.id === user.zoneId?.toString());
+    if (!userZone) {
+      const zone = await ZoneModel.findById(user.zoneId)
+        .select({ code: 1, name: 1 })
+        .lean();
+      if (!zone) return null;
+      return {
+        type: "zone",
+        rank: allZones.length + 1,
+        totalXp: 0,
+        zoneEntry: {
+          id: (zone._id as { toString(): string }).toString(),
+          name: zone.name,
+          code: zone.code,
+          rank: allZones.length + 1,
+          totalXp: 0,
+          memberCount: 0,
+        },
+      };
+    }
+    return {
+      type: "zone",
+      rank: userZone.rank,
+      totalXp: userZone.totalXp,
+      zoneEntry: userZone,
+    };
+  }
+
+  // Individual boards (tdm, members, ngv, zone-leads, leads)
+  const userRole = user.role;
+  // Supported roles for leaderboard
+  if (!["TDM", "MEMBER", "NGV", "ZONE_LEAD", "REGIONAL_LEAD"].includes(userRole)) {
+    return null;
+  }
+
+  const res = await getRoleLeaderboardRankAndScore(user, userRole);
+  if (!res) return null;
+
+  return {
+    type: "user",
+    rank: res.rank,
+    totalXp: res.totalXp,
+    userEntry: res.entry,
+  };
+}
+
