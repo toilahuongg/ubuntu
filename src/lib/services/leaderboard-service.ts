@@ -1,6 +1,6 @@
 import "server-only";
 
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 import {
   getAppTimezone,
@@ -12,6 +12,7 @@ import { connectToDatabase } from "@/lib/mongoose";
 import {
   DttClassModel,
   DttEnrollmentModel,
+  PointTransactionModel,
   RegionModel,
   SubmissionModel,
   TaskModel,
@@ -55,27 +56,27 @@ function toLeaderboardEntry(
 }
 
 function buildMonthlyPointsPipeline(yearMonth: string) {
+  const timezone = getAppTimezone();
+  const startOfMonth = fromZonedTime(`${yearMonth}-01T00:00:00`, timezone);
+  const year = Number(yearMonth.slice(0, 4));
+  const month = Number(yearMonth.slice(5, 7));
+  const nextYearMonth = month === 12
+    ? `${year + 1}-01`
+    : `${year}-${String(month + 1).padStart(2, "0")}`;
+  const endOfMonth = fromZonedTime(`${nextYearMonth}-01T00:00:00`, timezone);
+
   return [
-    { $match: { date: { $regex: `^${yearMonth}` } } },
     {
-      $lookup: {
-        as: "task",
-        foreignField: "_id",
-        from: "tasks",
-        localField: "taskId",
+      $match: {
+        source: { $in: ["task_reward", "task_streak_bonus_reward"] },
+        createdAt: { $gte: startOfMonth, $lt: endOfMonth },
       },
     },
-    { $unwind: "$task" },
     {
       $group: {
-        _id: "$subjectUserId",
+        _id: "$userId",
         monthlyXp: {
-          $sum: {
-            $multiply: [
-              { $ifNull: ["$task.pointReward", 0] },
-              { $ifNull: ["$completionCount", 1] },
-            ],
-          },
+          $sum: "$amount",
         },
       },
     },
@@ -90,7 +91,7 @@ async function getTopUsersByMonthlyXp(
   await connectToDatabase();
   const yearMonth = getCurrentYearMonth();
 
-  const topIds = (await SubmissionModel.aggregate([
+  const topIds = (await PointTransactionModel.aggregate([
     ...buildMonthlyPointsPipeline(yearMonth),
     {
       $lookup: {
@@ -157,7 +158,7 @@ export async function getTopRegions(
   await connectToDatabase();
   const yearMonth = getCurrentYearMonth();
 
-  const aggregated = (await SubmissionModel.aggregate([
+  const aggregated = (await PointTransactionModel.aggregate([
     ...buildMonthlyPointsPipeline(yearMonth),
     {
       $lookup: {
@@ -215,7 +216,7 @@ export async function getTopZones(
   await connectToDatabase();
   const yearMonth = getCurrentYearMonth();
 
-  const aggregated = (await SubmissionModel.aggregate([
+  const aggregated = (await PointTransactionModel.aggregate([
     ...buildMonthlyPointsPipeline(yearMonth),
     {
       $lookup: {

@@ -46,6 +46,9 @@ vi.mock("@/lib/models", () => ({
   SubmissionModel: {
     aggregate: mocks.aggregate,
   },
+  PointTransactionModel: {
+    aggregate: mocks.aggregate,
+  },
   ZoneModel: {
     find: mocks.zoneFind,
   },
@@ -174,7 +177,7 @@ describe("leaderboard service", () => {
     expect(pipeline).toContainEqual({ $limit: 5 });
   });
 
-  it("multiplies pointReward by completionCount in monthly points pipeline", async () => {
+  it("sums transaction amounts in monthly points pipeline", async () => {
     mocks.aggregate.mockResolvedValue([]);
     mocks.zoneFind.mockReturnValue({
       select: () => ({
@@ -187,16 +190,14 @@ describe("leaderboard service", () => {
     expect(mocks.aggregate).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
+          $match: expect.objectContaining({
+            source: { $in: ["task_reward", "task_streak_bonus_reward"] },
+          }),
+        }),
+        expect.objectContaining({
           $group: {
-            _id: "$subjectUserId",
-            monthlyXp: {
-              $sum: {
-                $multiply: [
-                  { $ifNull: ["$task.pointReward", 0] },
-                  { $ifNull: ["$completionCount", 1] },
-                ],
-              },
-            },
+            _id: "$userId",
+            monthlyXp: { $sum: "$amount" },
           },
         }),
       ]),
