@@ -6,6 +6,7 @@ const mockGetSessionUser = vi.fn();
 const mockCanManageDtt = vi.fn();
 const mockRedirect = vi.fn();
 const mockEnrollmentFindOne = vi.fn();
+const mockGetUserLeaderboardResult = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   getSessionUser: () => mockGetSessionUser(),
@@ -40,6 +41,7 @@ vi.mock("@/lib/services/leaderboard-service", () => ({
   getTopNgv: vi.fn().mockResolvedValue([]),
   getTopZoneLeads: vi.fn().mockResolvedValue([]),
   getTopRegionalLeads: vi.fn().mockResolvedValue([]),
+  getUserLeaderboardResult: () => mockGetUserLeaderboardResult(),
 }));
 
 // Helper to recursively search for text in React element tree
@@ -69,9 +71,24 @@ function hasText(node: any, text: string): boolean {
   return false;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function findComponent(node: any, componentName: string): any {
+  if (!node) return null;
+  if (node.type && (node.type.name === componentName || node.type === componentName)) return node;
+  if (node.props && node.props.children) {
+    const children = Array.isArray(node.props.children) ? node.props.children : [node.props.children];
+    for (const child of children) {
+      const found = findComponent(child, componentName);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 describe("LeaderboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetUserLeaderboardResult.mockResolvedValue(null);
   });
 
   it("redirects to /login if user is not authenticated", async () => {
@@ -115,5 +132,38 @@ describe("LeaderboardPage", () => {
     expect(result).toBeDefined();
 
     expect(hasText(result, "Bảng xếp hạng Lớp học ĐTT")).toBe(true);
+  });
+
+  it("renders the personal leaderboard results if available", async () => {
+    const session = { id: "user_1", role: "MEMBER", status: "ACTIVE" };
+    mockGetSessionUser.mockResolvedValue(session);
+    mockCanManageDtt.mockReturnValue(false);
+    mockEnrollmentFindOne.mockResolvedValue(null);
+    mockGetUserLeaderboardResult.mockResolvedValue({
+      type: "user",
+      rank: 4,
+      totalXp: 120,
+      userEntry: {
+        id: "user_1",
+        fullName: "User One",
+        level: 5,
+        levelInfo: { icon: "/levels/5.png", nameVi: "Cấp 5" },
+        rank: 4,
+        totalXp: 120,
+      },
+    });
+
+    const result = await LeaderboardPage({ searchParams: Promise.resolve({}) });
+    expect(result).toBeDefined();
+    expect(hasText(result, "Vị trí của bạn")).toBe(true);
+    expect(hasText(result, "(bạn)")).toBe(true);
+
+    const cosmeticNameNode = findComponent(result, "CosmeticName");
+    expect(cosmeticNameNode).toBeDefined();
+    expect(cosmeticNameNode.props.fullName).toBe("User One");
+
+    const levelAvatarNode = findComponent(result, "LevelAvatar");
+    expect(levelAvatarNode).toBeDefined();
+    expect(levelAvatarNode.props.src).toBe("/levels/5.png");
   });
 });

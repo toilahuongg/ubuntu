@@ -13,6 +13,7 @@ import {
   getTopTdm,
   getTopZoneLeads,
   getTopZones,
+  getUserLeaderboardResult,
   type RegionLeaderboardEntry,
   type ZoneLeaderboardEntry,
 } from "@/lib/services/leaderboard-service";
@@ -117,6 +118,8 @@ export default async function LeaderboardPage({
                 ? await getTopZoneLeads(LEADERBOARD_LIMIT)
                 : await getTopRegionalLeads(LEADERBOARD_LIMIT);
 
+  const personalResult = await getUserLeaderboardResult(session.id, activeBoard);
+
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
       <div className="space-y-3">
@@ -164,6 +167,86 @@ export default async function LeaderboardPage({
           <UserPodium entries={entries as LeaderboardEntry[]} selfId={session.id} />
         ) : null}
       </Section>
+
+      {personalResult && (
+        <div
+          className="sticky bottom-[53px] z-30 w-full max-w-2xl border border-primary/20 bg-background/95 dark:bg-slate-900/90 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.12)] transition-all rounded-xl"
+          style={{ bottom: "calc(53px + env(safe-area-inset-bottom))" }}
+        >
+          <div className="mx-auto px-4 py-2.5">
+            <span className="text-[10px] uppercase tracking-wider text-primary font-bold block mb-1">
+              {personalResult.type === "region"
+                ? "Khu vực của bạn"
+                : personalResult.type === "zone"
+                ? "Địa vực của bạn"
+                : "Vị trí của bạn"}
+            </span>
+
+            {personalResult.type === "user" && personalResult.userEntry && (
+              <div className="flex items-center gap-3">
+                <RankBadge rank={personalResult.rank} />
+                <LevelAvatar
+                  src={personalResult.userEntry.levelInfo.icon}
+                  alt={personalResult.userEntry.levelInfo.nameVi}
+                  equipped={personalResult.userEntry.equipped}
+                  size={44}
+                  className="h-11 w-11 shrink-0 rounded-full object-cover"
+                  imageClassName="rounded-full"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-foreground flex items-center">
+                    <CosmeticName
+                      fullName={personalResult.userEntry.fullName}
+                      equipped={personalResult.userEntry.equipped}
+                    />
+                    <span className="ml-1.5 text-[11px] text-muted-foreground font-normal">(bạn)</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Lv.{personalResult.userEntry.level} — {personalResult.userEntry.levelInfo.nameVi}
+                  </p>
+                </div>
+                <XpValue xp={personalResult.totalXp} />
+              </div>
+            )}
+
+            {personalResult.type === "region" && personalResult.regionEntry && (
+              <div className="flex items-center gap-3">
+                <RankBadge rank={personalResult.rank} />
+                <div className="bg-primary/10 p-2 rounded-lg text-primary">
+                  <MapPin className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {personalResult.regionEntry.name}
+                  </p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {personalResult.regionEntry.code} — {personalResult.regionEntry.memberCount} thành viên
+                  </p>
+                </div>
+                <XpValue xp={personalResult.totalXp} />
+              </div>
+            )}
+
+            {personalResult.type === "zone" && personalResult.zoneEntry && (
+              <div className="flex items-center gap-3">
+                <RankBadge rank={personalResult.rank} />
+                <div className="bg-primary/10 p-2 rounded-lg text-primary">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {personalResult.zoneEntry.name}
+                  </p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {personalResult.zoneEntry.code} — {personalResult.zoneEntry.memberCount} thành viên
+                  </p>
+                </div>
+                <XpValue xp={personalResult.totalXp} />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
