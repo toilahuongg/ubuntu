@@ -171,7 +171,8 @@ export function UserCombobox({
             value &&
             selectedLabels[0] &&
             !query &&
-            !userClearedRef.current
+            !userClearedRef.current &&
+            !open
               ? selectedLabels[0]
               : query
           }
