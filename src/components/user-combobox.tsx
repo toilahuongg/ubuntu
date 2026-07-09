@@ -64,9 +64,8 @@ export function UserCombobox({
     setLoading(true);
     try {
       const result = await searchCaregiversAction(q);
-      if (result.ok && result.data) {
-        setResults(result.data);
-      }
+      const data = result.ok && result.data ? result.data : [];
+      setResults(data);
     } finally {
       setLoading(false);
     }
@@ -161,23 +160,32 @@ export function UserCombobox({
         <input
           type="text"
           value={
-            !multiple && value && selectedLabels[0] ? selectedLabels[0] : query
+            !multiple && value && selectedLabels[0] && !query
+              ? selectedLabels[0]
+              : query
           }
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
           }}
           onFocus={() => {
-            if (!multiple && value) {
-              // In single-select with a value, clear the display to allow re-search
-              setQuery("");
-            }
             setOpen(true);
           }}
           onBlur={() => {
-            // Restore selected label if no query was entered
-            if (!query.trim() && !multiple && value && selectedLabels[0]) {
-              // Value will be shown via the controlled input above
+            // In single-select, if user blurs without selecting and
+            // there's a previous value, restore it
+            if (!multiple && value && !query.trim() && selectedLabels[0]) {
+              // Input already shows selectedLabels[0] via value prop
+            } else if (!multiple && !value) {
+              setQuery("");
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setOpen(false);
+              if (!multiple && value && selectedLabels[0]) {
+                setQuery("");
+              }
             }
           }}
           placeholder={placeholder}
