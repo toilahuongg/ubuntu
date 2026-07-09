@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Check, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { stripDiacritics } from "@/lib/utils/text";
 import type { CustomerCaregiverOption } from "@/lib/services/customer-service";
 
 type UserComboboxProps = {
@@ -41,14 +42,14 @@ export function UserCombobox({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Filter options by query
+  // Filter options by query (diacritic-insensitive)
   const filtered = React.useMemo(() => {
     if (!query.trim()) return options;
-    const q = query.toLowerCase();
+    const q = stripDiacritics(query);
     return options.filter(
       (o) =>
-        o.fullName.toLowerCase().includes(q) ||
-        o.roleLabel.toLowerCase().includes(q),
+        stripDiacritics(o.fullName).includes(q) ||
+        stripDiacritics(o.roleLabel).includes(q),
     );
   }, [options, query]);
 

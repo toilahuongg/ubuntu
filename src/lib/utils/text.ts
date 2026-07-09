@@ -16,3 +16,11 @@ export function slugifyCode(input: string) {
     .replace(/-+/g, "-")
     .toUpperCase();
 }
+
+/** Strip Vietnamese diacritics so search works with or without accents. */
+export function stripDiacritics(input: string): string {
+  return input
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
