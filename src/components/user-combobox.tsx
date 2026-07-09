@@ -210,7 +210,7 @@ export function UserCombobox({
               Không tìm thấy người dùng
             </div>
           ) : (
-            Object.entries(grouped).map(([roleLabel, items]) => (
+            Array.from(grouped.entries()).map(([roleLabel, items]) => (
               <div key={roleLabel}>
                 <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                   {roleLabel}
