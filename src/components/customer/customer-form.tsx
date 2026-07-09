@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, UserPlus, X } from "lucide-react";
+import { ArrowLeft, Save, UserPlus } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -25,10 +25,9 @@ import {
   PERSONALITIES,
   PERSONALITY_LABELS,
 } from "@/lib/customer/constants";
-import type {
-  CustomerCaregiverOption,
-  CustomerListItem,
-} from "@/lib/services/customer-service";
+import type { CustomerListItem } from "@/lib/services/customer-service";
+import type { CustomerCaregiverOption } from "@/lib/services/customer-service";
+import { UserCombobox } from "@/components/user-combobox";
 
 export function CustomerForm({
   caregiverOptions = [],
@@ -57,15 +56,6 @@ export function CustomerForm({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  function addCaregiver(id: string) {
-    if (!id || caregiverIds.includes(id) || caregiverIds.length >= 3) return;
-    setCaregiverIds([...caregiverIds, id]);
-  }
-
-  function removeCaregiver(id: string) {
-    setCaregiverIds(caregiverIds.filter((caregiverId) => caregiverId !== id));
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -244,50 +234,14 @@ export function CustomerForm({
             </span>
           </div>
 
-          {caregiverIds.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {caregiverIds.map((id) => {
-                const caregiver = caregiverOptions.find((user) => user.id === id);
-                return (
-                  <span
-                    key={id}
-                    className="inline-flex items-center gap-1 rounded-full bg-background px-2 py-1 text-[11px] font-medium ring-1 ring-border"
-                  >
-                    {caregiver?.fullName ?? "Người dùng"}
-                    <button
-                      type="button"
-                      disabled={caregiverIds.length <= 1}
-                      onClick={() => removeCaregiver(id)}
-                      className="rounded-full p-0.5 text-muted-foreground transition hover:bg-overlay-medium hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-                      aria-label="Bỏ người chăm sóc"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                );
-              })}
-            </div>
-          )}
-
-          <select
-            value=""
-            disabled={caregiverIds.length >= 3}
-            onChange={(e) => addCaregiver(e.target.value)}
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
-          >
-            <option value="">
-              {caregiverIds.length >= 3
-                ? "Đã đủ 3 người chăm sóc"
-                : "Thêm người cùng chăm sóc"}
-            </option>
-            {caregiverOptions
-              .filter((user) => !caregiverIds.includes(user.id))
-              .map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.fullName} · {user.roleLabel}
-                </option>
-              ))}
-          </select>
+          <UserCombobox
+            options={caregiverOptions}
+            value={caregiverIds}
+            onChange={(v) => setCaregiverIds(v as string[])}
+            multiple
+            maxSelections={3}
+            placeholder="Tìm và chọn người chăm sóc…"
+          />
         </div>
       )}
 
