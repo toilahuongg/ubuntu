@@ -45,6 +45,11 @@ export function UserCombobox({
     return Array.from(map.values());
   }, [selectedOptions, results]);
 
+  // Reset cleared flag when a new selection is made
+  React.useEffect(() => {
+    if (value) userClearedRef.current = false;
+  }, [value]);
+
   // Close popup on outside click
   React.useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -89,7 +94,6 @@ export function UserCombobox({
 
   const handleSelect = React.useCallback(
     (id: string) => {
-      userClearedRef.current = false;
       if (multiple) {
         const current = value as string[];
         if (current.includes(id)) {
@@ -176,8 +180,6 @@ export function UserCombobox({
             setOpen(true);
           }}
           onFocus={() => {
-            // Reset cleared flag when user focuses to search again
-            userClearedRef.current = false;
             setOpen(true);
           }}
           onBlur={() => {
