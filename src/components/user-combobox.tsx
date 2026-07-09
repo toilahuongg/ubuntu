@@ -34,6 +34,8 @@ export function UserCombobox({
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track if user has actively cleared the selection in single-select mode
+  const userClearedRef = React.useRef(false);
 
   // Merge pre-selected options with search results for display
   const allKnown = React.useMemo(() => {
@@ -87,6 +89,7 @@ export function UserCombobox({
 
   const handleSelect = React.useCallback(
     (id: string) => {
+      userClearedRef.current = false;
       if (multiple) {
         const current = value as string[];
         if (current.includes(id)) {
@@ -160,7 +163,11 @@ export function UserCombobox({
         <input
           type="text"
           value={
-            !multiple && value && selectedLabels[0] && !query
+            !multiple &&
+            value &&
+            selectedLabels[0] &&
+            !query &&
+            !userClearedRef.current
               ? selectedLabels[0]
               : query
           }
@@ -169,14 +176,18 @@ export function UserCombobox({
             setOpen(true);
           }}
           onFocus={() => {
+            // Reset cleared flag when user focuses to search again
+            userClearedRef.current = false;
             setOpen(true);
           }}
           onBlur={() => {
-            // In single-select, if user blurs without selecting and
-            // there's a previous value, restore it
-            if (!multiple && value && !query.trim() && selectedLabels[0]) {
-              // Input already shows selectedLabels[0] via value prop
-            } else if (!multiple && !value) {
+            // Single-select: if user cleared the input, also clear the selection
+            if (!multiple && !query.trim() && value) {
+              userClearedRef.current = true;
+              onChange("" as any);
+              setQuery("");
+            } else if (!multiple && !query.trim()) {
+              userClearedRef.current = true;
               setQuery("");
             }
           }}
