@@ -18,8 +18,10 @@ import {
   getCustomerById,
   listCustomers,
   updateCustomer,
+  searchAssignableCustomerCaregivers,
   type CustomerListFilters,
   type CustomerInput,
+  type CustomerCaregiverOption,
 } from "@/lib/services/customer-service";
 import {
   createInteraction,
@@ -212,5 +214,14 @@ export async function listInteractionsAction(
   return runAction(async () => {
     const session = await requireSession();
     return listInteractionsByCustomer(customerId, session);
+  });
+}
+
+export async function searchCaregiversAction(
+  query: string,
+): Promise<ActionResult<CustomerCaregiverOption[]>> {
+  return runAction(async () => {
+    const session = await requireSession();
+    return searchAssignableCustomerCaregivers(session, query);
   });
 }

@@ -563,6 +563,31 @@ export async function listAssignableCustomerCaregivers(
   return users.map(serializeCaregiverOption);
 }
 
+export async function searchAssignableCustomerCaregivers(
+  actor: SessionUser,
+  query: string,
+): Promise<CustomerCaregiverOption[]> {
+  await connectToDatabase();
+
+  const normalized = query
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+
+  const filter = buildAssignableCaregiverFilter(actor);
+  const users = (await UserModel.find({
+    ...filter,
+    $or: [
+      { fullName: { $regex: normalized, $options: "i" } },
+    ],
+  })
+    .sort({ role: 1, fullName: 1 })
+    .limit(20)
+    .lean()) as UserRecord[];
+
+  return users.map(serializeCaregiverOption);
+}
+
 export async function updateCustomer(
   id: string,
   input: Partial<CustomerInput>,

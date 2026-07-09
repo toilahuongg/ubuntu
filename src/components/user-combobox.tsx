@@ -1,13 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Check, Search, X } from "lucide-react";
+import { Check, Loader2, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { stripDiacritics } from "@/lib/utils/text";
 import type { CustomerCaregiverOption } from "@/lib/services/customer-service";
+import { searchCaregiversAction } from "@/app/(app)/customers/actions";
 
 type UserComboboxProps = {
-  options: CustomerCaregiverOption[];
   value: string | string[];
   onChange: (value: string | string[]) => void;
   multiple?: boolean;
@@ -15,10 +14,11 @@ type UserComboboxProps = {
   maxSelections?: number;
   disabled?: boolean;
   className?: string;
+  /** Pre-selected options to display names for already-selected IDs */
+  selectedOptions?: CustomerCaregiverOption[];
 };
 
 export function UserCombobox({
-  options,
   value,
   onChange,
   multiple = false,
@@ -26,10 +26,22 @@ export function UserCombobox({
   maxSelections,
   disabled = false,
   className,
+  selectedOptions = [],
 }: UserComboboxProps) {
   const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState<CustomerCaregiverOption[]>([]);
+  const [loading, setLoading] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Merge pre-selected options with search results for display
+  const allKnown = React.useMemo(() => {
+    const map = new Map<string, CustomerCaregiverOption>();
+    for (const opt of selectedOptions) map.set(opt.id, opt);
+    for (const opt of results) map.set(opt.id, opt);
+    return Array.from(map.values());
+  }, [selectedOptions, results]);
 
   // Close popup on outside click
   React.useEffect(() => {
@@ -42,27 +54,31 @@ export function UserCombobox({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Filter options by query (diacritic-insensitive)
-  const filtered = React.useMemo(() => {
-    if (!query.trim()) return options;
-    const q = stripDiacritics(query);
-    return options.filter(
-      (o) =>
-        stripDiacritics(o.fullName).includes(q) ||
-        stripDiacritics(o.roleLabel).includes(q),
-    );
-  }, [options, query]);
-
-  // Build items grouped by role
-  const grouped = React.useMemo(() => {
-    const map = new Map<string, CustomerCaregiverOption[]>();
-    for (const opt of filtered) {
-      const label = opt.roleLabel ?? "Khác";
-      if (!map.has(label)) map.set(label, []);
-      map.get(label)!.push(opt);
+  // Server-side search with debounce
+  const doSearch = React.useCallback(async (q: string) => {
+    if (!q.trim()) {
+      setResults([]);
+      setLoading(false);
+      return;
     }
-    return map;
-  }, [filtered]);
+    setLoading(true);
+    try {
+      const result = await searchCaregiversAction(q);
+      if (result.ok && result.data) {
+        setResults(result.data);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => doSearch(query), 300);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [query, doSearch]);
 
   const isSelected = React.useCallback(
     (id: string) =>
@@ -89,13 +105,27 @@ export function UserCombobox({
   const selectedLabels = React.useMemo(() => {
     if (multiple) {
       return (value as string[]).map((id) => {
-        const opt = options.find((o) => o.id === id);
+        const opt = allKnown.find((o) => o.id === id);
         return opt?.fullName ?? "";
       });
     }
-    const opt = options.find((o) => o.id === value);
+    const opt = allKnown.find((o) => o.id === value);
     return opt ? [opt.fullName] : [];
-  }, [multiple, value, options]);
+  }, [multiple, value, allKnown]);
+
+  // Build items grouped by role
+  const grouped = React.useMemo(() => {
+    const map = new Map<string, CustomerCaregiverOption[]>();
+    for (const opt of results) {
+      const label = opt.roleLabel ?? "Khác";
+      if (!map.has(label)) map.set(label, []);
+      map.get(label)!.push(opt);
+    }
+    return map;
+  }, [results]);
+
+  const hasResults = Object.entries(grouped).length > 0;
+  const showEmpty = query.trim().length > 0 && !loading && !hasResults;
 
   return (
     <div ref={ref} className={cn("relative", className)}>
@@ -145,12 +175,20 @@ export function UserCombobox({
           disabled={disabled}
           className="w-full rounded-lg border border-border bg-background pl-8 pr-8 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
         />
+        {loading && (
+          <Loader2 className="absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-muted-foreground/60" />
+        )}
       </div>
 
-      {/* Filtered results list */}
-      {open && (
+      {/* Search results list */}
+      {open && query.trim().length > 0 && (
         <div className="absolute z-50 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-background shadow-sm">
-          {Object.entries(grouped).length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 px-3 py-4 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Đang tìm…
+            </div>
+          ) : showEmpty ? (
             <div className="px-3 py-4 text-center text-xs text-muted-foreground">
               Không tìm thấy người dùng
             </div>

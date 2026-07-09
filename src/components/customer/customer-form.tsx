@@ -235,12 +235,12 @@ export function CustomerForm({
           </div>
 
           <UserCombobox
-            options={caregiverOptions}
             value={caregiverIds}
             onChange={(v) => setCaregiverIds(v as string[])}
             multiple
             maxSelections={3}
             placeholder="Tìm và chọn người chăm sóc…"
+            selectedOptions={caregiverOptions.filter((u) => caregiverIds.includes(u.id))}
           />
         </div>
       )}
