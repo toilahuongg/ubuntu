@@ -155,22 +155,31 @@ export function UserCombobox({
         </div>
       )}
 
-      {/* Single-select: show selected value */}
-      {!multiple && value && selectedLabels[0] && (
-        <div className="mb-1 text-xs text-foreground">{selectedLabels[0]}</div>
-      )}
-
       {/* Search input */}
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
         <input
           type="text"
-          value={query}
+          value={
+            !multiple && value && selectedLabels[0] ? selectedLabels[0] : query
+          }
           onChange={(e) => {
             setQuery(e.target.value);
             setOpen(true);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            if (!multiple && value) {
+              // In single-select with a value, clear the display to allow re-search
+              setQuery("");
+            }
+            setOpen(true);
+          }}
+          onBlur={() => {
+            // Restore selected label if no query was entered
+            if (!query.trim() && !multiple && value && selectedLabels[0]) {
+              // Value will be shown via the controlled input above
+            }
+          }}
           placeholder={placeholder}
           disabled={disabled}
           className="w-full rounded-lg border border-border bg-background pl-8 pr-8 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"
