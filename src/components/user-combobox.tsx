@@ -125,16 +125,22 @@ export function UserCombobox({
   // Build items grouped by role
   const grouped = React.useMemo(() => {
     const map = new Map<string, CustomerCaregiverOption[]>();
+    console.log("[combobox] building grouped, results.length:", results.length);
+    console.log("[combobox] results:", results);
     for (const opt of results) {
+      console.log("[combobox] iterating opt:", opt);
       const label = opt.roleLabel ?? "Khác";
+      console.log("[combobox] label:", label);
       if (!map.has(label)) map.set(label, []);
       map.get(label)!.push(opt);
     }
+    console.log("[combobox] grouped entries:", Object.fromEntries(map));
     return map;
   }, [results]);
 
   const hasResults = Object.entries(grouped).length > 0;
   const showEmpty = query.trim().length > 0 && !loading && !hasResults;
+  console.log("[combobox] hasResults:", hasResults, "showEmpty:", showEmpty);
 
   return (
     <div ref={ref} className={cn("relative", className)}>
