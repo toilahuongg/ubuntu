@@ -64,7 +64,12 @@ export function UserCombobox({
     setLoading(true);
     try {
       const result = await searchCaregiversAction(q);
-      const data = result.ok && result.data ? result.data : [];
+      console.log("[combobox] raw result:", result);
+      console.log("[combobox] result.ok:", result.ok);
+      console.log("[combobox] result.data:", result.data);
+      console.log("[combobox] Array.isArray(result.data):", Array.isArray(result.data));
+      const data = result.ok && Array.isArray(result.data) ? result.data : [];
+      console.log("[combobox] resolved data:", data);
       setResults(data);
     } finally {
       setLoading(false);
