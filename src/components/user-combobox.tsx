@@ -66,8 +66,13 @@ export function UserCombobox({
       const result = await searchCaregiversAction(q);
       console.log("[combobox] raw result:", result);
       console.log("[combobox] result.ok:", result.ok);
-      console.log("[combobox] result.data:", result.data);
-      console.log("[combobox] Array.isArray(result.data):", Array.isArray(result.data));
+      if (result.ok) {
+        console.log("[combobox] result.data:", result.data);
+        console.log(
+          "[combobox] Array.isArray(result.data):",
+          Array.isArray(result.data),
+        );
+      }
       const data = result.ok && Array.isArray(result.data) ? result.data : [];
       console.log("[combobox] resolved data:", data);
       setResults(data);
