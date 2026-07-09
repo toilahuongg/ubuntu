@@ -17,6 +17,7 @@ import {
 import { calculateInteractionScore } from "@/lib/customer/scoring";
 import type { InteractionOutcome } from "@/lib/customer/constants";
 import type { CustomerCaregiverOption } from "@/lib/services/customer-service";
+import { UserCombobox } from "@/components/user-combobox";
 
 function getDefaultCaregiverId(
   caregiverOptions: CustomerCaregiverOption[],
@@ -154,19 +155,16 @@ export function InteractionForm({
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
                 Người chia sẻ
               </label>
-              <select
+              <UserCombobox
                 value={sharedByCaregiverId}
-                onChange={(e) => setSharedByCaregiverId(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/40"
-                required
-              >
-                <option value="">-- Chọn người --</option>
-                {caregiverOptions.map((caregiver) => (
-                  <option key={caregiver.id} value={caregiver.id}>
-                    {caregiver.fullName} · {caregiver.roleLabel}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setSharedByCaregiverId(v as string)}
+                placeholder="Tìm người chia sẻ…"
+                selectedOptions={
+                  sharedByCaregiverId
+                    ? caregiverOptions.filter((c) => c.id === sharedByCaregiverId)
+                    : []
+                }
+              />
             </div>
           </div>
         )}
