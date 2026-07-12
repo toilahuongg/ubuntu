@@ -86,7 +86,6 @@ const taskBaseSchema = z.object({
   title: z.string().min(3, "Tiêu đề quá ngắn").max(80),
   submissionMessage: z.string().max(280).optional().default(""),
   completionMessage: z.string().max(280).optional().default(""),
-  isDtt: z.boolean().default(false),
 });
 
 export const taskInputSchema = taskBaseSchema

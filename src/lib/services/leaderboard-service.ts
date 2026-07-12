@@ -11,6 +11,7 @@ import {
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   DttClassModel,
+  DttClassTaskModel,
   DttEnrollmentModel,
   PointTransactionModel,
   RegionModel,
@@ -297,10 +298,14 @@ export async function getDttClassLeaderboard(
   const startDayOfWeek = classDoc.startDayOfWeek ?? 1;
   const { startStr, endStr } = getWeekRangeFromDateKey(getTodayDateKey(), startDayOfWeek);
 
+  const classTaskAssignments = await DttClassTaskModel.find({
+    classId: toObjectId(classId),
+  }).lean();
+
+  const dttTaskIds = classTaskAssignments.map((a) => a.taskId);
   const dttTasks = await TaskModel.find({
-    teamId: classDoc.teamId,
+    _id: { $in: dttTaskIds },
     isActive: true,
-    isDtt: true,
   }).select({ title: 1 }).lean();
 
   const enrollments = await DttEnrollmentModel.find({ classId }).lean();

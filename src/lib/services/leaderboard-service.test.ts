@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   regionFind: vi.fn(),
   zoneFind: vi.fn(),
   dttClassFindById: vi.fn(),
+  dttClassTaskFind: vi.fn(),
   dttEnrollmentFind: vi.fn(),
   taskFind: vi.fn(),
   userFind: vi.fn(),
@@ -56,6 +57,9 @@ vi.mock("@/lib/models", () => ({
   DttClassModel: {
     findById: mocks.dttClassFindById,
   },
+  DttClassTaskModel: {
+    find: mocks.dttClassTaskFind,
+  },
   DttEnrollmentModel: {
     find: mocks.dttEnrollmentFind,
   },
@@ -87,6 +91,7 @@ describe("leaderboard service", () => {
     mocks.regionFind.mockReset();
     mocks.zoneFind.mockReset();
     mocks.dttClassFindById.mockReset();
+    mocks.dttClassTaskFind.mockReset();
     mocks.dttEnrollmentFind.mockReset();
     mocks.taskFind.mockReset();
     mocks.userFind.mockReset();
@@ -227,11 +232,18 @@ describe("leaderboard service", () => {
       mocks.dttClassFindById.mockReturnValue({
         lean: () =>
           Promise.resolve({
-            _id: objectId("class-1"),
+            _id: "60c72b2f9b1d8b2d88888801",
             name: "Lớp 1",
             teamId: objectId("team-1"),
             startDayOfWeek: 2,
           }),
+      });
+
+      mocks.dttClassTaskFind.mockReturnValue({
+        lean: () =>
+          Promise.resolve([
+            { classId: "60c72b2f9b1d8b2d88888801", taskId: "60c72b2f9b1d8b2d88888810", isInherited: true },
+          ]),
       });
 
       mocks.taskFind.mockReturnValue({
@@ -247,7 +259,7 @@ describe("leaderboard service", () => {
         lean: () => Promise.resolve([]),
       });
 
-      const result = await getDttClassLeaderboard("class-1");
+      const result = await getDttClassLeaderboard("60c72b2f9b1d8b2d88888801");
 
       expect(result).toEqual({
         classInfo: {
@@ -260,16 +272,17 @@ describe("leaderboard service", () => {
         tasks: [{ id: "task-1", title: "Task 1" }],
       });
 
+      expect(mocks.dttClassTaskFind).toHaveBeenCalledWith(
+        expect.objectContaining({ classId: expect.anything() })
+      );
       expect(mocks.taskFind).toHaveBeenCalledWith(
         expect.objectContaining({
           isActive: true,
-          isDtt: true,
         })
       );
-      expect(mocks.taskFind.mock.calls[0]?.[0]?.teamId?.toString()).toBe("team-1");
 
       expect(mocks.dttEnrollmentFind).toHaveBeenCalledWith({
-        classId: "class-1",
+        classId: "60c72b2f9b1d8b2d88888801",
       });
     });
 
@@ -277,11 +290,18 @@ describe("leaderboard service", () => {
       mocks.dttClassFindById.mockReturnValue({
         lean: () =>
           Promise.resolve({
-            _id: objectId("class-1"),
+            _id: "60c72b2f9b1d8b2d88888801",
             name: "Lớp 1",
             teamId: objectId("team-1"),
             startDayOfWeek: 2,
           }),
+      });
+
+      mocks.dttClassTaskFind.mockReturnValue({
+        lean: () =>
+          Promise.resolve([
+            { classId: "60c72b2f9b1d8b2d88888801", taskId: "60c72b2f9b1d8b2d88888810", isInherited: true },
+          ]),
       });
 
       mocks.taskFind.mockReturnValue({
@@ -296,8 +316,8 @@ describe("leaderboard service", () => {
       mocks.dttEnrollmentFind.mockReturnValue({
         lean: () =>
           Promise.resolve([
-            { userId: objectId("user-1"), classId: "class-1" },
-            { userId: objectId("user-2"), classId: "class-1" },
+            { userId: objectId("user-1"), classId: "60c72b2f9b1d8b2d88888801" },
+            { userId: objectId("user-2"), classId: "60c72b2f9b1d8b2d88888801" },
           ]),
       });
 
@@ -314,7 +334,7 @@ describe("leaderboard service", () => {
         { _id: objectId("user-1"), totalXp: 150 },
       ]);
 
-      const result = await getDttClassLeaderboard("class-1");
+      const result = await getDttClassLeaderboard("60c72b2f9b1d8b2d88888801");
 
       expect(result).toEqual({
         classInfo: {
@@ -374,18 +394,27 @@ describe("leaderboard service", () => {
       mocks.dttClassFindById.mockReturnValue({
         lean: () =>
           Promise.resolve({
-            _id: objectId("class-1"),
+            _id: "60c72b2f9b1d8b2d88888801",
             name: "Lớp 1",
             teamId: objectId("team-1"),
             startDayOfWeek: 2,
           }),
       });
 
+      mocks.dttClassTaskFind.mockReturnValue({
+        lean: () =>
+          Promise.resolve([
+            { classId: "60c72b2f9b1d8b2d88888801", taskId: "60c72b2f9b1d8b2d88888810", isInherited: true },
+            { classId: "60c72b2f9b1d8b2d88888801", taskId: "60c72b2f9b1d8b2d88888811", isInherited: true },
+          ]),
+      });
+
       mocks.taskFind.mockReturnValue({
         select: () => ({
           lean: () =>
             Promise.resolve([
-              { _id: objectId(targetTaskId), title: "Task 1" },
+              { _id: objectId("task-1"), title: "Task 1" },
+              { _id: objectId(targetTaskId), title: "Task 2" },
             ]),
         }),
       });
@@ -393,8 +422,8 @@ describe("leaderboard service", () => {
       mocks.dttEnrollmentFind.mockReturnValue({
         lean: () =>
           Promise.resolve([
-            { userId: objectId("user-1"), classId: "class-1" },
-            { userId: objectId("user-2"), classId: "class-1" },
+            { userId: objectId("user-1"), classId: "60c72b2f9b1d8b2d88888801" },
+            { userId: objectId("user-2"), classId: "60c72b2f9b1d8b2d88888801" },
           ]),
       });
 
@@ -410,7 +439,7 @@ describe("leaderboard service", () => {
         { _id: objectId("user-1"), totalXp: 3 },
       ]);
 
-      const result = await getDttClassLeaderboard("class-1", targetTaskId);
+      const result = await getDttClassLeaderboard("60c72b2f9b1d8b2d88888801", targetTaskId);
 
       expect(result).toEqual({
         classInfo: {
@@ -437,7 +466,10 @@ describe("leaderboard service", () => {
             totalXp: 0,
           },
         ],
-        tasks: [{ id: targetTaskId, title: "Task 1" }],
+        tasks: [
+          { id: "task-1", title: "Task 1" },
+          { id: targetTaskId, title: "Task 2" },
+        ],
       });
 
       expect(mocks.aggregate).toHaveBeenCalledWith(
