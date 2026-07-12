@@ -324,17 +324,7 @@ export function CreateTemplateForm({ scope }: { scope: TaskScope }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <label className="relative flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-overlay-subtle px-3 py-2 text-xs font-semibold text-muted-foreground hover:border-foreground/25 hover:text-foreground has-[:checked]:border-primary has-[:checked]:bg-primary/10 has-[:checked]:text-primary">
-          <input
-            type="checkbox"
-            name="isDtt"
-            value="true"
-            className="rounded border-border text-primary focus:ring-primary/25"
-          />
-          Nhiệm vụ thuộc Trường học ĐTT
-        </label>
-      </div>
+      {/* isDtt checkbox removed — DTT task assignments are now managed per-class */}
 
       <input type="hidden" name="isActive" value="true" />
 

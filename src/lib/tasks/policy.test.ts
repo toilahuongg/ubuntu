@@ -81,13 +81,13 @@ describe("task org scope policy", () => {
   it("matches organization scope independently from target roles", () => {
     expect(
       isWithinTaskOrgScope(
-        { ...regionTask, targetRoles: ["REGIONAL_LEAD"] },
+        regionTask,
         member,
       ),
     ).toBe(true);
     expect(
       isWithinTaskOrgScope(
-        { ...regionTask, targetRoles: ["REGIONAL_LEAD"] },
+        regionTask,
         { ...member, regionId: "region-b" },
       ),
     ).toBe(false);

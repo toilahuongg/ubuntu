@@ -102,7 +102,7 @@ export function isReminderDue(input: {
 function taskToScope(
   task: Pick<
     TaskRecord,
-    "scope" | "teamId" | "zoneId" | "regionId" | "targetRoles" | "isDtt"
+    "scope" | "teamId" | "zoneId" | "regionId" | "targetRoles"
   >,
 ): ScopeContext {
   return {
@@ -111,7 +111,6 @@ function taskToScope(
     targetRoles: normalizeTargetRoles(task.targetRoles, task.scope),
     teamId: task.teamId.toString(),
     zoneId: task.zoneId?.toString() ?? null,
-    isDtt: task.isDtt,
   };
 }
 
