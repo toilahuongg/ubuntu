@@ -1055,3 +1055,33 @@ export async function bulkApproveUsers(_userIds: string[] = []): Promise<number>
   void _userIds;
   throw new Error("Vui lòng duyệt từng thành viên và chọn Khu vực.");
 }
+
+export async function changeUserPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+) {
+  await connectToDatabase();
+
+  const user = (await UserModel.findById(userId).lean()) as
+    | (UserRecord & { passwordHash?: string | null })
+    | null;
+
+  if (!user) {
+    throw new Error("Không tìm thấy người dùng.");
+  }
+
+  if (!user.passwordHash) {
+    throw new Error(
+      "Tài khoản của bạn hiện đăng nhập qua Google/Telegram. Vui lòng đặt mật khẩu trước khi đổi.",
+    );
+  }
+
+  const isValid = await verifyPassword(currentPassword, user.passwordHash);
+  if (!isValid) {
+    throw new Error("Mật khẩu hiện tại không đúng.");
+  }
+
+  const newHash = await hashPassword(newPassword);
+  await UserModel.findByIdAndUpdate(userId, { passwordHash: newHash });
+}

@@ -224,6 +224,20 @@ export const updateProfileInputSchema = z.object({
   bio: z.string().max(280).optional().default(""),
 });
 
+export const changePasswordInputSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Vui lòng nhập mật khẩu hiện tại."),
+    newPassword: z.string().min(8, "Mật khẩu mới tối thiểu 8 ký tự."),
+    confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu mới."),
+  })
+  .refine(
+    (data) => data.newPassword === data.confirmPassword,
+    {
+      message: "Mật khẩu xác nhận không khớp.",
+      path: ["confirmPassword"],
+    },
+  );
+
 // Customer validation schemas
 export const customerInputSchema = z.object({
   name: z.string().min(1, "Tên không được để trống.").max(80),

@@ -24,6 +24,7 @@ import {
   listProfileTaskSettings,
   type ProfileTaskSetting,
 } from "@/lib/tasks/profile-settings-service";
+import { ChangePasswordForm } from "./change-password-form";
 import { EditProfileForm } from "./edit-profile-form";
 import { LogoutButton } from "./logout-button";
 import { ProfileTaskSettingsShortcut } from "./profile-task-settings-shortcut";
@@ -147,6 +148,7 @@ export default async function ProfilePage() {
           level={progress.level}
           compact
         />
+        <ChangePasswordForm compact />
         <LogoutButton compact />
       </section>
     </div>

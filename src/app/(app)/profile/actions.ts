@@ -5,8 +5,11 @@ import { redirect } from "next/navigation";
 
 import { getSessionUser, setSessionCookie } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
-import { updateUserProfile } from "@/lib/services/organization-service";
-import { updateProfileInputSchema } from "@/lib/validation";
+import {
+  changeUserPassword,
+  updateUserProfile,
+} from "@/lib/services/organization-service";
+import { changePasswordInputSchema, updateProfileInputSchema } from "@/lib/validation";
 
 export async function updateProfileAction(
   formData: FormData,
@@ -27,5 +30,25 @@ export async function updateProfileAction(
     await setSessionCookie(updatedUser);
     revalidatePath("/profile");
     revalidatePath("/dashboard");
+  });
+}
+
+export async function changePasswordAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const session = await getSessionUser();
+    if (!session) redirect("/login");
+    const parsed = changePasswordInputSchema.parse({
+      currentPassword: formData.get("currentPassword") ?? "",
+      newPassword: formData.get("newPassword") ?? "",
+      confirmPassword: formData.get("confirmPassword") ?? "",
+    });
+    await changeUserPassword(
+      session.id,
+      parsed.currentPassword,
+      parsed.newPassword,
+    );
+    revalidatePath("/profile");
   });
 }
