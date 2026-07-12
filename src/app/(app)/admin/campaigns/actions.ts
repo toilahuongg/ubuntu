@@ -59,7 +59,6 @@ export async function createCampaignOnlyTaskAction(
       scheduleType: "EVERY_DAY",
       scheduledWeekdays: [],
       scheduledMonthDays: [],
-      isDtt: false,
       isActive: true,
     });
     const id = await createTask(session, createCampaignOnlyTaskInput(parsed));

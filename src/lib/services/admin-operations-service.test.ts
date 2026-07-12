@@ -43,7 +43,6 @@ function createUser(input: {
 function createTask(input: {
   deadlineTime?: string;
   id: string;
-  isDtt?: boolean;
   regionId?: string | null;
   scheduledMonthDays?: number[] | null;
   scheduleType?: TaskRecord["scheduleType"];
@@ -62,7 +61,6 @@ function createTask(input: {
     description: "",
     expReward: 0,
     isActive: true,
-    isDtt: input.isDtt ?? false,
     lateWindowDays: 1,
     pointReward: 0,
     regionId: input.regionId ? objectId(input.regionId) : null,
@@ -485,64 +483,5 @@ describe("admin operations view model", () => {
     });
     expect(view.tree.teams).toHaveLength(2);
     expect(view.scope.name).toBe("Toàn hệ thống");
-  });
-});
-
-describe("admin operations DTT enrollment awareness", () => {
-  const actor: SessionUser = {
-    ...users.teamLeadA,
-    status: "ACTIVE",
-  };
-  const orgContext = {
-    region: null,
-    team: { code: "TA", id: ids.teamA, name: "Nhóm A" },
-    zone: null,
-  };
-  // Task targets TEAM_LEAD only; a MEMBER won't match by role.
-  // Only DTT enrollment (isDttUser) can include a MEMBER.
-  const dttTask = createTask({
-    id: "dtt-team-task",
-    isDtt: true,
-    scope: "TEAM",
-    targetRoles: ["TEAM_LEAD"],
-    teamId: ids.teamA,
-  });
-
-  it("counts DTT-enrolled user for a DTT task even when their role does not match targetRoles", () => {
-    const dttUserIdsSet = new Set([ids.memberA1]);
-
-    const view = buildAdminOperationsViewModel({
-      actor,
-      dateKey: "2026-04-22",
-      dttUserIdsSet,
-      orgContext,
-      structure,
-      submissions: [],
-      tasks: [dttTask],
-      visibleUsers: [users.memberA1],
-    });
-
-    // memberA1 is a MEMBER (not TEAM_LEAD) but is DTT-enrolled,
-    // so they should be assigned for every scheduled day in April
-    expect(view.summary.assigned).toBeGreaterThan(0);
-  });
-
-  it("does not count non-DTT-enrolled MEMBER user for a TEAM_LEAD-targeted DTT task", () => {
-    // dttUserIdsSet is empty - nobody enrolled
-    const dttUserIdsSet = new Set<string>();
-
-    const view = buildAdminOperationsViewModel({
-      actor,
-      dateKey: "2026-04-22",
-      dttUserIdsSet,
-      orgContext,
-      structure,
-      submissions: [],
-      tasks: [dttTask],
-      visibleUsers: [users.memberA1],
-    });
-
-    // memberA1 is a MEMBER; role doesn't match TEAM_LEAD and not DTT-enrolled
-    expect(view.summary.assigned).toBe(0);
   });
 });

@@ -3,7 +3,6 @@ import { getSessionUser } from "@/lib/auth/session";
 import { canManageDtt } from "@/lib/permissions";
 import { DttClassModel } from "@/lib/models/dtt-class";
 import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
-import { TaskModel } from "@/lib/models/task";
 import { UserModel } from "@/lib/models/user";
 import { RegionModel } from "@/lib/models/region";
 import { toObjectId } from "@/lib/utils/ids";
@@ -22,33 +21,20 @@ export default async function DttManagementPage() {
 
   const teamId = toObjectId(session.teamId);
 
-  // Load all classes for the team
   const classes = await DttClassModel.find({ teamId }).lean();
-  
-  // Load all active DTT enrollments for the team
   const enrollments = await DttEnrollmentModel.find({ teamId }).lean();
-  
-  // Load all active users in the team
   const teamMembers = await UserModel.find({
     teamId,
     status: "ACTIVE",
   }).select({ fullName: 1, role: 1, regionId: 1 }).lean();
 
-  // Load regions for the team to resolve region names
   const regions = await RegionModel.find({ teamId }).lean();
   const regionMap = new Map(
     regions.map((r) => [r._id.toString(), r.name])
   );
 
-  // Filter users not currently in DTT
   const enrolledUserIds = new Set(enrollments.map((e) => e.userId.toString()));
   const nonDttMembers = teamMembers.filter((m) => !enrolledUserIds.has(m._id.toString()));
-
-  // Load active tasks for the team
-  const tasks = await TaskModel.find({
-    isActive: true,
-    teamId,
-  }).sort({ createdAt: -1 }).lean();
 
   const formattedClasses = classes.map((c) => ({
     id: c._id.toString(),
@@ -79,12 +65,6 @@ export default async function DttManagementPage() {
       : null,
   }));
 
-  const formattedTasks = tasks.map((t) => ({
-    id: t._id.toString(),
-    title: t.title,
-    isDtt: !!t.isDtt,
-  }));
-
   return (
     <div className="space-y-6 animate-slide-up pb-8">
       <AdminSubHeader
@@ -96,7 +76,6 @@ export default async function DttManagementPage() {
         classes={formattedClasses}
         enrollments={formattedEnrollments}
         nonDttMembers={formattedNonDttMembers}
-        tasks={formattedTasks}
       />
     </div>
   );

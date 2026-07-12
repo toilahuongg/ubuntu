@@ -6,7 +6,6 @@ import { getSessionUser } from "@/lib/auth/session";
 import { runAction, type ActionResult } from "@/lib/actions/result";
 import { DttClassModel } from "@/lib/models/dtt-class";
 import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
-import { TaskModel } from "@/lib/models/task";
 import { UserModel } from "@/lib/models/user";
 import { toObjectId } from "@/lib/utils/ids";
 import { connectToDatabase } from "@/lib/mongoose";
@@ -230,20 +229,3 @@ export async function bulkEnrollStudentsAction(
   });
 }
 
-export async function toggleTaskDttAction(taskId: string, isDtt: boolean): Promise<ActionResult> {
-  return runAction(async () => {
-    const { teamId } = await requireManagerTeam();
-    const updated = await TaskModel.findOneAndUpdate(
-      { _id: toObjectId(taskId), teamId, isActive: true },
-      { isDtt }
-    );
-
-    if (!updated) {
-      throw new Error("Không tìm thấy nhiệm vụ hoạt động trong nhóm của bạn.");
-    }
-
-    revalidatePath("/admin/dtt");
-    revalidatePath("/templates");
-    revalidatePath("/dashboard");
-  });
-}

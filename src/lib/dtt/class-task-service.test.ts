@@ -20,7 +20,6 @@ const makeTask = (overrides: Partial<TaskRecord> = {}): TaskRecord =>
     lateWindowDays: 7,
     sortOrder: null,
     isActive: true,
-    isDtt: false,
     campaignOnly: false,
     regionId: null,
     scope: "TEAM" as const,

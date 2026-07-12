@@ -61,7 +61,6 @@ export type TaskSummary = {
   completionMessage: string;
   completedAt: string | null;
   isActive: boolean;
-  isDtt: boolean;
   campaignOnly: boolean;
   teamId: string;
   zoneId: string | null;

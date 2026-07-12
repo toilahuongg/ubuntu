@@ -17,8 +17,6 @@ const mocks = vi.hoisted(() => ({
   enrollmentExists: vi.fn(),
   enrollmentFindOneAndDelete: vi.fn(),
   enrollmentFindOneAndUpdate: vi.fn(),
-  // TaskModel
-  taskFindOneAndUpdate: vi.fn(),
   // UserModel
   userExists: vi.fn(),
 }));
@@ -58,12 +56,6 @@ vi.mock("@/lib/models/dtt-enrollment", () => ({
   },
 }));
 
-vi.mock("@/lib/models/task", () => ({
-  TaskModel: {
-    findOneAndUpdate: mocks.taskFindOneAndUpdate,
-  },
-}));
-
 vi.mock("@/lib/models/user", () => ({
   UserModel: {
     exists: mocks.userExists,
@@ -77,7 +69,6 @@ import {
   enrollStudentAction,
   unenrollStudentAction,
   changeStudentClassAction,
-  toggleTaskDttAction,
 } from "./actions";
 
 describe("DTT Server Actions", () => {
@@ -448,38 +439,6 @@ describe("DTT Server Actions", () => {
       expect(res.ok).toBe(false);
       if (!res.ok) {
         expect(res.error).toBe("Không tìm thấy học viên ĐTT trong nhóm của bạn.");
-      }
-      expect(mocks.revalidatePath).not.toHaveBeenCalled();
-    });
-  });
-
-  describe("toggleTaskDttAction", () => {
-    it("updates task isDtt flag", async () => {
-      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
-      mocks.taskFindOneAndUpdate.mockResolvedValueOnce({});
-
-      const taskId = "507f1f77bcf86cd79943901c";
-      const res = await toggleTaskDttAction(taskId, true);
-
-      expect(res.ok).toBe(true);
-      expect(mocks.taskFindOneAndUpdate).toHaveBeenCalledWith(
-        { _id: expect.any(Object), teamId: expect.any(Object), isActive: true },
-        { isDtt: true }
-      );
-      expect(mocks.revalidatePath).toHaveBeenCalledWith("/admin/dtt");
-      expect(mocks.revalidatePath).toHaveBeenCalledWith("/templates");
-      expect(mocks.revalidatePath).toHaveBeenCalledWith("/dashboard");
-    });
-
-    it("rejects toggles for tasks outside the manager team", async () => {
-      mocks.getSessionUser.mockResolvedValueOnce(teamLeadSession);
-      mocks.taskFindOneAndUpdate.mockResolvedValueOnce(null);
-
-      const res = await toggleTaskDttAction("507f1f77bcf86cd79943901c", true);
-
-      expect(res.ok).toBe(false);
-      if (!res.ok) {
-        expect(res.error).toBe("Không tìm thấy nhiệm vụ hoạt động trong nhóm của bạn.");
       }
       expect(mocks.revalidatePath).not.toHaveBeenCalled();
     });

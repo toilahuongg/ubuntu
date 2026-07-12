@@ -62,7 +62,7 @@ import { toObjectId } from "@/lib/utils/ids";
 export function taskToScope(
   task: Pick<
     TaskRecord,
-    "scope" | "teamId" | "zoneId" | "regionId" | "targetRoles" | "isDtt"
+    "scope" | "teamId" | "zoneId" | "regionId" | "targetRoles"
   >,
 ): ScopeContext {
   return {
@@ -71,7 +71,6 @@ export function taskToScope(
     zoneId: task.zoneId?.toString() ?? null,
     regionId: task.regionId?.toString() ?? null,
     targetRoles: normalizeTargetRoles(task.targetRoles, task.scope),
-    isDtt: task.isDtt,
   };
 }
 
@@ -147,7 +146,6 @@ export function mapTask(record: TaskRecord): TaskSummary {
     completionMessage: record.completionMessage ?? "",
     completedAt: record.completedAt ? record.completedAt.toISOString() : null,
     isActive: record.isActive,
-    isDtt: !!record.isDtt,
     campaignOnly: !!record.campaignOnly,
     teamId: record.teamId.toString(),
     zoneId: record.zoneId?.toString() ?? null,
