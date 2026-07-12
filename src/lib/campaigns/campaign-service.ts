@@ -4,6 +4,7 @@ import {
   CAMPAIGN_TARGET_ROLES,
   isCampaignRole,
 } from "@/lib/campaigns/constants";
+import { loadAllDttClassTaskIdsForTeam } from "@/lib/dtt/class-task-service";
 import { getTodayDateKey } from "@/lib/dates";
 import type { SessionUser } from "@/lib/domain";
 import {
@@ -207,7 +208,7 @@ export async function getDailyCampaignAdminView(
   assertCanManageDailyCampaign(actor);
   await connectToDatabase();
 
-  const [campaign, tasks, visibleUsers] = await Promise.all([
+  const [campaign, tasks, visibleUsers, dttClassTaskIds] = await Promise.all([
     DailyCampaignModel.findOne({
       date: dateKey,
       teamId: toObjectId(actor.teamId),
@@ -218,17 +219,19 @@ export async function getDailyCampaignAdminView(
       teamId: toObjectId(actor.teamId),
     }).lean() as Promise<TaskRecord[]>,
     listVisibleUsersForActor(actor),
+    loadAllDttClassTaskIdsForTeam(actor.teamId),
   ]);
 
   const eligibleTaskRecords = sortTasksForDisplay(
     tasks.filter(
       (task) =>
         !task.campaignOnly &&
+        !dttClassTaskIds.has(task._id.toString()) &&
         isTaskEligibleForCampaign(task, actor.teamId, dateKey),
     ),
   );
   const campaignOnlyTaskRecords = sortTasksForDisplay(
-    tasks.filter((task) => task.campaignOnly),
+    tasks.filter((task) => task.campaignOnly && !dttClassTaskIds.has(task._id.toString())),
   );
   const selectedTaskIds = campaign?.taskIds.map((id) => id.toString()) ?? [];
   const selectedTasks = selectedTaskIds

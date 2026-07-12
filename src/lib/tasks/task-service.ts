@@ -1,5 +1,6 @@
 import "server-only";
 
+import { loadAllDttClassTaskIdsForTeam } from "@/lib/dtt/class-task-service";
 import {
   filterTaskTargetRolesForScope,
   normalizeTargetRoles,
@@ -515,6 +516,10 @@ async function listVisibleTaskRecordsForActor(
 ): Promise<TaskRecord[]> {
   await connectToDatabase();
 
+  const dttClassTaskIds = actor.teamId
+    ? await loadAllDttClassTaskIdsForTeam(actor.teamId)
+    : new Set<string>();
+
   const all = (
     actor.role === "ADMIN"
       ? await TaskModel.find({ campaignOnly: { $ne: true } }).lean()
@@ -526,11 +531,15 @@ async function listVisibleTaskRecordsForActor(
         : []
   ) as TaskRecord[];
 
+  const filtered = all.filter(
+    (record) => !dttClassTaskIds.has(record._id.toString()),
+  );
+
   if (actor.role === "ADMIN") {
-    return sortTasksForDisplay(all);
+    return sortTasksForDisplay(filtered);
   }
 
-  const filtered = all.filter((record) => {
+  const scopeFiltered = filtered.filter((record) => {
     if (record.scope === "TEAM") return true;
     if (record.scope === "ZONE") {
       return !!actor.zoneId && record.zoneId?.toString() === actor.zoneId;
@@ -541,7 +550,7 @@ async function listVisibleTaskRecordsForActor(
     return false;
   });
 
-  return sortTasksForDisplay(filtered);
+  return sortTasksForDisplay(scopeFiltered);
 }
 
 export function filterManageableTasksForActor(
