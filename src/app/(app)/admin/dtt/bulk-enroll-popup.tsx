@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { X, Search, UserPlus } from "lucide-react";
 import { bulkEnrollStudentsAction } from "./actions";
 import { FormError, FormSuccess } from "../_shared";
+import { ROLE_LABELS } from "@/lib/domain";
 
 export type BulkEnrollMember = {
   id: string;
@@ -19,16 +20,6 @@ type BulkEnrollPopupProps = {
   className: string;
   onClose: () => void;
   members: BulkEnrollMember[];
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  ADMIN: "Quản trị viên",
-  TEAM_LEAD: "Trưởng nhóm",
-  ZONE_LEAD: "Trưởng vùng",
-  REGIONAL_LEAD: "Trưởng khu vực",
-  NGV: "Nguyện vọng",
-  MEMBER: "Thành viên",
-  TDM: "Tín đồ mới",
 };
 
 function groupMembersByRegion(members: BulkEnrollMember[]) {
@@ -266,7 +257,7 @@ export function BulkEnrollPopup({
                               {member.fullName}
                             </p>
                             <p className="text-[10px] text-muted-foreground">
-                              {ROLE_LABELS[member.role] || member.role}
+                              {ROLE_LABELS[member.role as keyof typeof ROLE_LABELS] || member.role}
                             </p>
                           </div>
                         </label>

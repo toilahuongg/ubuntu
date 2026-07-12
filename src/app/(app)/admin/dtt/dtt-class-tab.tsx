@@ -2,17 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, GraduationCap, ArrowRightLeft, ShieldAlert, Award, UserPlus } from "lucide-react";
+import { Plus, X, ArrowRightLeft, ShieldAlert, Award, UserPlus } from "lucide-react";
 import {
   createClassAction,
   updateClassAction,
   deleteClassAction,
-  enrollStudentAction,
   unenrollStudentAction,
   changeStudentClassAction,
 } from "./actions";
 import { ConfirmDeleteButton, FormError, FormSuccess } from "../_shared";
 import { BulkEnrollPopup, type BulkEnrollMember } from "./bulk-enroll-popup";
+import { ROLE_LABELS } from "@/lib/domain";
 
 type ClassItem = {
   id: string;
@@ -64,8 +64,6 @@ export function DttClassTab({
   // Forms state
   const [newClassName, setNewClassName] = useState("");
   const [newClassStartDay, setNewClassStartDay] = useState<number>(1);
-  const [selectedStudentId, setSelectedStudentId] = useState("");
-  const [selectedClassId, setSelectedClassId] = useState("");
 
   // Edit class state
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
@@ -74,16 +72,6 @@ export function DttClassTab({
 
   // Bulk enroll state
   const [bulkEnrollClassId, setBulkEnrollClassId] = useState<string | null>(null);
-
-  const ROLE_LABELS: Record<string, string> = {
-    ADMIN: "Quản trị viên",
-    TEAM_LEAD: "Trưởng nhóm",
-    ZONE_LEAD: "Trưởng vùng",
-    REGIONAL_LEAD: "Trưởng khu vực",
-    NGV: "Nguyện vọng",
-    MEMBER: "Thành viên",
-    TDM: "Tín đồ mới",
-  };
 
   const handleCreateClass = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,27 +102,6 @@ export function DttClassTab({
       if (res.ok) {
         setSuccess(`Đã cập nhật lớp thành công.`);
         setEditingClassId(null);
-        router.refresh();
-      } else {
-        setError(res.error);
-      }
-    });
-  };
-
-  const handleEnrollStudent = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedStudentId || !selectedClassId) return;
-
-    setError(null);
-    setSuccess(null);
-    startTransition(async () => {
-      const res = await enrollStudentAction(selectedStudentId, selectedClassId);
-      if (res.ok) {
-        const studentName = nonDttMembers.find(m => m.id === selectedStudentId)?.fullName || "";
-        const className = classes.find(c => c.id === selectedClassId)?.name || "";
-        setSuccess(`Đã xếp học viên ${studentName} vào lớp ${className}.`);
-        setSelectedStudentId("");
-        setSelectedClassId("");
         router.refresh();
       } else {
         setError(res.error);
@@ -211,57 +178,6 @@ export function DttClassTab({
                 className="btn-gradient flex h-10 w-full items-center justify-center gap-1.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Tạo lớp học
-              </button>
-            </form>
-          </div>
-
-          {/* Enroll Student Card */}
-          <div className="glass-card space-y-4 border border-border/40 p-4">
-            <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-              <GraduationCap className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold text-foreground">Ghi danh học viên</h3>
-            </div>
-            <form onSubmit={handleEnrollStudent} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Thành viên chưa vào ĐTT</label>
-                <select
-                  value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  required
-                  className="form-select"
-                >
-                  <option value="">-- Chọn thành viên --</option>
-                  {nonDttMembers.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.fullName} ({ROLE_LABELS[member.role] || member.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Lớp học ĐTT mục tiêu</label>
-                <select
-                  value={selectedClassId}
-                  onChange={(e) => setSelectedClassId(e.target.value)}
-                  required
-                  className="form-select"
-                >
-                  <option value="">-- Chọn lớp học --</option>
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isPending || !selectedStudentId || !selectedClassId}
-                className="btn-gradient flex h-10 w-full items-center justify-center gap-1.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Ghi danh
               </button>
             </form>
           </div>
@@ -371,7 +287,7 @@ export function DttClassTab({
                               <div className="min-w-0">
                                 <p className="text-xs font-semibold truncate text-foreground">{student.fullName}</p>
                                 <p className="text-[10px] text-muted-foreground font-medium">
-                                  {ROLE_LABELS[student.role] || student.role}
+                                  {ROLE_LABELS[student.role as keyof typeof ROLE_LABELS] || student.role}
                                 </p>
                               </div>
                             </div>
