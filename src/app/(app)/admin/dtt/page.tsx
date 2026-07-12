@@ -2,11 +2,14 @@ import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
 import { canManageDtt } from "@/lib/permissions";
 import { DttClassModel } from "@/lib/models/dtt-class";
+import { DttClassTaskModel } from "@/lib/models/dtt-class-task";
 import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
+import { TaskModel } from "@/lib/models/task";
 import { UserModel } from "@/lib/models/user";
 import { RegionModel } from "@/lib/models/region";
 import { toObjectId } from "@/lib/utils/ids";
 import { connectToDatabase } from "@/lib/mongoose";
+import { loadAllDttClassTaskIdsForTeam } from "@/lib/dtt/class-task-service";
 import { AdminSubHeader } from "../sub-header";
 import { DttManager } from "./dtt-manager";
 
@@ -65,6 +68,40 @@ export default async function DttManagementPage() {
       : null,
   }));
 
+  // Fetch available tasks (not already assigned to any DTT class)
+  const dttClassTaskIds = await loadAllDttClassTaskIdsForTeam(session.teamId);
+
+  const availableTasks = (await TaskModel.find({
+    isActive: true,
+    teamId,
+    _id: { $nin: Array.from(dttClassTaskIds).map(toObjectId) },
+  })
+    .select("title expReward pointReward")
+    .sort({ createdAt: -1 })
+    .lean())
+    .map((t) => ({
+      id: t._id.toString(),
+      title: t.title,
+      expReward: t.expReward ?? 10,
+      pointReward: t.pointReward ?? 10,
+    }));
+
+  // Fetch class task assignments
+  const classAssignments = (await DttClassTaskModel.find({ teamId })
+    .populate("taskId", "title")
+    .lean()) as any[];
+
+  const classTasksByClass: Record<string, Array<{ taskId: string; taskTitle: string; isInherited: boolean }>> = {};
+  for (const a of classAssignments) {
+    const cid = a.classId.toString();
+    if (!classTasksByClass[cid]) classTasksByClass[cid] = [];
+    classTasksByClass[cid].push({
+      taskId: a.taskId._id.toString(),
+      taskTitle: a.taskId.title,
+      isInherited: a.isInherited ?? false,
+    });
+  }
+
   return (
     <div className="space-y-6 animate-slide-up pb-8">
       <AdminSubHeader
@@ -76,6 +113,8 @@ export default async function DttManagementPage() {
         classes={formattedClasses}
         enrollments={formattedEnrollments}
         nonDttMembers={formattedNonDttMembers}
+        availableTasks={availableTasks}
+        classTasksByClass={classTasksByClass}
       />
     </div>
   );

@@ -29,10 +29,23 @@ export function DttManager({
   classes,
   enrollments,
   nonDttMembers,
+  availableTasks,
+  classTasksByClass,
 }: {
   classes: ClassItem[];
   enrollments: EnrollmentItem[];
   nonDttMembers: NonDttMember[];
+  availableTasks?: Array<{
+    id: string;
+    title: string;
+    expReward: number;
+    pointReward: number;
+  }>;
+  classTasksByClass?: Record<string, Array<{
+    taskId: string;
+    taskTitle: string;
+    isInherited: boolean;
+  }>>;
 }) {
   return (
     <div className="space-y-6">
@@ -40,6 +53,8 @@ export function DttManager({
         classes={classes}
         enrollments={enrollments}
         nonDttMembers={nonDttMembers}
+        availableTasks={availableTasks}
+        classTasksByClass={classTasksByClass}
       />
     </div>
   );

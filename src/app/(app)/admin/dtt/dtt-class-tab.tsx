@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, ArrowRightLeft, ShieldAlert, Award, UserPlus } from "lucide-react";
+import { Plus, X, ArrowRightLeft, ShieldAlert, Award, UserPlus, BookOpen } from "lucide-react";
 import {
   createClassAction,
   updateClassAction,
@@ -12,6 +12,7 @@ import {
 } from "./actions";
 import { ConfirmDeleteButton, FormError, FormSuccess } from "../_shared";
 import { BulkEnrollPopup, type BulkEnrollMember } from "./bulk-enroll-popup";
+import { ClassTaskPopup } from "./class-task-popup";
 import { ROLE_LABELS } from "@/lib/domain";
 
 type ClassItem = {
@@ -51,10 +52,23 @@ export function DttClassTab({
   classes,
   enrollments,
   nonDttMembers,
+  availableTasks,
+  classTasksByClass,
 }: {
   classes: ClassItem[];
   enrollments: EnrollmentItem[];
   nonDttMembers: NonDttMember[];
+  availableTasks?: Array<{
+    id: string;
+    title: string;
+    expReward: number;
+    pointReward: number;
+  }>;
+  classTasksByClass?: Record<string, Array<{
+    taskId: string;
+    taskTitle: string;
+    isInherited: boolean;
+  }>>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -72,6 +86,7 @@ export function DttClassTab({
 
   // Bulk enroll state
   const [bulkEnrollClassId, setBulkEnrollClassId] = useState<string | null>(null);
+  const [managingTaskClassId, setManagingTaskClassId] = useState<string | null>(null);
 
   const handleCreateClass = (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,6 +269,13 @@ export function DttClassTab({
                             <UserPlus className="h-3.5 w-3.5 inline mr-0.5" />
                             Thêm
                           </button>
+                          <button
+                            onClick={() => setManagingTaskClassId(classItem.id)}
+                            className="text-[10px] font-medium text-muted-foreground hover:text-primary transition-colors ml-1 inline-flex items-center"
+                          >
+                            <BookOpen className="h-3.5 w-3.5 mr-0.5" />
+                            Nhiệm vụ
+                          </button>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           Bắt đầu tuần: {WEEKDAY_LABELS.find(d => d.value === classItem.startDayOfWeek)?.label ?? "Thứ hai"}
@@ -360,6 +382,21 @@ export function DttClassTab({
             className={targetClass.name}
             onClose={() => setBulkEnrollClassId(null)}
             members={popupMembers}
+          />
+        );
+      })()}
+
+      {/* Class task popup */}
+      {managingTaskClassId && (() => {
+        const targetClass = classes.find((c) => c.id === managingTaskClassId);
+        if (!targetClass) return null;
+        return (
+          <ClassTaskPopup
+            classId={managingTaskClassId}
+            className={targetClass.name}
+            availableTasks={availableTasks ?? []}
+            classTasks={classTasksByClass?.[managingTaskClassId] ?? []}
+            onClose={() => setManagingTaskClassId(null)}
           />
         );
       })()}
