@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, X, ArrowRightLeft, ShieldAlert, Award, UserPlus, BookOpen } from "lucide-react";
+import { Plus, X, ArrowRightLeft, ShieldAlert, Award, UserPlus, BookOpen, BarChart3 } from "lucide-react";
 import {
   createClassAction,
   updateClassAction,
@@ -276,6 +277,13 @@ export function DttClassTab({
                             <BookOpen className="h-3.5 w-3.5 mr-0.5" />
                             Nhiệm vụ
                           </button>
+                          <Link
+                            href={`/admin/dtt/classes/${classItem.id}/report`}
+                            className="text-[10px] font-medium text-muted-foreground hover:text-primary transition-colors ml-1 inline-flex items-center"
+                          >
+                            <BarChart3 className="h-3.5 w-3.5 mr-0.5" />
+                            Báo cáo
+                          </Link>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           Bắt đầu tuần: {WEEKDAY_LABELS.find(d => d.value === classItem.startDayOfWeek)?.label ?? "Thứ hai"}
