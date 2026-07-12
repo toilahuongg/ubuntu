@@ -75,6 +75,15 @@ export function LeaderDashboard({
         />
       )}
 
+      {data.dttClassTasks && data.dttClassTasks.cards.length > 0 && (
+        <TaskCardSection
+          title={`Nhiệm vụ lớp ${data.dttClassTasks.classNames.join(", ")}`}
+          cards={data.dttClassTasks.cards}
+          userId={userId}
+          variant="leader"
+        />
+      )}
+
       <TaskCardSection
         title="Nhiệm vụ hôm nay"
         cards={todayCards}

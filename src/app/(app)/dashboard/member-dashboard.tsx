@@ -86,6 +86,15 @@ export function MemberDashboard({
         />
       )}
 
+      {data.dttClassTasks && data.dttClassTasks.cards.length > 0 && (
+        <TaskCardSection
+          title={`Nhiệm vụ lớp ${data.dttClassTasks.classNames.join(", ")}`}
+          cards={data.dttClassTasks.cards}
+          userId={userId}
+          variant="member"
+        />
+      )}
+
       <TaskCardSection
         title="Nhiệm vụ hôm nay"
         cards={todayCards}

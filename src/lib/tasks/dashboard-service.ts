@@ -54,6 +54,7 @@ import type {
 } from "@/lib/tasks/types";
 import { toObjectId } from "@/lib/utils/ids";
 import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
+import { buildDttClassTaskView } from "@/lib/dtt/class-task-service";
 
 function userShape(
   u: Pick<SerializedUser, "id" | "teamId" | "zoneId" | "regionId" | "role"> & { isDttUser?: boolean },
@@ -668,6 +669,10 @@ export async function buildDashboardView(
     cards.filter((card) => actorTaskIds.has(card.id)),
   );
 
+  const dttClassTasks = actor.teamId
+    ? await buildDttClassTaskView(actor.id, actor.teamId, dateKey)
+    : null;
+
   const roster: DashboardRosterEntry[] = visibleUsers.map((user) => {
     const statuses = sortedTasks.map((t) => {
       const taskId = t._id.toString();
@@ -713,6 +718,7 @@ export async function buildDashboardView(
     },
     cards,
     campaign,
+    dttClassTasks,
     goalNotice,
     roster,
     tasks: sortTasksForDisplay(filteredAllTasks).map(mapTask),
@@ -840,11 +846,15 @@ export async function buildMemberDashboard(
     }),
   );
   const goalNotice = buildDashboardGoalNotice(cards);
+  const dttClassTasks = actor.teamId
+    ? await buildDttClassTaskView(actor.id, actor.teamId, dateKey)
+    : null;
 
   return {
     date: dateKey,
     cards,
     campaign,
+    dttClassTasks,
     goalNotice,
     dailyScripture: getDailyScripture(dateKey),
     equipped: progress.equipped,
@@ -929,11 +939,15 @@ export async function buildMemberPrayerDashboard(
     }),
   );
   const goalNotice = buildDashboardGoalNotice(cards);
+  const dttClassTasks = actor.teamId
+    ? await buildDttClassTaskView(actor.id, actor.teamId, dateKey)
+    : null;
 
   return {
     date: dateKey,
     cards,
     campaign: null,
+    dttClassTasks,
     goalNotice,
     dailyScripture: getDailyScripture(dateKey),
     currentLevelXp: progress.currentLevelXp,

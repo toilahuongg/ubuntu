@@ -175,11 +175,17 @@ export type DashboardHighlights = {
   pending: number;
 };
 
+export type DttClassTaskView = {
+  cards: TaskCard[];
+  classNames: string[];
+};
+
 export type DashboardView = {
   date: string;
   highlights: DashboardHighlights;
   cards: TaskCard[];
   campaign: DailyCampaignView | null;
+  dttClassTasks: DttClassTaskView | null;
   goalNotice: DashboardGoalNotice | null;
   roster: DashboardRosterEntry[];
   tasks: TaskSummary[];
@@ -204,6 +210,7 @@ export type MemberDashboardView = {
   date: string;
   cards: TaskCard[];
   campaign: DailyCampaignView | null;
+  dttClassTasks: DttClassTaskView | null;
   goalNotice: DashboardGoalNotice | null;
 } & DashboardLevelSummary;
 
