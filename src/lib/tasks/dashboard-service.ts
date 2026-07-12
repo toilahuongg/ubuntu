@@ -1066,6 +1066,10 @@ export async function buildLeaderPrayerDashboard(
   const totalSlots = lookup.applicableCount;
   const completedSubmissions = lookup.completedSubmissionCount;
 
+  const dttClassTasks = actor.teamId
+    ? await buildDttClassTaskView(actor.id, actor.teamId, dateKey)
+    : null;
+
   return {
     date: dateKey,
     highlights: {
@@ -1079,6 +1083,7 @@ export async function buildLeaderPrayerDashboard(
     },
     cards,
     campaign: null,
+    dttClassTasks,
     goalNotice,
     roster,
     tasks: sortTasksForDisplay(prayerAllTasks).map(mapTask),

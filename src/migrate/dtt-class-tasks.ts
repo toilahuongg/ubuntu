@@ -26,7 +26,7 @@ if (!MONGODB_URI) {
 
 async function run() {
   console.log("Connecting to MongoDB...");
-  await mongoose.connect(MONGODB_URI);
+  await mongoose.connect(MONGODB_URI!);
   console.log("Connected.");
 
   const TaskModel = mongoose.model("Task", new mongoose.Schema({}, { strict: false }));
@@ -34,7 +34,7 @@ async function run() {
   const DttClassTaskModel = mongoose.model("DttClassTask", new mongoose.Schema({}, { strict: false }));
 
   // Step 1: Find all isDtt=true tasks
-  const dttTasks = await TaskModel.find({ isDtt: true }).select("_id title teamId").lean();
+  const dttTasks = await TaskModel.find({ isDtt: true }).select("_id title teamId").lean() as any[];
   console.log(`\nFound ${dttTasks.length} tasks with isDtt: true`);
 
   if (dttTasks.length === 0) {
@@ -60,7 +60,7 @@ async function run() {
     let defaultClass = await DttClassModel.findOne({
       teamId: new mongoose.Types.ObjectId(teamId),
       name: "Lớp ĐTT Tổng",
-    }).lean();
+    }).lean() as any;
 
     if (!defaultClass) {
       const firstTaskCreatedBy = tasks[0]?.createdBy;
