@@ -11,6 +11,7 @@ import { DttClassModel } from "@/lib/models/dtt-class";
 import { TaskModel } from "@/lib/models/task";
 import { createTask } from "@/lib/tasks/task-service";
 import { toObjectId } from "@/lib/utils/ids";
+import type { TaskTargetRole } from "@/lib/domain";
 
 async function requireManagerTeam() {
   await connectToDatabase();
@@ -86,7 +87,7 @@ export async function createCustomClassTaskAction(
       expReward: Number(formData.get("expReward") ?? 10),
       pointReward: 0,
       lateWindowDays: Number(formData.get("lateWindowDays") ?? 7),
-      targetRoles: formData.getAll("targetRoles").map(String),
+      targetRoles: formData.getAll("targetRoles").map(String) as TaskTargetRole[],
       taskType: "DAILY_PER_MEMBER",
       scheduleType: "EVERY_DAY",
       submissionMessage: (formData.get("submissionMessage") as string) ?? "",
