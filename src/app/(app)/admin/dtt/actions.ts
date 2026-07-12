@@ -174,6 +174,62 @@ export async function changeStudentClassAction(userId: string, classId: string):
   });
 }
 
+export async function bulkEnrollStudentsAction(
+  userIds: string[],
+  classId: string,
+): Promise<ActionResult<{ success: number; skipped: number }>> {
+  return runAction(async () => {
+    const { session, teamId } = await requireManagerTeam();
+
+    await assertClassInTeam(classId, teamId);
+
+    if (userIds.length === 0) {
+      throw new Error("Chọn ít nhất một thành viên.");
+    }
+
+    const objectIds = userIds.map((id) => toObjectId(id));
+
+    // Verify all users are active and in the team
+    const validUsers = await UserModel.find({
+      _id: { $in: objectIds },
+      status: "ACTIVE",
+      teamId,
+    }).lean();
+
+    const validUserIds = validUsers.map((u) => u._id);
+
+    // Find which users are already enrolled in any DTT class
+    const alreadyEnrolled = await DttEnrollmentModel.find({
+      userId: { $in: validUserIds },
+    }).select("userId").lean();
+
+    const enrolledUserIdSet = new Set(
+      alreadyEnrolled.map((e) => e.userId.toString())
+    );
+
+    const toEnroll = validUserIds.filter(
+      (id) => !enrolledUserIdSet.has(id.toString())
+    );
+    const skippedCount = alreadyEnrolled.length;
+
+    if (toEnroll.length > 0) {
+      const docs = toEnroll.map((userId) => ({
+        userId,
+        classId: toObjectId(classId),
+        teamId,
+        enrolledBy: toObjectId(session.id),
+      }));
+
+      await DttEnrollmentModel.insertMany(docs, { ordered: false });
+    }
+
+    revalidatePath("/admin/dtt");
+    revalidatePath("/dashboard");
+
+    return { success: toEnroll.length, skipped: skippedCount };
+  });
+}
+
 export async function toggleTaskDttAction(taskId: string, isDtt: boolean): Promise<ActionResult> {
   return runAction(async () => {
     const { teamId } = await requireManagerTeam();

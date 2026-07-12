@@ -5,6 +5,7 @@ import { DttClassModel } from "@/lib/models/dtt-class";
 import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
 import { TaskModel } from "@/lib/models/task";
 import { UserModel } from "@/lib/models/user";
+import { RegionModel } from "@/lib/models/region";
 import { toObjectId } from "@/lib/utils/ids";
 import { connectToDatabase } from "@/lib/mongoose";
 import { AdminSubHeader } from "../sub-header";
@@ -31,7 +32,13 @@ export default async function DttManagementPage() {
   const teamMembers = await UserModel.find({
     teamId,
     status: "ACTIVE",
-  }).select({ fullName: 1, role: 1 }).lean();
+  }).select({ fullName: 1, role: 1, regionId: 1 }).lean();
+
+  // Load regions for the team to resolve region names
+  const regions = await RegionModel.find({ teamId }).lean();
+  const regionMap = new Map(
+    regions.map((r) => [r._id.toString(), r.name])
+  );
 
   // Filter users not currently in DTT
   const enrolledUserIds = new Set(enrollments.map((e) => e.userId.toString()));
@@ -66,6 +73,10 @@ export default async function DttManagementPage() {
     id: m._id.toString(),
     fullName: m.fullName,
     role: m.role,
+    regionId: m.regionId?.toString() ?? null,
+    regionName: m.regionId
+      ? (regionMap.get(m.regionId.toString()) ?? null)
+      : null,
   }));
 
   const formattedTasks = tasks.map((t) => ({

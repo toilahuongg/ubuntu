@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, GraduationCap, ArrowRightLeft, ShieldAlert, Award } from "lucide-react";
+import { Plus, X, GraduationCap, ArrowRightLeft, ShieldAlert, Award, UserPlus } from "lucide-react";
 import {
   createClassAction,
   updateClassAction,
@@ -12,6 +12,7 @@ import {
   changeStudentClassAction,
 } from "./actions";
 import { ConfirmDeleteButton, FormError, FormSuccess } from "../_shared";
+import { BulkEnrollPopup, type BulkEnrollMember } from "./bulk-enroll-popup";
 
 type ClassItem = {
   id: string;
@@ -32,6 +33,8 @@ type NonDttMember = {
   id: string;
   fullName: string;
   role: string;
+  regionId: string | null;
+  regionName: string | null;
 };
 
 const WEEKDAY_LABELS = [
@@ -68,6 +71,9 @@ export function DttClassTab({
   const [editingClassId, setEditingClassId] = useState<string | null>(null);
   const [editingClassName, setEditingClassName] = useState("");
   const [editingClassStartDay, setEditingClassStartDay] = useState<number>(1);
+
+  // Bulk enroll state
+  const [bulkEnrollClassId, setBulkEnrollClassId] = useState<string | null>(null);
 
   const ROLE_LABELS: Record<string, string> = {
     ADMIN: "Quản trị viên",
@@ -325,6 +331,13 @@ export function DttClassTab({
                           >
                             Sửa
                           </button>
+                          <button
+                            onClick={() => setBulkEnrollClassId(classItem.id)}
+                            className="text-[10px] font-medium text-muted-foreground hover:text-primary transition-colors ml-1"
+                          >
+                            <UserPlus className="h-3.5 w-3.5 inline mr-0.5" />
+                            Thêm
+                          </button>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
                           Bắt đầu tuần: {WEEKDAY_LABELS.find(d => d.value === classItem.startDayOfWeek)?.label ?? "Thứ hai"}
@@ -405,6 +418,35 @@ export function DttClassTab({
           )}
         </div>
       </div>
+
+      {/* Bulk enroll popup */}
+      {bulkEnrollClassId && (() => {
+        const targetClass = classes.find((c) => c.id === bulkEnrollClassId);
+        if (!targetClass) return null;
+
+        // Get users already enrolled in this specific class
+        const classEnrolledIds = new Set(
+          enrollments.filter((e) => e.classId === bulkEnrollClassId).map((e) => e.userId)
+        );
+
+        // Filter to members not in ANY DTT class (same as nonDttMembers)
+        const popupMembers: BulkEnrollMember[] = nonDttMembers.map((m) => ({
+          id: m.id,
+          fullName: m.fullName,
+          role: m.role,
+          regionId: m.regionId,
+          regionName: m.regionName,
+        }));
+
+        return (
+          <BulkEnrollPopup
+            classId={bulkEnrollClassId}
+            className={targetClass.name}
+            onClose={() => setBulkEnrollClassId(null)}
+            members={popupMembers}
+          />
+        );
+      })()}
     </div>
   );
 }

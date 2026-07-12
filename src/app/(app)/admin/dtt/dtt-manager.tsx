@@ -24,6 +24,8 @@ type NonDttMember = {
   id: string;
   fullName: string;
   role: string;
+  regionId: string | null;
+  regionName: string | null;
 };
 
 type TaskItem = {
