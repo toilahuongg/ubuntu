@@ -54,7 +54,7 @@ import type {
 } from "@/lib/tasks/types";
 import { toObjectId } from "@/lib/utils/ids";
 import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
-import { buildDttClassTaskView } from "@/lib/dtt/class-task-service";
+import { buildDttClassTaskView, loadAllDttClassTaskIdsForTeam } from "@/lib/dtt/class-task-service";
 
 function userShape(
   u: Pick<SerializedUser, "id" | "teamId" | "zoneId" | "regionId" | "role"> & { isDttUser?: boolean },
@@ -160,7 +160,13 @@ async function loadScopeDataForVisibleUsers(
     userIdsToQuery.push(toObjectId(actorId));
   }
 
-  const [allTasks, dttEnrollments] = await Promise.all([
+  // Load DTT class task IDs to exclude them from the regular task view
+  const primaryTeamId = visibleUsers.find((u) => u.teamId)?.teamId ?? null;
+  const dttClassTaskIds = primaryTeamId
+    ? await loadAllDttClassTaskIdsForTeam(primaryTeamId)
+    : new Set<string>();
+
+  const [allTasksRaw, dttEnrollments] = await Promise.all([
     TaskModel.find({
       campaignOnly: { $ne: true },
       isActive: true,
@@ -172,6 +178,11 @@ async function loadScopeDataForVisibleUsers(
       userId: { $in: userIdsToQuery },
     }).lean(),
   ]);
+
+  // Filter out tasks assigned to any DTT class (exclusivity rule)
+  const allTasks = allTasksRaw.filter(
+    (t) => !dttClassTaskIds.has(t._id.toString()),
+  );
 
   const dttUserIdsSet = new Set(dttEnrollments.map((e) => e.userId.toString()));
 
