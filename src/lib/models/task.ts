@@ -59,6 +59,7 @@ const taskSchema = new Schema(
       type: [Number],
     },
     targetCount: { default: null, min: 1, type: Number },
+    maxPerWeek: { default: null, min: 1, type: Number },
     targetRoles: {
       default: undefined,
       enum: TASK_TARGET_ROLES,
@@ -101,6 +102,7 @@ export type TaskRecord = {
   completionMessage: string;
   taskType: TaskType;
   targetCount: number | null;
+  maxPerWeek: number | null;
   targetRoles?: TaskTargetRole[] | null;
   completedAt: Date | null;
   teamId: Types.ObjectId;
