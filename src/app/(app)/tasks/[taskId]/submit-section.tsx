@@ -21,6 +21,8 @@ export function SubmitSection({
   subjectUserId,
   myCompletionCount,
   monthlyCompletion,
+  weeklyCompletion,
+  maxPerWeek,
   status,
   taskType,
 }: {
@@ -28,6 +30,8 @@ export function SubmitSection({
   subjectUserId: string;
   myCompletionCount: number;
   monthlyCompletion: number;
+  weeklyCompletion?: number;
+  maxPerWeek?: number | null;
   status: TaskStatus;
   taskType: TaskType;
 }) {

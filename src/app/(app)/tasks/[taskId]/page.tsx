@@ -219,6 +219,26 @@ export default async function TaskDetailPage({
         </section>
       )}
 
+      {detail.taskType === "WEEKLY_PER_MEMBER" && detail.maxPerWeek !== null && detail.isApplicableToActor && (
+        <section className="space-y-3">
+          <div className="glass-card space-y-2 p-4">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" aria-hidden />
+              <h2 className="text-sm font-semibold">
+                Tiến độ tuần này
+              </h2>
+            </div>
+            <ProgressBar
+              current={detail.weeklyCompletion}
+              target={detail.maxPerWeek}
+            />
+            <p className="text-xs text-muted-foreground">
+              {detail.weeklyCompletion} / {detail.maxPerWeek} lượt
+            </p>
+          </div>
+        </section>
+      )}
+
       {detail.isApplicableToActor ? (
         <>
           <SubmitSection
@@ -226,6 +246,8 @@ export default async function TaskDetailPage({
             subjectUserId={session.id}
             myCompletionCount={detail.myCompletionCount}
             monthlyCompletion={detail.monthlyCompletion}
+            weeklyCompletion={detail.weeklyCompletion}
+            maxPerWeek={detail.maxPerWeek}
             status={detail.status}
             taskType={detail.taskType}
           />
