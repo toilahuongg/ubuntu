@@ -64,6 +64,10 @@ export async function createTaskAction(
         rawTargetCount != null && rawTargetCount !== ""
           ? Number(rawTargetCount)
           : undefined,
+      maxPerWeek:
+        formData.get("maxPerWeek") != null && formData.get("maxPerWeek") !== ""
+          ? Number(formData.get("maxPerWeek"))
+          : null,
       targetRoles: formData.getAll("targetRoles").map(String),
       submissionMessage: (formData.get("submissionMessage") as string) ?? "",
       completionMessage: (formData.get("completionMessage") as string) ?? "",
@@ -106,6 +110,10 @@ export async function updateTaskAction(
         rawTargetCount != null && rawTargetCount !== ""
           ? Number(rawTargetCount)
           : undefined,
+      maxPerWeek:
+        formData.get("maxPerWeek") != null && formData.get("maxPerWeek") !== ""
+          ? Number(formData.get("maxPerWeek"))
+          : null,
       targetRoles: formData.getAll("targetRoles").map(String),
       submissionMessage: (formData.get("submissionMessage") as string) ?? "",
       completionMessage: (formData.get("completionMessage") as string) ?? "",
