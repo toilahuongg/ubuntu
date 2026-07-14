@@ -38,6 +38,8 @@ function makeTask(
     title: input.title,
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
     zoneId: input.zoneId ?? null,
+    campaignOnly: false,
+    maxPerWeek: null,
   };
 }
 

@@ -77,6 +77,8 @@ function createTask(input: {
     title: input.id,
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
     zoneId: input.zoneId ? objectId(input.zoneId) : null,
+    campaignOnly: false,
+    maxPerWeek: null,
   } satisfies TaskRecord;
 }
 

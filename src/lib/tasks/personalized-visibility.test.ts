@@ -35,6 +35,8 @@ describe("Personalized Task Visibility Unit Logic", () => {
       title: "Test Task",
       updatedAt: new Date(),
       zoneId: null,
+      campaignOnly: false,
+      maxPerWeek: null,
     };
 
     const mockUser = {
@@ -90,6 +92,8 @@ describe("Personalized Task Visibility Unit Logic", () => {
       title: "Test Task",
       updatedAt: new Date(),
       zoneId: null,
+      campaignOnly: false,
+      maxPerWeek: null,
     };
 
     const mockUser = {
@@ -142,6 +146,8 @@ describe("Personalized Task Visibility Unit Logic", () => {
       title: "Test Task",
       updatedAt: new Date(),
       zoneId: null,
+      campaignOnly: false,
+      maxPerWeek: null,
     };
 
     const mockUser = {
@@ -174,6 +180,7 @@ describe("Personalized Task Visibility Unit Logic", () => {
       monthlyByTaskUser: new Map(),
       goalByTaskUser: new Map(),
       reminderByTaskId: new Map(),
+      weeklyByTaskUser: new Map<string, number>(),
     });
 
     expect(card1.isApplicableToActor).toBe(false);
@@ -198,6 +205,7 @@ describe("Personalized Task Visibility Unit Logic", () => {
       monthlyByTaskUser: new Map(),
       goalByTaskUser: new Map(),
       reminderByTaskId: new Map(),
+      weeklyByTaskUser: new Map<string, number>(),
     });
 
     expect(card2.isApplicableToActor).toBe(true); // Should be true because of visibility override!

@@ -43,6 +43,8 @@ function task(input: Partial<TaskRecord> = {}): TaskRecord {
     title: input.title ?? "Daily update",
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
     zoneId: null,
+    campaignOnly: false,
+    maxPerWeek: null,
     ...input,
   };
 }

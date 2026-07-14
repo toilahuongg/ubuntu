@@ -40,6 +40,8 @@ function makeCard(
           : "COUNT_TOTAL",
     isApplicableToActor: true,
     progress,
+    weeklyCompletion: 0,
+    maxPerWeek: null,
   };
 }
 
@@ -69,6 +71,8 @@ function makeTask(
     title: input.title,
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
     zoneId: null,
+    campaignOnly: false,
+    maxPerWeek: null,
   };
 }
 

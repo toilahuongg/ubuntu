@@ -39,6 +39,8 @@ function task(input: Partial<TaskRecord> = {}): TaskRecord {
     title: input.title ?? "Cầu nguyện",
     updatedAt: new Date("2026-06-01T00:00:00.000Z"),
     zoneId: null,
+    campaignOnly: false,
+    maxPerWeek: null,
     ...input,
   };
 }
