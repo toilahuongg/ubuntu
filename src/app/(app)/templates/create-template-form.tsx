@@ -175,6 +175,29 @@ export function CreateTemplateForm({ scope }: { scope: TaskScope }) {
         </div>
       )}
 
+      {taskType === "WEEKLY_PER_MEMBER" && (
+        <div>
+          <label
+            htmlFor="maxPerWeek"
+            className="mb-1.5 block text-xs font-medium text-muted-foreground"
+          >
+            Giới hạn mỗi tuần (tùy chọn)
+          </label>
+          <input
+            id="maxPerWeek"
+            name="maxPerWeek"
+            type="number"
+            min={1}
+            placeholder="Để trống = không giới hạn"
+            inputMode="numeric"
+            className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Số lần tối đa mỗi thành viên có thể hoàn thành trong tuần (CN–T7).
+          </p>
+        </div>
+      )}
+
       <div>
         <label htmlFor="title" className="mb-1.5 block text-xs font-medium text-muted-foreground">
           Tiêu đề *
