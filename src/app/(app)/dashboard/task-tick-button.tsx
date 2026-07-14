@@ -19,6 +19,8 @@ export function TaskTickButton({
   status,
   isGoalComplete = false,
   taskType,
+  weeklyCompletion,
+  maxPerWeek,
 }: {
   taskId: string;
   subjectUserId: string;
@@ -26,6 +28,8 @@ export function TaskTickButton({
   status: TaskStatus;
   isGoalComplete?: boolean;
   taskType?: TaskType;
+  weeklyCompletion?: number;
+  maxPerWeek?: number | null;
 }) {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
@@ -44,11 +48,16 @@ export function TaskTickButton({
   const isCompletedMonthlyTask = taskType === "MONTHLY_PER_MEMBER" && isDone;
   const shouldRenderChecked = isDone && taskType !== "COUNT_TOTAL";
   const isTaskCompleted = status === "COMPLETED";
+  const weeklyLimitReached =
+    taskType === "WEEKLY_PER_MEMBER" &&
+    maxPerWeek != null &&
+    (weeklyCompletion ?? 0) >= maxPerWeek;
   const disabled =
     isPending ||
     isLocked ||
     isCompletedMonthlyTask ||
     isGoalComplete ||
+    weeklyLimitReached ||
     (isTaskCompleted && !isDone);
 
   function handleClick(e: React.MouseEvent) {

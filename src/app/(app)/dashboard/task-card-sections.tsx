@@ -111,6 +111,8 @@ function TaskCardRow({
           status={card.status}
           isGoalComplete={isGoalComplete}
           taskType={card.taskType}
+          weeklyCompletion={card.weeklyCompletion}
+          maxPerWeek={card.maxPerWeek}
         />
       ) : (
         <div className="h-9 w-9 shrink-0" aria-hidden />
@@ -215,7 +217,10 @@ function isCardDone(card: TaskCard) {
     return card.progress.isGoalComplete || card.myCompletionCount > 0;
   }
   if (card.taskType === "WEEKLY_PER_MEMBER") {
-    return card.progress.isGoalComplete;
+    const weeklyReached = card.maxPerWeek != null
+      ? card.weeklyCompletion >= card.maxPerWeek
+      : card.progress.isGoalComplete;
+    return weeklyReached || card.myCompletionCount > 0;
   }
   if (card.taskType === "COUNT_TOTAL") {
     return card.progress.target !== null
