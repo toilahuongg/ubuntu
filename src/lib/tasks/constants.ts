@@ -38,6 +38,10 @@ export function isDailyTaskType(taskType?: TaskType | null): boolean {
   return normalizeTaskType(taskType) === "DAILY_PER_MEMBER";
 }
 
+export function isWeeklyTaskType(taskType?: TaskType | null): boolean {
+  return normalizeTaskType(taskType) === "WEEKLY_PER_MEMBER";
+}
+
 export function getMonthlyGoalLimitForTaskType(
   taskType?: TaskType | null,
 ): number | null {

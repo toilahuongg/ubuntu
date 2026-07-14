@@ -56,6 +56,7 @@ export type TaskSummary = {
   scheduledWeekdays: number[];
   scheduledMonthDays: number[];
   targetCount: number | null;
+  maxPerWeek: number | null;
   targetRoles: TaskTargetRole[];
   submissionMessage: string;
   completionMessage: string;
@@ -84,6 +85,8 @@ export type TaskCard = {
   taskType: TaskType;
   isApplicableToActor: boolean;
   progress: TaskProgress;
+  weeklyCompletion: number;
+  maxPerWeek: number | null;
 };
 
 export type RosterEntry = {
@@ -127,6 +130,9 @@ export type TaskDetail = {
   rosterMembers: SessionUser[];
   roster: RosterEntry[];
   backfillDays: BackfillDay[];
+  weeklyCompletion: number;
+  maxPerWeek: number | null;
+  weekSubmissions: BackfillDay[];
 };
 
 export type DashboardMemberTaskStatus = {
