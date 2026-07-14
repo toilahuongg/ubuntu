@@ -11,6 +11,7 @@ import {
 import {
   createDeadlineAt,
   getTodayDateKey,
+  getWeekRangeFromDateKey,
   getYearMonthFromDateKey,
 } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
@@ -142,6 +143,7 @@ export function mapTask(record: TaskRecord): TaskSummary {
     scheduledWeekdays: schedule.scheduledWeekdays,
     scheduledMonthDays: schedule.scheduledMonthDays,
     targetCount: record.targetCount ?? null,
+    maxPerWeek: record.maxPerWeek ?? null,
     targetRoles: normalizeTargetRoles(record.targetRoles, record.scope),
     submissionMessage: record.submissionMessage ?? "",
     completionMessage: record.completionMessage ?? "",
@@ -329,6 +331,18 @@ export async function getTaskDetail(
     throw new Error("Bạn chưa có đối tượng để nộp nhiệm vụ.");
   }
 
+  const weeklySubmissions: SubmissionRecordModel[] =
+    taskType === "WEEKLY_PER_MEMBER"
+      ? await (async () => {
+          const weekRange = getWeekRangeFromDateKey(dateKey, 7);
+          return (await SubmissionModel.find({
+            date: { $gte: weekRange.startStr, $lte: weekRange.endStr },
+            subjectUserId: toObjectId(selectedSubject.id),
+            taskId: toObjectId(taskId),
+          }).lean()) as SubmissionRecordModel[];
+        })()
+      : [];
+
   const selectedTodaySub = submissionsToday.find(
     (s) => s.subjectUserId.toString() === selectedSubject.id,
   );
@@ -463,6 +477,15 @@ export async function getTaskDetail(
     rosterMembers,
     roster,
     backfillDays,
+    weeklyCompletion: weeklySubmissions.reduce(
+      (sum, s) => sum + (s.completionCount ?? 0),
+      0,
+    ),
+    maxPerWeek: task.maxPerWeek ?? null,
+    weekSubmissions: weeklySubmissions.map((s) => ({
+      dateKey: s.date,
+      completionCount: s.completionCount ?? 0,
+    })),
   };
 }
 
@@ -481,6 +504,7 @@ export type CreateTaskInput = {
   scheduledWeekdays?: number[];
   scheduledMonthDays?: number[];
   targetCount?: number | null;
+  maxPerWeek?: number | null;
   targetRoles: TaskTargetRole[];
   submissionMessage?: string;
   completionMessage?: string;
@@ -640,6 +664,7 @@ export async function createTask(
     campaignOnly,
     taskType,
     targetCount: taskType === "COUNT_TOTAL" ? input.targetCount : null,
+    maxPerWeek: taskType === "WEEKLY_PER_MEMBER" ? input.maxPerWeek ?? null : null,
     targetRoles,
     sortOrder: maxSortOrder + TASK_SORT_ORDER_STEP,
     teamId: toObjectId(actorScope.teamId),
@@ -684,6 +709,7 @@ export type UpdateTaskInput = {
   scheduledWeekdays?: number[];
   scheduledMonthDays?: number[];
   targetCount?: number | null;
+  maxPerWeek?: number | null;
   targetRoles: TaskTargetRole[];
   submissionMessage?: string;
   completionMessage?: string;
@@ -754,6 +780,9 @@ export async function updateTask(
         scheduledWeekdays: schedule.scheduledWeekdays,
         scheduledMonthDays: schedule.scheduledMonthDays,
         targetCount: nextTargetCount,
+        maxPerWeek: taskType === "WEEKLY_PER_MEMBER"
+          ? input.maxPerWeek ?? null
+          : null,
         targetRoles,
         submissionMessage: input.submissionMessage?.trim() ?? "",
         completionMessage: input.completionMessage?.trim() ?? "",
