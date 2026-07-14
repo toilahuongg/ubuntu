@@ -227,10 +227,15 @@ export async function saveSubmission(
       })
         .session(session ?? null)
         .select({ date: 1, completionCount: 1 })
-        .lean()) as Array<{ completionCount: number }>;
+        .lean()) as Array<{ date: string; completionCount: number }>;
 
       const currentTotal = weekSubmissions.reduce(
-        (sum, s) => sum + (s.completionCount ?? 0),
+        (sum, s) => {
+          // In "set" mode, exclude the existing submission for this dateKey
+          // since it will be replaced, not added to.
+          if (mode === "set" && existing && s.date === dateKey) return sum;
+          return sum + (s.completionCount ?? 0);
+        },
         0,
       );
       if (currentTotal + count > taskRaw.maxPerWeek) {

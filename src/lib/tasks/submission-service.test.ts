@@ -332,6 +332,59 @@ describe("weekly maxPerWeek limits", () => {
       }),
     ).rejects.toThrow("Đã đạt giới hạn số lần hoàn thành tuần này.");
   });
+
+  it("allows decreasing count via set mode on same date when at limit", async () => {
+    const team = await TeamModel.create({
+      code: "TEST_WEEKLY_6",
+      name: "Test Team Weekly 6",
+    });
+
+    const user = await UserModel.create({
+      fullName: "Weekly User 6",
+      role: "MEMBER",
+      status: "ACTIVE",
+      totalXp: 100,
+      pointBalance: 100,
+      teamId: team._id,
+    });
+
+    const task = await TaskModel.create({
+      title: "Weekly Set Decrease",
+      description: "Test",
+      taskType: "WEEKLY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      expReward: 10,
+      pointReward: 5,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+      maxPerWeek: 3,
+    });
+
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    // Set to 3 (at limit)
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-13", {
+      count: 3,
+      mode: "set",
+    });
+
+    // Decrease to 1 via set mode on same date — should succeed
+    const result = await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-13", {
+      count: 1,
+      mode: "set",
+    });
+    expect(result.completionCount).toBe(1);
+  });
 });
 
 describe("saveSubmission points/XP subtraction and deletion", () => {
