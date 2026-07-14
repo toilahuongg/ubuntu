@@ -86,6 +86,7 @@ const taskBaseSchema = z.object({
   title: z.string().min(3, "Tiêu đề quá ngắn").max(80),
   submissionMessage: z.string().max(280).optional().default(""),
   completionMessage: z.string().max(280).optional().default(""),
+  maxPerWeek: z.number().int().min(1).max(1000).nullable().optional().default(null),
 });
 
 export const taskInputSchema = taskBaseSchema
@@ -120,6 +121,17 @@ export const taskInputSchema = taskBaseSchema
       message: "Vui lòng chọn ít nhất một ngày trong tháng.",
       path: ["scheduledMonthDays"],
     },
+  )
+  .refine(
+    (v) =>
+      v.taskType !== "WEEKLY_PER_MEMBER" ||
+      v.maxPerWeek === null ||
+      v.maxPerWeek === undefined ||
+      v.maxPerWeek >= 1,
+    {
+      message: "Giới hạn tuần phải ≥ 1 hoặc để trống.",
+      path: ["maxPerWeek"],
+    },
   );
 
 export const updateTaskInputSchema = taskBaseSchema
@@ -153,6 +165,17 @@ export const updateTaskInputSchema = taskBaseSchema
     {
       message: "Vui lòng chọn ít nhất một ngày trong tháng.",
       path: ["scheduledMonthDays"],
+    },
+  )
+  .refine(
+    (v) =>
+      v.taskType !== "WEEKLY_PER_MEMBER" ||
+      v.maxPerWeek === null ||
+      v.maxPerWeek === undefined ||
+      v.maxPerWeek >= 1,
+    {
+      message: "Giới hạn tuần phải ≥ 1 hoặc để trống.",
+      path: ["maxPerWeek"],
     },
   );
 
