@@ -7,7 +7,7 @@ import {
   getDailyCampaignRecordForTeam,
 } from "@/lib/campaigns/campaign-service";
 import type { SessionUser } from "@/lib/domain";
-import { getTodayDateKey } from "@/lib/dates";
+import { getTodayDateKey, getWeekRangeFromDateKey } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   AuditLogModel,
@@ -214,6 +214,27 @@ export async function saveSubmission(
       );
       if (hasOtherMonthlyCompletion) {
         throw new Error("Nhiệm vụ tháng đã được hoàn thành trong tháng này.");
+      }
+    }
+
+    if (taskType === "WEEKLY_PER_MEMBER" && taskRaw.maxPerWeek && count > 0) {
+      const weekRange = getWeekRangeFromDateKey(dateKey, 7);
+      const weekSubmissions = (await SubmissionModel.find({
+        completionCount: { $gt: 0 },
+        date: { $gte: weekRange.startStr, $lte: weekRange.endStr },
+        subjectUserId: subjectRaw._id,
+        taskId: taskRaw._id,
+      })
+        .session(session ?? null)
+        .select({ date: 1, completionCount: 1 })
+        .lean()) as Array<{ completionCount: number }>;
+
+      const currentTotal = weekSubmissions.reduce(
+        (sum, s) => sum + (s.completionCount ?? 0),
+        0,
+      );
+      if (currentTotal + count > taskRaw.maxPerWeek) {
+        throw new Error("Đã đạt giới hạn số lần hoàn thành tuần này.");
       }
     }
 

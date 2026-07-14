@@ -48,7 +48,7 @@ describe("submission limits", () => {
     expect(clampSubmissionCountForTaskType("MONTHLY_PER_MEMBER", 5)).toBe(1);
   });
 
-  it("does not cap weekly per-member submissions", () => {
+  it("caps weekly per-member at maxPerWeek when set, no cap when null", () => {
     expect(clampSubmissionCountForTaskType("WEEKLY_PER_MEMBER", 5)).toBe(5);
   });
 
@@ -60,6 +60,277 @@ describe("submission limits", () => {
         taskType: "MONTHLY_PER_MEMBER",
       }),
     ).toBe(true);
+  });
+});
+
+describe("weekly maxPerWeek limits", () => {
+  it("rejects submission when count would exceed maxPerWeek", async () => {
+    const team = await TeamModel.create({
+      code: "TEST_WEEKLY_1",
+      name: "Test Team Weekly 1",
+    });
+
+    const user = await UserModel.create({
+      fullName: "Weekly User 1",
+      role: "MEMBER",
+      status: "ACTIVE",
+      totalXp: 0,
+      pointBalance: 0,
+      teamId: team._id,
+    });
+
+    const task = await TaskModel.create({
+      title: "Weekly Limited Task",
+      description: "Test weekly task with maxPerWeek",
+      taskType: "WEEKLY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      expReward: 10,
+      pointReward: 5,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+      maxPerWeek: 3,
+    });
+
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-13", {
+      count: 3,
+      mode: "set",
+    });
+
+    await expect(
+      saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-14", {
+        count: 1,
+        mode: "set",
+      }),
+    ).rejects.toThrow("Đã đạt giới hạn số lần hoàn thành tuần này.");
+  });
+
+  it("allows submission when at exactly maxPerWeek with increment mode", async () => {
+    const team = await TeamModel.create({
+      code: "TEST_WEEKLY_2",
+      name: "Test Team Weekly 2",
+    });
+
+    const user = await UserModel.create({
+      fullName: "Weekly User 2",
+      role: "MEMBER",
+      status: "ACTIVE",
+      totalXp: 0,
+      pointBalance: 0,
+      teamId: team._id,
+    });
+
+    const task = await TaskModel.create({
+      title: "Weekly Task 2",
+      description: "Test",
+      taskType: "WEEKLY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      expReward: 10,
+      pointReward: 5,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+      maxPerWeek: 2,
+    });
+
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    // 2026-07-12 is Sun (week starts Sun)
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-12", {
+      count: 1,
+      mode: "increment",
+    });
+
+    const result = await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-13", {
+      count: 1,
+      mode: "increment",
+    });
+    expect(result.completionCount).toBe(1);
+
+    // 2026-07-14 is Tue, same week, should hit the limit (total would be 3 > maxPerWeek=2)
+    await expect(
+      saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-14", {
+        count: 1,
+        mode: "increment",
+      }),
+    ).rejects.toThrow("Đã đạt giới hạn số lần hoàn thành tuần này.");
+  });
+
+  it("does not limit weekly tasks when maxPerWeek is null", async () => {
+    const team = await TeamModel.create({
+      code: "TEST_WEEKLY_3",
+      name: "Test Team Weekly 3",
+    });
+
+    const user = await UserModel.create({
+      fullName: "Weekly User 3",
+      role: "MEMBER",
+      status: "ACTIVE",
+      totalXp: 0,
+      pointBalance: 0,
+      teamId: team._id,
+    });
+
+    const task = await TaskModel.create({
+      title: "Weekly No Limit",
+      description: "Test",
+      taskType: "WEEKLY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      expReward: 10,
+      pointReward: 5,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+      maxPerWeek: null,
+    });
+
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    const result = await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-13", {
+      count: 5,
+      mode: "set",
+    });
+    expect(result.completionCount).toBe(5);
+  });
+
+  it("allows decreasing count even when previously at limit", async () => {
+    const team = await TeamModel.create({
+      code: "TEST_WEEKLY_4",
+      name: "Test Team Weekly 4",
+    });
+
+    const user = await UserModel.create({
+      fullName: "Weekly User 4",
+      role: "MEMBER",
+      status: "ACTIVE",
+      totalXp: 100,
+      pointBalance: 100,
+      teamId: team._id,
+    });
+
+    const task = await TaskModel.create({
+      title: "Weekly Decrease",
+      description: "Test",
+      taskType: "WEEKLY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      expReward: 10,
+      pointReward: 5,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+      maxPerWeek: 3,
+    });
+
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-13", {
+      count: 2,
+      mode: "set",
+    });
+
+    const result = await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-13", {
+      count: 0,
+      mode: "set",
+    });
+    expect(result.completionCount).toBe(0);
+  });
+
+  it("counts backfill submissions toward weekly limit", async () => {
+    const team = await TeamModel.create({
+      code: "TEST_WEEKLY_5",
+      name: "Test Team Weekly 5",
+    });
+
+    const user = await UserModel.create({
+      fullName: "Weekly User 5",
+      role: "MEMBER",
+      status: "ACTIVE",
+      totalXp: 0,
+      pointBalance: 0,
+      teamId: team._id,
+    });
+
+    const task = await TaskModel.create({
+      title: "Weekly Backfill",
+      description: "Test",
+      taskType: "WEEKLY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      expReward: 10,
+      pointReward: 5,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+      maxPerWeek: 2,
+    });
+
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    // Submit on Monday (2026-07-13)
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-13", {
+      count: 1,
+      mode: "set",
+    });
+
+    // Backfill on Sunday (2026-07-12, same week Sun-Sat)
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-12", {
+      count: 1,
+      mode: "set",
+    });
+
+    // Total is 2 = maxPerWeek. Another submit should fail.
+    await expect(
+      saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-14", {
+        count: 1,
+        mode: "increment",
+      }),
+    ).rejects.toThrow("Đã đạt giới hạn số lần hoàn thành tuần này.");
   });
 });
 
