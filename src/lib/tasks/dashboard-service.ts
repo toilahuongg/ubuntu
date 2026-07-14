@@ -8,7 +8,7 @@ import {
 import { isCampaignRole } from "@/lib/campaigns/constants";
 import { getDailyScripture } from "@/lib/daily-scripture";
 import type { Role, SerializedUser, SessionUser, TaskScope } from "@/lib/domain";
-import { createDeadlineAt, getYearMonthFromDateKey } from "@/lib/dates";
+import { createDeadlineAt, getYearMonthFromDateKey, getWeekRangeFromDateKey } from "@/lib/dates";
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   MonthlyGoalModel,
@@ -28,6 +28,7 @@ import {
   DEFAULT_POINT_REWARD,
   getTaskProgressUnitLabel,
   isDailyTaskType,
+  isWeeklyTaskType,
   normalizeTaskType,
   supportsMonthlyGoal,
 } from "@/lib/tasks/constants";
@@ -86,7 +87,12 @@ export function buildDashboardSubmissionDateFilter(
     (task) => normalizeTaskType(task.taskType) === "MONTHLY_PER_MEMBER",
   );
   const dailyScopedTasks = tasks.filter(
-    (task) => normalizeTaskType(task.taskType) !== "MONTHLY_PER_MEMBER",
+    (task) =>
+      normalizeTaskType(task.taskType) !== "MONTHLY_PER_MEMBER" &&
+      !isWeeklyTaskType(task.taskType),
+  );
+  const weeklyTasks = tasks.filter(
+    (task) => isWeeklyTaskType(task.taskType),
   );
   const clauses = [];
 
@@ -100,6 +106,13 @@ export function buildDashboardSubmissionDateFilter(
     clauses.push({
       date: dateKey,
       taskId: { $in: dailyScopedTasks.map((task) => task._id) },
+    });
+  }
+  if (weeklyTasks.length > 0) {
+    const weekRange = getWeekRangeFromDateKey(dateKey, 7);
+    clauses.push({
+      date: { $gte: weekRange.startStr, $lte: weekRange.endStr },
+      taskId: { $in: weeklyTasks.map((task) => task._id) },
     });
   }
 
@@ -251,6 +264,7 @@ function resolveScopeLabel(actor: SessionUser): ScopeLabel {
 type ProgressAggregates = {
   totalByTask: Map<string, number>;
   monthlyByTaskUser: Map<string, number>;
+  weeklyByTaskUser: Map<string, number>;
   goalByTaskUser: Map<string, number>;
 };
 
@@ -358,6 +372,7 @@ async function loadProgressAggregates(
 ): Promise<ProgressAggregates> {
   const totalByTask = new Map<string, number>();
   const monthlyByTaskUser = new Map<string, number>();
+  const weeklyByTaskUser = new Map<string, number>();
   const goalByTaskUser = new Map<string, number>();
 
   const countTasks = tasks.filter(
@@ -413,7 +428,34 @@ async function loadProgressAggregates(
     }
   }
 
-  return { totalByTask, monthlyByTaskUser, goalByTaskUser };
+  const weeklyTasks = tasks.filter((t) => isWeeklyTaskType(t.taskType));
+  if (weeklyTasks.length > 0 && userIds.length > 0) {
+    const weekRange = getWeekRangeFromDateKey(dateKey, 7);
+    const userObjectIds = userIds.map((id) => toObjectId(id));
+    const weekly = (await SubmissionModel.aggregate([
+      {
+        $match: {
+          taskId: { $in: weeklyTasks.map((t) => t._id) },
+          subjectUserId: { $in: userObjectIds },
+          date: { $gte: weekRange.startStr, $lte: weekRange.endStr },
+        },
+      },
+      {
+        $group: {
+          _id: { taskId: "$taskId", userId: "$subjectUserId" },
+          total: { $sum: "$completionCount" },
+        },
+      },
+    ])) as { _id: { taskId: unknown; userId: unknown }; total: number }[];
+    for (const row of weekly) {
+      weeklyByTaskUser.set(
+        aggKey(String(row._id.taskId), String(row._id.userId)),
+        row.total,
+      );
+    }
+  }
+
+  return { totalByTask, monthlyByTaskUser, weeklyByTaskUser, goalByTaskUser };
 }
 
 export function buildTaskCard(
@@ -425,6 +467,7 @@ export function buildTaskCard(
     lookup: DashboardLookup;
     totalByTask: Map<string, number>;
     monthlyByTaskUser: Map<string, number>;
+    weeklyByTaskUser: Map<string, number>;
     goalByTaskUser: Map<string, number>;
     reminderByTaskId: Map<string, { enabled: boolean; reminderTime: string }>;
   },
@@ -449,11 +492,17 @@ export function buildTaskCard(
           current: ctx.totalByTask.get(taskId) ?? 0,
           target: t.targetCount ?? null,
         })
-      : buildTaskProgress({
-          taskType,
-          current: ctx.monthlyByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? 0,
-          target: ctx.goalByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? null,
-        });
+      : taskType === "WEEKLY_PER_MEMBER"
+        ? buildTaskProgress({
+            taskType,
+            current: ctx.weeklyByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? 0,
+            target: t.maxPerWeek ?? null,
+          })
+        : buildTaskProgress({
+            taskType,
+            current: ctx.monthlyByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? 0,
+            target: ctx.goalByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? null,
+          });
   const reminderPreference = ctx.reminderByTaskId.get(taskId);
   const reminderSettings = resolveEffectiveReminderTime({
     defaultReminderTime: t.deadlineTime,
@@ -477,6 +526,10 @@ export function buildTaskCard(
     taskType,
     isApplicableToActor,
     progress,
+    weeklyCompletion: taskType === "WEEKLY_PER_MEMBER"
+      ? ctx.weeklyByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? 0
+      : 0,
+    maxPerWeek: t.maxPerWeek ?? null,
   };
 }
 
@@ -550,7 +603,7 @@ async function buildDailyCampaignView(input: {
     submissions,
     visibilityOverrides,
   );
-  const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
+  const { totalByTask, monthlyByTaskUser, weeklyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(
       campaignTasks,
       campaignUsers.map((user) => user.id),
@@ -571,6 +624,7 @@ async function buildDailyCampaignView(input: {
       lookup,
       totalByTask,
       monthlyByTaskUser,
+      weeklyByTaskUser,
       goalByTaskUser,
       reminderByTaskId,
     }),
@@ -644,7 +698,7 @@ export async function buildDashboardView(
     ]),
   );
 
-  const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
+  const { totalByTask, monthlyByTaskUser, weeklyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(sortedTasks, [actor.id], dateKey);
   const actorShape = userShape(actor, dttUserIdsSet);
   const lookup = buildDashboardLookup(
@@ -662,6 +716,7 @@ export async function buildDashboardView(
       lookup,
       totalByTask,
       monthlyByTaskUser,
+      weeklyByTaskUser,
       goalByTaskUser,
       reminderByTaskId,
     }),
@@ -827,7 +882,7 @@ export async function buildMemberDashboard(
     ]),
   );
 
-  const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
+  const { totalByTask, monthlyByTaskUser, weeklyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(sortedPersonal, [actor.id], dateKey);
   const lookup = buildDashboardLookup(
     sortedPersonal,
@@ -852,6 +907,7 @@ export async function buildMemberDashboard(
       lookup,
       totalByTask,
       monthlyByTaskUser,
+      weeklyByTaskUser,
       goalByTaskUser,
       reminderByTaskId,
     }),
@@ -920,7 +976,7 @@ export async function buildMemberPrayerDashboard(
     ]),
   );
 
-  const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
+  const { totalByTask, monthlyByTaskUser, weeklyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(sortedPersonal, [actor.id], dateKey);
   const lookup = buildDashboardLookup(
     sortedPersonal,
@@ -945,6 +1001,7 @@ export async function buildMemberPrayerDashboard(
       lookup,
       totalByTask,
       monthlyByTaskUser,
+      weeklyByTaskUser,
       goalByTaskUser,
       reminderByTaskId,
     }),
@@ -1009,7 +1066,7 @@ export async function buildLeaderPrayerDashboard(
     ]),
   );
 
-  const { totalByTask, monthlyByTaskUser, goalByTaskUser } =
+  const { totalByTask, monthlyByTaskUser, weeklyByTaskUser, goalByTaskUser } =
     await loadProgressAggregates(sortedTasks, [actor.id], dateKey);
   const actorShape = {
     teamId: actor.teamId ?? null,
@@ -1027,6 +1084,7 @@ export async function buildLeaderPrayerDashboard(
       lookup,
       totalByTask,
       monthlyByTaskUser,
+      weeklyByTaskUser,
       goalByTaskUser,
       reminderByTaskId,
     }),

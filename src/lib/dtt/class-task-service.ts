@@ -105,6 +105,8 @@ export function buildClassTaskCard(
       isGoalMissing: false,
       isGoalComplete: myCompletionCount > 0,
     },
+    weeklyCompletion: 0,
+    maxPerWeek: task.maxPerWeek ?? null,
   };
 }
 
