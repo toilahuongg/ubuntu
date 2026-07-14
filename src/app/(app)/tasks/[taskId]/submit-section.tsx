@@ -86,6 +86,11 @@ export function SubmitSection({
   const displayCount = isMonthly ? monthlyCompletion : myCompletionCount;
   const submitDisabled =
     isPending || alreadyCompletedPeriod || (isLocked && !alreadySubmittedToday);
+  const weeklyLimitReached =
+    taskType === "WEEKLY_PER_MEMBER" &&
+    maxPerWeek != null &&
+    (weeklyCompletion ?? 0) >= maxPerWeek;
+  const weeklySubmitDisabled = submitDisabled || weeklyLimitReached;
   const submitLabel = isCompleted
     ? "Đã hoàn thành"
     : alreadyCompletedPeriod
@@ -112,6 +117,11 @@ export function SubmitSection({
               ? copy.countLabel(displayCount)
               : copy.pendingLabel}
           </p>
+          {taskType === "WEEKLY_PER_MEMBER" && maxPerWeek != null && (
+            <p className="text-xs text-muted-foreground">
+              Đã {weeklyCompletion ?? 0}/{maxPerWeek} lần tuần này
+            </p>
+          )}
         </div>
         {displayCount > 0 && (
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-overlay-medium">
@@ -126,11 +136,17 @@ export function SubmitSection({
         </p>
       )}
 
+      {weeklyLimitReached && !error && (
+        <p className="text-xs text-muted-foreground">
+          Đã đạt giới hạn tuần này ({maxPerWeek} lần).
+        </p>
+      )}
+
       {success && !error && <p className="text-xs text-primary">{success}</p>}
 
       <button
         type="button"
-        disabled={submitDisabled}
+        disabled={weeklySubmitDisabled}
         aria-busy={isPending}
         onClick={handleSubmit}
         className="btn-gradient flex h-11 w-full items-center justify-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-60"
