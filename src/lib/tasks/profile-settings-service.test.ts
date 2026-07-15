@@ -133,4 +133,36 @@ describe("profile task settings", () => {
       unitLabel: "lượt",
     });
   });
+
+  it("omits monthly goal controls for weekly tasks with an admin weekly limit", () => {
+    const weeklyTaskId = new Types.ObjectId();
+    const settings = buildProfileTaskSettings({
+      actor: {
+        id: ids.user.toString(),
+        role: "MEMBER",
+        teamId: ids.team.toString(),
+        zoneId: null,
+        regionId: null,
+      },
+      goals: [goal({ targetCount: 8, taskId: weeklyTaskId })],
+      preferences: [],
+      tasks: [
+        task({
+          _id: weeklyTaskId,
+          maxPerWeek: 3,
+          taskType: "WEEKLY_PER_MEMBER",
+          title: "Nhiệm vụ tuần có giới hạn",
+        }),
+      ],
+      visibilityOverrides: new Map(),
+      yearMonth: "2026-06",
+    });
+
+    expect(settings).toHaveLength(1);
+    expect(settings[0]).toMatchObject({
+      currentGoal: null,
+      supportsMonthlyGoal: false,
+      unitLabel: "lượt",
+    });
+  });
 });

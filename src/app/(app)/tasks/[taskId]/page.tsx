@@ -22,6 +22,7 @@ import {
   getTaskHeaderCompletionLabel,
   getMonthlyGoalLimitForTaskType,
   getTaskProgressUnitLabel,
+  isWeeklyTaskType,
   supportsMonthlyGoal,
   TASK_TYPE_LABELS,
 } from "@/lib/tasks/constants";
@@ -60,8 +61,12 @@ export default async function TaskDetailPage({
         : "Đã khoá";
 
   const isCountTotal = detail.taskType === "COUNT_TOTAL";
+  const usesAdminWeeklyLimit =
+    isWeeklyTaskType(detail.taskType) && detail.maxPerWeek !== null;
   const hasMonthlyGoal =
-    supportsMonthlyGoal(detail.taskType) && detail.isApplicableToActor;
+    supportsMonthlyGoal(detail.taskType) &&
+    detail.isApplicableToActor &&
+    !usesAdminWeeklyLimit;
   const progressUnit = getTaskProgressUnitLabel(detail.taskType);
   const monthlyGoalLimit = getMonthlyGoalLimitForTaskType(detail.taskType);
   const headerCompletionCount =

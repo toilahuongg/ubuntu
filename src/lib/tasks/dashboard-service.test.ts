@@ -6,6 +6,7 @@ import type { SerializedUser } from "@/lib/domain";
 import {
   buildDashboardGoalNotice,
   buildDashboardSubmissionDateFilter,
+  buildTaskCard,
   buildTaskProgress,
   isTaskRelevantForVisibleUsers,
 } from "@/lib/tasks/dashboard-service";
@@ -73,7 +74,7 @@ function makeTask(
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
     zoneId: null,
     campaignOnly: false,
-    maxPerWeek: null,
+    maxPerWeek: input.maxPerWeek ?? null,
   };
 }
 
@@ -132,7 +133,7 @@ describe("dashboard task progress", () => {
     });
   });
 
-  it("marks weekly tasks with weekly progress kind and monthly goals", () => {
+  it("marks weekly tasks with admin weekly limits as not missing monthly goals", () => {
     const progress = buildTaskProgress({
       taskType: "WEEKLY_PER_MEMBER",
       current: 4,
@@ -147,6 +148,21 @@ describe("dashboard task progress", () => {
     });
   });
 
+  it("marks weekly tasks without admin weekly limits as missing monthly goals", () => {
+    const progress = buildTaskProgress({
+      taskType: "WEEKLY_PER_MEMBER",
+      current: 4,
+      target: null,
+    });
+
+    expect(progress).toMatchObject({
+      kind: "WEEKLY_MEMBER",
+      unitLabel: "lượt",
+      isGoalMissing: true,
+      isGoalComplete: false,
+    });
+  });
+
   it("labels weekly limit progress as this week", () => {
     const progress = buildTaskProgress({
       taskType: "WEEKLY_PER_MEMBER",
@@ -155,6 +171,92 @@ describe("dashboard task progress", () => {
     });
 
     expect(getTaskProgressPeriodLabel(progress)).toBe(" tuần này");
+  });
+
+  it("uses the monthly goal as the weekly target when no admin weekly limit is set", () => {
+    const actorId = new Types.ObjectId().toString();
+    const task = makeTask({
+      _id: new Types.ObjectId(),
+      deadlineTime: "21:00",
+      maxPerWeek: null,
+      taskType: "WEEKLY_PER_MEMBER",
+      title: "Weekly without admin limit",
+    });
+    const taskId = task._id.toString();
+
+    const card = buildTaskCard(task, {
+      actorId,
+      actorShape: {
+        regionId: null,
+        role: "MEMBER",
+        teamId: task.teamId.toString(),
+        zoneId: null,
+      },
+      dateKey: "2026-04-20",
+      goalByTaskUser: new Map([[`${taskId}:${actorId}`, 6]]),
+      lookup: {
+        applicableCount: 1,
+        applicableUserIdsByTaskId: new Map([[taskId, new Set([actorId])]]),
+        applicableUsersByTaskId: new Map([[taskId, []]]),
+        completedSubmissionCount: 0,
+        submissionByTaskUser: new Map(),
+        submissionsByTaskId: new Map(),
+      },
+      monthlyByTaskUser: new Map(),
+      reminderByTaskId: new Map(),
+      totalByTask: new Map(),
+      weeklyByTaskUser: new Map([[`${taskId}:${actorId}`, 2]]),
+    });
+
+    expect(card.progress).toMatchObject({
+      current: 2,
+      target: 6,
+      isGoalMissing: false,
+      isGoalComplete: false,
+    });
+  });
+
+  it("uses the admin weekly limit before the user's monthly goal", () => {
+    const actorId = new Types.ObjectId().toString();
+    const task = makeTask({
+      _id: new Types.ObjectId(),
+      deadlineTime: "21:00",
+      maxPerWeek: 3,
+      taskType: "WEEKLY_PER_MEMBER",
+      title: "Weekly with admin limit",
+    });
+    const taskId = task._id.toString();
+
+    const card = buildTaskCard(task, {
+      actorId,
+      actorShape: {
+        regionId: null,
+        role: "MEMBER",
+        teamId: task.teamId.toString(),
+        zoneId: null,
+      },
+      dateKey: "2026-04-20",
+      goalByTaskUser: new Map([[`${taskId}:${actorId}`, 8]]),
+      lookup: {
+        applicableCount: 1,
+        applicableUserIdsByTaskId: new Map([[taskId, new Set([actorId])]]),
+        applicableUsersByTaskId: new Map([[taskId, []]]),
+        completedSubmissionCount: 0,
+        submissionByTaskUser: new Map(),
+        submissionsByTaskId: new Map(),
+      },
+      monthlyByTaskUser: new Map(),
+      reminderByTaskId: new Map(),
+      totalByTask: new Map(),
+      weeklyByTaskUser: new Map([[`${taskId}:${actorId}`, 2]]),
+    });
+
+    expect(card.progress).toMatchObject({
+      current: 2,
+      target: 3,
+      isGoalMissing: false,
+      isGoalComplete: false,
+    });
   });
 
   it("keeps count-total tasks out of monthly-goal missing notices", () => {

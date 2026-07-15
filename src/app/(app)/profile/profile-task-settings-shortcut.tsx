@@ -72,7 +72,7 @@ export function ProfileTaskSettingsShortcut({ settings }: Props) {
               Nhắc nhở & mục tiêu
             </span>
             <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-              Đặt giờ nhắc và mục tiêu tháng.
+              Đặt giờ nhắc và mục tiêu cá nhân khi nhiệm vụ cần.
             </span>
           </span>
         </span>

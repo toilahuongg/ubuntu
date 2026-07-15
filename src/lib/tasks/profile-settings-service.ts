@@ -14,6 +14,7 @@ import {
 } from "@/lib/models";
 import {
   isDailyTaskType,
+  isWeeklyTaskType,
   supportsMonthlyGoal,
   type TaskType,
 } from "@/lib/tasks/constants";
@@ -104,7 +105,9 @@ export function buildProfileTaskSettings(input: {
         deadlineTime: task.deadlineTime,
         preference,
       });
-      const canSetGoal = supportsMonthlyGoal(task.taskType);
+      const canSetGoal =
+        supportsMonthlyGoal(task.taskType) &&
+        !(isWeeklyTaskType(task.taskType) && task.maxPerWeek !== null);
 
       return {
         currentGoal: canSetGoal

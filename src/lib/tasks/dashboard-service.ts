@@ -484,6 +484,11 @@ export function buildTaskCard(
   const distinctCompleters = new Set(
     taskSubs.map((s) => s.subjectUserId.toString()),
   );
+  const actorTaskKey = aggKey(taskId, ctx.actorId);
+  const weeklyCompletion = ctx.weeklyByTaskUser.get(actorTaskKey) ?? 0;
+  const monthlyGoal = ctx.goalByTaskUser.get(actorTaskKey) ?? null;
+  const effectiveWeeklyTarget =
+    taskType === "WEEKLY_PER_MEMBER" ? (t.maxPerWeek ?? monthlyGoal) : null;
 
   const progress =
     taskType === "COUNT_TOTAL"
@@ -495,13 +500,13 @@ export function buildTaskCard(
       : taskType === "WEEKLY_PER_MEMBER"
         ? buildTaskProgress({
             taskType,
-            current: ctx.weeklyByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? 0,
-            target: t.maxPerWeek ?? null,
+            current: weeklyCompletion,
+            target: effectiveWeeklyTarget,
           })
         : buildTaskProgress({
             taskType,
-            current: ctx.monthlyByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? 0,
-            target: ctx.goalByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? null,
+            current: ctx.monthlyByTaskUser.get(actorTaskKey) ?? 0,
+            target: monthlyGoal,
           });
   const reminderPreference = ctx.reminderByTaskId.get(taskId);
   const reminderSettings = resolveEffectiveReminderTime({
@@ -526,9 +531,7 @@ export function buildTaskCard(
     taskType,
     isApplicableToActor,
     progress,
-    weeklyCompletion: taskType === "WEEKLY_PER_MEMBER"
-      ? ctx.weeklyByTaskUser.get(aggKey(taskId, ctx.actorId)) ?? 0
-      : 0,
+    weeklyCompletion: taskType === "WEEKLY_PER_MEMBER" ? weeklyCompletion : 0,
     maxPerWeek: t.maxPerWeek ?? null,
   };
 }
