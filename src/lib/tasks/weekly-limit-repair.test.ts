@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildWeeklyLimitLedgerReconciliation,
+  buildWeeklyLimitRepairRewardReversals,
   isMongoTransactionalWriteUnsupportedError,
   planWeeklyLimitRepairs,
   resolveWeeklyLimitRepairDateRange,
@@ -139,5 +141,68 @@ describe("planWeeklyLimitRepairs", () => {
         pointsDeducted: 20,
       }),
     ]);
+  });
+
+  it("builds negative reward transactions for deleted weekly overflow", () => {
+    const plan = planWeeklyLimitRepairs({
+      fromDate: "2026-07-01",
+      submissions: [
+        submission({ id: "kept", date: "2026-07-05", completionCount: 5 }),
+        submission({ id: "overflow", date: "2026-07-06", completionCount: 2 }),
+      ],
+      tasks: [task],
+      users: [user],
+    });
+
+    expect(buildWeeklyLimitRepairRewardReversals(plan.groups)).toEqual({
+      pointTransactions: [
+        {
+          amount: -8,
+          description: "Huỷ thưởng vượt giới hạn tuần: Weekly Task",
+          source: "task_reward",
+          sourceId: "task-weekly",
+          userId: "user-1",
+        },
+      ],
+      xpTransactions: [
+        {
+          amount: -20,
+          description: "Huỷ hoàn thành vượt giới hạn tuần: Weekly Task",
+          source: "task_completion",
+          sourceId: "task-weekly",
+          userId: "user-1",
+        },
+      ],
+    });
+  });
+
+  it("builds negative reconciliation transactions when user totals were already reduced", () => {
+    const reconciliation = buildWeeklyLimitLedgerReconciliation({
+      pointLedgerTotal: 80,
+      totalXpLedgerTotal: 100,
+      user: {
+        fullName: "User One",
+        id: "user-1",
+        pointBalance: 60,
+        totalXp: 70,
+      },
+    });
+
+    expect(reconciliation).toMatchObject({
+      pointTransaction: {
+        amount: -20,
+        description: "Bù ledger sau repair giới hạn tuần: User One",
+        source: "task_reward",
+        sourceId: null,
+        userId: "user-1",
+      },
+      xpTransaction: {
+        amount: -30,
+        description: "Bù XP ledger sau repair giới hạn tuần: User One",
+        source: "task_completion",
+        sourceId: null,
+        userId: "user-1",
+      },
+    });
   });
 });

@@ -1,7 +1,13 @@
 import mongoose, { Types } from "mongoose";
 
 import { getWeekRangeFromDateKey } from "@/lib/dates";
-import { SubmissionModel, TaskModel, UserModel } from "@/lib/models";
+import {
+  PointTransactionModel,
+  SubmissionModel,
+  TaskModel,
+  UserModel,
+  XpTransactionModel,
+} from "@/lib/models";
 
 export type WeeklyLimitRepairTask = {
   id: string;
@@ -74,6 +80,33 @@ export type WeeklyLimitRepairPlan = {
   totals: WeeklyLimitRepairTotals;
 };
 
+export type WeeklyLimitRepairRewardReversal = {
+  amount: number;
+  description: string;
+  source: "task_completion" | "task_reward";
+  sourceId: string | null;
+  userId: string;
+};
+
+export type WeeklyLimitLedgerReconciliation = {
+  pointLedgerTotal: number;
+  pointTransaction: WeeklyLimitRepairRewardReversal | null;
+  totalXpLedgerTotal: number;
+  user: WeeklyLimitRepairUser;
+  xpTransaction: WeeklyLimitRepairRewardReversal | null;
+};
+
+export type WeeklyLimitLedgerReconciliationReport = {
+  rows: WeeklyLimitLedgerReconciliation[];
+  totals: {
+    pointsToReconcile: number;
+    usersScanned: number;
+    usersWithPointDrift: number;
+    usersWithXpDrift: number;
+    xpToReconcile: number;
+  };
+};
+
 type GroupAccumulator = {
   task: WeeklyLimitRepairTask;
   user: WeeklyLimitRepairUser;
@@ -86,6 +119,82 @@ export function resolveWeeklyLimitRepairDateRange(requestedFromDate: string) {
   return {
     requestedFromDate,
     effectiveFromDate: getWeekRangeFromDateKey(requestedFromDate, 7).startStr,
+  };
+}
+
+export function buildWeeklyLimitRepairRewardReversals(
+  groups: WeeklyLimitRepairGroup[],
+): {
+  pointTransactions: WeeklyLimitRepairRewardReversal[];
+  xpTransactions: WeeklyLimitRepairRewardReversal[];
+} {
+  return {
+    pointTransactions: groups
+      .filter((group) => group.pointsDeducted > 0)
+      .map((group) => ({
+        amount: -group.pointsDeducted,
+        description: `Huỷ thưởng vượt giới hạn tuần: ${group.taskTitle}`,
+        source: "task_reward",
+        sourceId: group.taskId,
+        userId: group.userId,
+      })),
+    xpTransactions: groups
+      .filter((group) => group.xpDeducted > 0)
+      .map((group) => ({
+        amount: -group.xpDeducted,
+        description: `Huỷ hoàn thành vượt giới hạn tuần: ${group.taskTitle}`,
+        source: "task_completion",
+        sourceId: group.taskId,
+        userId: group.userId,
+      })),
+  };
+}
+
+function toTransactionDocument(reversal: WeeklyLimitRepairRewardReversal) {
+  return {
+    amount: reversal.amount,
+    description: reversal.description,
+    source: reversal.source,
+    sourceId: reversal.sourceId ? new Types.ObjectId(reversal.sourceId) : null,
+    userId: new Types.ObjectId(reversal.userId),
+  };
+}
+
+export function buildWeeklyLimitLedgerReconciliation(input: {
+  pointLedgerTotal: number;
+  totalXpLedgerTotal: number;
+  user: WeeklyLimitRepairUser;
+}): WeeklyLimitLedgerReconciliation {
+  const pointDelta = Math.max(
+    0,
+    input.pointLedgerTotal - input.user.pointBalance,
+  );
+  const xpDelta = Math.max(0, input.totalXpLedgerTotal - input.user.totalXp);
+
+  return {
+    pointLedgerTotal: input.pointLedgerTotal,
+    pointTransaction:
+      pointDelta > 0
+        ? {
+            amount: -pointDelta,
+            description: `Bù ledger sau repair giới hạn tuần: ${input.user.fullName}`,
+            source: "task_reward",
+            sourceId: null,
+            userId: input.user.id,
+          }
+        : null,
+    totalXpLedgerTotal: input.totalXpLedgerTotal,
+    user: input.user,
+    xpTransaction:
+      xpDelta > 0
+        ? {
+            amount: -xpDelta,
+            description: `Bù XP ledger sau repair giới hạn tuần: ${input.user.fullName}`,
+            source: "task_completion",
+            sourceId: null,
+            userId: input.user.id,
+          }
+        : null,
   };
 }
 
@@ -341,6 +450,84 @@ export async function repairWeeklyLimitOverflows(input: {
   return plan;
 }
 
+export async function repairWeeklyLimitLedgerReconciliation(input: {
+  apply: boolean;
+}): Promise<WeeklyLimitLedgerReconciliationReport> {
+  const [users, pointRows, xpRows] = await Promise.all([
+    UserModel.find(
+      {},
+      { _id: 1, fullName: 1, pointBalance: 1, totalXp: 1 },
+    ).lean(),
+    PointTransactionModel.aggregate<{ _id: Types.ObjectId; total: number }>([
+      { $group: { _id: "$userId", total: { $sum: "$amount" } } },
+    ]),
+    XpTransactionModel.aggregate<{ _id: Types.ObjectId; total: number }>([
+      { $group: { _id: "$userId", total: { $sum: "$amount" } } },
+    ]),
+  ]);
+
+  const pointTotalByUser = new Map(
+    pointRows.map((row) => [row._id.toString(), row.total]),
+  );
+  const xpTotalByUser = new Map(
+    xpRows.map((row) => [row._id.toString(), row.total]),
+  );
+
+  const rows = users
+    .map((user) =>
+      buildWeeklyLimitLedgerReconciliation({
+        pointLedgerTotal: pointTotalByUser.get(user._id.toString()) ?? 0,
+        totalXpLedgerTotal: xpTotalByUser.get(user._id.toString()) ?? 0,
+        user: {
+          id: user._id.toString(),
+          fullName: user.fullName,
+          pointBalance: user.pointBalance ?? 0,
+          totalXp: user.totalXp ?? 0,
+        },
+      }),
+    )
+    .filter((row) => row.pointTransaction || row.xpTransaction);
+
+  const report: WeeklyLimitLedgerReconciliationReport = {
+    rows,
+    totals: {
+      pointsToReconcile: rows.reduce(
+        (sum, row) => sum + Math.abs(row.pointTransaction?.amount ?? 0),
+        0,
+      ),
+      usersScanned: users.length,
+      usersWithPointDrift: rows.filter((row) => row.pointTransaction).length,
+      usersWithXpDrift: rows.filter((row) => row.xpTransaction).length,
+      xpToReconcile: rows.reduce(
+        (sum, row) => sum + Math.abs(row.xpTransaction?.amount ?? 0),
+        0,
+      ),
+    },
+  };
+
+  if (!input.apply || rows.length === 0) {
+    return report;
+  }
+
+  const pointTransactions = rows
+    .map((row) => row.pointTransaction)
+    .filter((tx): tx is WeeklyLimitRepairRewardReversal => tx !== null);
+  const xpTransactions = rows
+    .map((row) => row.xpTransaction)
+    .filter((tx): tx is WeeklyLimitRepairRewardReversal => tx !== null);
+
+  if (xpTransactions.length > 0) {
+    await XpTransactionModel.create(xpTransactions.map(toTransactionDocument));
+  }
+  if (pointTransactions.length > 0) {
+    await PointTransactionModel.create(
+      pointTransactions.map(toTransactionDocument),
+    );
+  }
+
+  return report;
+}
+
 async function applyWeeklyLimitRepairPlan(plan: WeeklyLimitRepairPlan) {
   const execute = async (session: mongoose.ClientSession | null) => {
     const deletedSubmissionIds = plan.groups.flatMap(
@@ -351,6 +538,20 @@ async function applyWeeklyLimitRepairPlan(plan: WeeklyLimitRepairPlan) {
       { _id: { $in: deletedSubmissionIds.map((id) => new Types.ObjectId(id)) } },
       session ? { session } : undefined,
     );
+
+    const reversals = buildWeeklyLimitRepairRewardReversals(plan.groups);
+    if (reversals.xpTransactions.length > 0) {
+      await XpTransactionModel.create(
+        reversals.xpTransactions.map(toTransactionDocument),
+        session ? { session } : undefined,
+      );
+    }
+    if (reversals.pointTransactions.length > 0) {
+      await PointTransactionModel.create(
+        reversals.pointTransactions.map(toTransactionDocument),
+        session ? { session } : undefined,
+      );
+    }
 
     for (const deduction of plan.userDeductions) {
       await UserModel.updateOne(

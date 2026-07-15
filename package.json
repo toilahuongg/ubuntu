@@ -9,6 +9,7 @@
     "cron:reminders": "tsx src/scripts/reminder-cron.ts",
     "convert:cosmetic-icons": "tsx src/scripts/convert-cosmetic-icons.ts",
     "convert:levels": "tsx src/scripts/convert-levels-from-xp.ts",
+    "repair:weekly-limits:ledger": "tsx src/scripts/repair-weekly-limit-ledger.ts",
     "repair:weekly-limits": "tsx src/scripts/repair-weekly-limit-overflows.ts",
     "lint": "eslint",
     "seed": "tsx src/scripts/seed.ts",
