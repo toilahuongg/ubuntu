@@ -49,6 +49,14 @@ function formatGroup(modeLabel: string, group: WeeklyLimitRepairGroup) {
 function printReport(plan: WeeklyLimitRepairPlan, apply: boolean) {
   const modeLabel = apply ? "APPLY" : "DRY-RUN";
 
+  if (plan.requestedFromDate !== plan.effectiveFromDate) {
+    console.log(
+      `[${modeLabel}] --from=${plan.requestedFromDate} nằm giữa tuần, quét từ đầu tuần ${plan.effectiveFromDate}.`,
+    );
+  } else {
+    console.log(`[${modeLabel}] Quét từ ${plan.effectiveFromDate}.`);
+  }
+
   if (plan.groups.length === 0) {
     console.log(`[${modeLabel}] Không có weekly submission nào vượt giới hạn.`);
   }

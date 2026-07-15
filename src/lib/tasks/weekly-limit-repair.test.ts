@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   planWeeklyLimitRepairs,
+  resolveWeeklyLimitRepairDateRange,
   type WeeklyLimitRepairSubmission,
   type WeeklyLimitRepairTask,
   type WeeklyLimitRepairUser,
@@ -36,6 +37,17 @@ function submission(
 }
 
 describe("planWeeklyLimitRepairs", () => {
+  it("expands a requested from date to the Sunday week start", () => {
+    expect(resolveWeeklyLimitRepairDateRange("2026-07-01")).toEqual({
+      effectiveFromDate: "2026-06-28",
+      requestedFromDate: "2026-07-01",
+    });
+    expect(resolveWeeklyLimitRepairDateRange("2026-07-05")).toEqual({
+      effectiveFromDate: "2026-07-05",
+      requestedFromDate: "2026-07-05",
+    });
+  });
+
   it("keeps the oldest submissions in a Sunday-Saturday week and deletes newer overflow", () => {
     const plan = planWeeklyLimitRepairs({
       fromDate: "2026-07-01",

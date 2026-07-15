@@ -67,6 +67,8 @@ export type WeeklyLimitRepairTotals = {
 };
 
 export type WeeklyLimitRepairPlan = {
+  requestedFromDate: string;
+  effectiveFromDate: string;
   groups: WeeklyLimitRepairGroup[];
   userDeductions: WeeklyLimitRepairUserDeduction[];
   totals: WeeklyLimitRepairTotals;
@@ -79,6 +81,13 @@ type GroupAccumulator = {
   weekEnd: string;
   submissions: WeeklyLimitRepairSubmission[];
 };
+
+export function resolveWeeklyLimitRepairDateRange(requestedFromDate: string) {
+  return {
+    requestedFromDate,
+    effectiveFromDate: getWeekRangeFromDateKey(requestedFromDate, 7).startStr,
+  };
+}
 
 export function planWeeklyLimitRepairs(input: {
   tasks: WeeklyLimitRepairTask[];
@@ -199,6 +208,8 @@ export function planWeeklyLimitRepairs(input: {
   );
 
   return {
+    requestedFromDate: input.fromDate,
+    effectiveFromDate: input.fromDate,
     groups,
     userDeductions,
     totals: {
@@ -239,6 +250,7 @@ export async function repairWeeklyLimitOverflows(input: {
   fromDate: string;
   apply: boolean;
 }): Promise<WeeklyLimitRepairPlan> {
+  const dateRange = resolveWeeklyLimitRepairDateRange(input.fromDate);
   const taskRecords = await TaskModel.find(
     {
       isActive: true,
@@ -265,14 +277,14 @@ export async function repairWeeklyLimitOverflows(input: {
     }));
 
   if (tasks.length === 0) {
-    return emptyPlan();
+    return emptyPlan(dateRange);
   }
 
   const taskObjectIds = tasks.map((task) => new Types.ObjectId(task.id));
   const submissionRecords = await SubmissionModel.find(
     {
       completionCount: { $gt: 0 },
-      date: { $gte: input.fromDate },
+      date: { $gte: dateRange.effectiveFromDate },
       taskId: { $in: taskObjectIds },
     },
     {
@@ -299,7 +311,7 @@ export async function repairWeeklyLimitOverflows(input: {
   ).lean();
 
   const plan = planWeeklyLimitRepairs({
-    fromDate: input.fromDate,
+    fromDate: dateRange.effectiveFromDate,
     tasks,
     users: userRecords.map((user) => ({
       id: user._id.toString(),
@@ -317,6 +329,8 @@ export async function repairWeeklyLimitOverflows(input: {
       createdAt: submission.createdAt,
     })),
   });
+  plan.requestedFromDate = dateRange.requestedFromDate;
+  plan.effectiveFromDate = dateRange.effectiveFromDate;
 
   if (!input.apply || plan.totals.submissionsDeleted === 0) {
     return plan;
@@ -373,8 +387,10 @@ function isTransactionUnsupportedError(error: unknown) {
   );
 }
 
-function emptyPlan(): WeeklyLimitRepairPlan {
+function emptyPlan(dateRange = resolveWeeklyLimitRepairDateRange("2026-07-01")): WeeklyLimitRepairPlan {
   return {
+    requestedFromDate: dateRange.requestedFromDate,
+    effectiveFromDate: dateRange.effectiveFromDate,
     groups: [],
     userDeductions: [],
     totals: {
