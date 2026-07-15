@@ -370,7 +370,7 @@ async function applyWeeklyLimitRepairPlan(plan: WeeklyLimitRepairPlan) {
   try {
     await session.withTransaction(async () => execute(session));
   } catch (error) {
-    if (!isTransactionUnsupportedError(error)) {
+    if (!isMongoTransactionalWriteUnsupportedError(error)) {
       throw error;
     }
     await execute(null);
@@ -379,11 +379,12 @@ async function applyWeeklyLimitRepairPlan(plan: WeeklyLimitRepairPlan) {
   }
 }
 
-function isTransactionUnsupportedError(error: unknown) {
+export function isMongoTransactionalWriteUnsupportedError(error: unknown) {
   return (
     error instanceof Error &&
     (error.message.includes("Transaction numbers are only allowed") ||
-      error.message.includes("replica set member or mongos"))
+      error.message.includes("replica set member or mongos") ||
+      error.message.includes("does not support retryable writes"))
   );
 }
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isMongoTransactionalWriteUnsupportedError,
   planWeeklyLimitRepairs,
   resolveWeeklyLimitRepairDateRange,
   type WeeklyLimitRepairSubmission,
@@ -37,6 +38,16 @@ function submission(
 }
 
 describe("planWeeklyLimitRepairs", () => {
+  it("treats unsupported retryable writes as a transaction fallback signal", () => {
+    expect(
+      isMongoTransactionalWriteUnsupportedError(
+        new Error(
+          "This MongoDB deployment does not support retryable writes. Please add retryWrites=false to your connection string.",
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("expands a requested from date to the Sunday week start", () => {
     expect(resolveWeeklyLimitRepairDateRange("2026-07-01")).toEqual({
       effectiveFromDate: "2026-06-28",
