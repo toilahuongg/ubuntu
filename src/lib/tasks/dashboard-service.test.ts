@@ -11,6 +11,7 @@ import {
 } from "@/lib/tasks/dashboard-service";
 import { sortTasksForDisplay } from "@/lib/tasks/task-service";
 import type { TaskCard, TaskProgress } from "@/lib/tasks/types";
+import { getTaskProgressPeriodLabel } from "@/app/(app)/dashboard/task-progress-badge";
 
 function makeCard(
   id: string,
@@ -144,6 +145,16 @@ describe("dashboard task progress", () => {
       isGoalMissing: false,
       isGoalComplete: false,
     });
+  });
+
+  it("labels weekly limit progress as this week", () => {
+    const progress = buildTaskProgress({
+      taskType: "WEEKLY_PER_MEMBER",
+      current: 3,
+      target: 5,
+    });
+
+    expect(getTaskProgressPeriodLabel(progress)).toBe(" tuần này");
   });
 
   it("keeps count-total tasks out of monthly-goal missing notices", () => {
