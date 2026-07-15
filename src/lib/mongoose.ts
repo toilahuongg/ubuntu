@@ -24,7 +24,7 @@ export async function connectToDatabase() {
   }
 
   if (!globalCache.promise) {
-    globalCache.promise = mongoose.connect(requireEnv("MONGODB_URI"), {
+    globalCache.promise = mongoose.connect(withRetryWritesDisabled(requireEnv("MONGODB_URI")), {
       dbName: "daily-task-app",
     });
   }
@@ -32,4 +32,12 @@ export async function connectToDatabase() {
   globalCache.conn = await globalCache.promise;
 
   return globalCache.conn;
+}
+
+export function withRetryWritesDisabled(uri: string) {
+  const [base, query = ""] = uri.split("?");
+  const params = new URLSearchParams(query);
+  params.set("retryWrites", "false");
+
+  return `${base}?${params.toString()}`;
 }
