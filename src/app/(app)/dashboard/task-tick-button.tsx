@@ -45,8 +45,10 @@ export function TaskTickButton({
 
   const isLocked = status === "LOCKED";
   const isDone = optimisticCount > 0;
+  const isWeeklyTask = taskType === "WEEKLY_PER_MEMBER";
   const isCompletedMonthlyTask = taskType === "MONTHLY_PER_MEMBER" && isDone;
-  const shouldRenderChecked = isDone && taskType !== "COUNT_TOTAL";
+  const shouldRenderChecked =
+    isDone && taskType !== "COUNT_TOTAL" && !isWeeklyTask;
   const isTaskCompleted = status === "COMPLETED";
   const weeklyLimitReached =
     taskType === "WEEKLY_PER_MEMBER" &&
@@ -67,7 +69,7 @@ export function TaskTickButton({
     setError(null);
     const previousCount = optimisticCount;
     const isCountTotal = taskType === "COUNT_TOTAL";
-    const nextCount = isCountTotal
+    const nextCount = isCountTotal || isWeeklyTask
       ? previousCount + 1
       : isDone ? 0 : Math.max(1, previousCount);
     setOptimisticCount(nextCount);
@@ -76,8 +78,10 @@ export function TaskTickButton({
       const result = await submitTaskViaApi({
         taskId,
         subjectUserId,
-        count: isCountTotal ? 1 : (isDone ? 0 : undefined),
-        mode: isCountTotal ? "increment" : (isDone ? "set" : undefined),
+        count: isCountTotal || isWeeklyTask ? 1 : (isDone ? 0 : undefined),
+        mode: isCountTotal || isWeeklyTask
+          ? "increment"
+          : (isDone ? "set" : undefined),
       });
       if (result.status === "error") {
         setOptimisticCount(previousCount);
@@ -98,6 +102,8 @@ export function TaskTickButton({
   const label = isDone
     ? taskType === "COUNT_TOTAL"
       ? "Đánh dấu thêm lượt cầu nguyện"
+      : isWeeklyTask
+        ? "Thêm một lượt hoàn thành"
       : taskType === "MONTHLY_PER_MEMBER"
         ? "Đã hoàn thành tháng này"
       : "Bỏ hoàn thành"

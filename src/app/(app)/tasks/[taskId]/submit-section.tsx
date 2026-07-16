@@ -119,7 +119,7 @@ export function SubmitSection({
           </p>
           {taskType === "WEEKLY_PER_MEMBER" && maxPerWeek != null && (
             <p className="text-xs text-muted-foreground">
-              Đã {weeklyCompletion ?? 0}/{maxPerWeek} lần tuần này
+              Đã {weeklyCompletion ?? 0}/{maxPerWeek} lượt tuần này
             </p>
           )}
         </div>
@@ -138,7 +138,7 @@ export function SubmitSection({
 
       {weeklyLimitReached && !error && (
         <p className="text-xs text-muted-foreground">
-          Đã đạt giới hạn tuần này ({maxPerWeek} lần).
+          Đã đạt giới hạn tuần này ({maxPerWeek} lượt).
         </p>
       )}
 

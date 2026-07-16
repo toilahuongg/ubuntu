@@ -131,7 +131,10 @@ function TaskCardRow({
               {TASK_TYPE_LABELS[card.taskType]}
             </span>
             {variant === "member" || card.isApplicableToActor ? (
-              <TaskProgressBadge progress={card.progress} />
+              <TaskProgressBadge
+                progress={card.progress}
+                maxPerWeek={card.maxPerWeek}
+              />
             ) : null}
             {variant === "leader" ? (
               <span className="flex items-center gap-1">
@@ -212,15 +215,12 @@ function TabButton({
   );
 }
 
-function isCardDone(card: TaskCard) {
+export function isCardDone(card: TaskCard) {
   if (card.taskType === "MONTHLY_PER_MEMBER") {
     return card.progress.isGoalComplete || card.myCompletionCount > 0;
   }
   if (card.taskType === "WEEKLY_PER_MEMBER") {
-    const weeklyReached = card.maxPerWeek != null
-      ? card.weeklyCompletion >= card.maxPerWeek
-      : card.progress.isGoalComplete;
-    return weeklyReached || card.myCompletionCount > 0;
+    return card.progress.target !== null ? card.progress.isGoalComplete : false;
   }
   if (card.taskType === "COUNT_TOTAL") {
     return card.progress.target !== null

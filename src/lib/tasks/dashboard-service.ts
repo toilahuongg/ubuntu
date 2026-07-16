@@ -486,9 +486,14 @@ export function buildTaskCard(
   );
   const actorTaskKey = aggKey(taskId, ctx.actorId);
   const weeklyCompletion = ctx.weeklyByTaskUser.get(actorTaskKey) ?? 0;
+  const monthlyCompletion = ctx.monthlyByTaskUser.get(actorTaskKey) ?? 0;
   const monthlyGoal = ctx.goalByTaskUser.get(actorTaskKey) ?? null;
   const effectiveWeeklyTarget =
     taskType === "WEEKLY_PER_MEMBER" ? (t.maxPerWeek ?? monthlyGoal) : null;
+  const effectiveWeeklyCurrent =
+    taskType === "WEEKLY_PER_MEMBER" && t.maxPerWeek != null
+      ? weeklyCompletion
+      : monthlyCompletion;
 
   const progress =
     taskType === "COUNT_TOTAL"
@@ -500,12 +505,12 @@ export function buildTaskCard(
       : taskType === "WEEKLY_PER_MEMBER"
         ? buildTaskProgress({
             taskType,
-            current: weeklyCompletion,
+            current: effectiveWeeklyCurrent,
             target: effectiveWeeklyTarget,
           })
         : buildTaskProgress({
             taskType,
-            current: ctx.monthlyByTaskUser.get(actorTaskKey) ?? 0,
+            current: monthlyCompletion,
             target: monthlyGoal,
           });
   const reminderPreference = ctx.reminderByTaskId.get(taskId);

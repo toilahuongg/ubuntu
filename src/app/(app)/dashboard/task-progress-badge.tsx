@@ -2,13 +2,24 @@ import { CheckCircle2, Target } from "lucide-react";
 
 import type { TaskProgress } from "@/lib/tasks/types";
 
-export function getTaskProgressPeriodLabel(progress: TaskProgress) {
+export function getTaskProgressPeriodLabel(
+  progress: TaskProgress,
+  maxPerWeek?: number | null,
+) {
   if (progress.kind === "TOTAL") return "";
-  if (progress.kind === "WEEKLY_MEMBER") return " tuần này";
+  if (progress.kind === "WEEKLY_MEMBER") {
+    return maxPerWeek != null ? " tuần này" : " tháng này";
+  }
   return " tháng này";
 }
 
-export function TaskProgressBadge({ progress }: { progress: TaskProgress }) {
+export function TaskProgressBadge({
+  progress,
+  maxPerWeek,
+}: {
+  progress: TaskProgress;
+  maxPerWeek?: number | null;
+}) {
   if (progress.isGoalMissing) {
     return (
       <span
@@ -51,7 +62,7 @@ export function TaskProgressBadge({ progress }: { progress: TaskProgress }) {
     >
       <Target className="h-3 w-3" aria-hidden />
       {progress.current}/{progress.target} {progress.unitLabel}
-      {getTaskProgressPeriodLabel(progress)}
+      {getTaskProgressPeriodLabel(progress, maxPerWeek)}
     </span>
   );
 }

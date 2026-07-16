@@ -12,6 +12,7 @@ import {
 } from "@/lib/tasks/dashboard-service";
 import { sortTasksForDisplay } from "@/lib/tasks/task-service";
 import type { TaskCard, TaskProgress } from "@/lib/tasks/types";
+import { isCardDone } from "@/app/(app)/dashboard/task-card-sections";
 import { getTaskProgressPeriodLabel } from "@/app/(app)/dashboard/task-progress-badge";
 
 function makeCard(
@@ -163,14 +164,24 @@ describe("dashboard task progress", () => {
     });
   });
 
-  it("labels weekly limit progress as this week", () => {
+  it("labels weekly admin limit progress as this week", () => {
     const progress = buildTaskProgress({
       taskType: "WEEKLY_PER_MEMBER",
       current: 3,
       target: 5,
     });
 
-    expect(getTaskProgressPeriodLabel(progress)).toBe(" tuần này");
+    expect(getTaskProgressPeriodLabel(progress, 5)).toBe(" tuần này");
+  });
+
+  it("labels weekly personal goal fallback progress as this month", () => {
+    const progress = buildTaskProgress({
+      taskType: "WEEKLY_PER_MEMBER",
+      current: 3,
+      target: 5,
+    });
+
+    expect(getTaskProgressPeriodLabel(progress, null)).toBe(" tháng này");
   });
 
   it("uses the monthly goal as the weekly target when no admin weekly limit is set", () => {
@@ -202,17 +213,17 @@ describe("dashboard task progress", () => {
         submissionByTaskUser: new Map(),
         submissionsByTaskId: new Map(),
       },
-      monthlyByTaskUser: new Map(),
+      monthlyByTaskUser: new Map([[`${taskId}:${actorId}`, 6]]),
       reminderByTaskId: new Map(),
       totalByTask: new Map(),
       weeklyByTaskUser: new Map([[`${taskId}:${actorId}`, 2]]),
     });
 
     expect(card.progress).toMatchObject({
-      current: 2,
+      current: 6,
       target: 6,
       isGoalMissing: false,
-      isGoalComplete: false,
+      isGoalComplete: true,
     });
   });
 
@@ -320,6 +331,35 @@ describe("dashboard task progress", () => {
       "daily",
       "weekly",
     ]);
+  });
+
+  it("keeps weekly tasks pending after a quick submit until the target is reached", () => {
+    const card = makeCard(
+      "weekly",
+      "Nhiệm vụ tuần",
+      buildTaskProgress({
+        taskType: "WEEKLY_PER_MEMBER",
+        current: 1,
+        target: 3,
+      }),
+    );
+    card.myCompletionCount = 1;
+
+    expect(isCardDone(card)).toBe(false);
+  });
+
+  it("marks weekly tasks done after the weekly target is reached", () => {
+    const card = makeCard(
+      "weekly",
+      "Nhiệm vụ tuần",
+      buildTaskProgress({
+        taskType: "WEEKLY_PER_MEMBER",
+        current: 3,
+        target: 3,
+      }),
+    );
+
+    expect(isCardDone(card)).toBe(true);
   });
 });
 
