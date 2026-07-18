@@ -130,6 +130,7 @@ type DashboardLookup = {
   applicableUsersByTaskId: Map<string, DashboardVisibleUser[]>;
   completedSubmissionCount: number;
   submissionByTaskUser: Map<string, SubmissionRecordModel>;
+  submissionByTaskUserDate: Map<string, SubmissionRecordModel>;
   submissionsByTaskId: Map<string, SubmissionRecordModel[]>;
 };
 
@@ -276,6 +277,10 @@ function buildSubmissionKey(taskId: string, userId: string) {
   return `${taskId}:${userId}`;
 }
 
+function buildSubmissionDateKey(taskId: string, userId: string, dateKey: string) {
+  return `${taskId}:${userId}:${dateKey}`;
+}
+
 export function buildDashboardLookup(
   tasks: TaskRecord[],
   visibleUsers: DashboardVisibleUser[],
@@ -285,6 +290,7 @@ export function buildDashboardLookup(
   const applicableUserIdsByTaskId = new Map<string, Set<string>>();
   const applicableUsersByTaskId = new Map<string, DashboardVisibleUser[]>();
   const submissionByTaskUser = new Map<string, SubmissionRecordModel>();
+  const submissionByTaskUserDate = new Map<string, SubmissionRecordModel>();
   const submissionsByTaskId = new Map<string, SubmissionRecordModel[]>();
   let applicableCount = 0;
   let completedSubmissionCount = 0;
@@ -310,6 +316,10 @@ export function buildDashboardLookup(
     if (!applicableUserIdsByTaskId.get(taskId)?.has(userId)) continue;
 
     submissionByTaskUser.set(buildSubmissionKey(taskId, userId), submission);
+    submissionByTaskUserDate.set(
+      buildSubmissionDateKey(taskId, userId, submission.date),
+      submission,
+    );
     const taskSubmissions = submissionsByTaskId.get(taskId) ?? [];
     taskSubmissions.push(submission);
     submissionsByTaskId.set(taskId, taskSubmissions);
@@ -322,6 +332,7 @@ export function buildDashboardLookup(
     applicableUsersByTaskId,
     completedSubmissionCount,
     submissionByTaskUser,
+    submissionByTaskUserDate,
     submissionsByTaskId,
   };
 }
@@ -478,9 +489,14 @@ export function buildTaskCard(
   const taskSubs = ctx.lookup.submissionsByTaskId.get(taskId) ?? [];
   const isApplicableToActor =
     ctx.lookup.applicableUserIdsByTaskId.get(taskId)?.has(ctx.actorId) ?? false;
-  const mine = ctx.lookup.submissionByTaskUser.get(
-    buildSubmissionKey(taskId, ctx.actorId),
-  );
+  const mine =
+    taskType === "WEEKLY_PER_MEMBER"
+      ? ctx.lookup.submissionByTaskUserDate.get(
+          buildSubmissionDateKey(taskId, ctx.actorId, ctx.dateKey),
+        )
+      : ctx.lookup.submissionByTaskUser.get(
+          buildSubmissionKey(taskId, ctx.actorId),
+        );
   const distinctCompleters = new Set(
     taskSubs.map((s) => s.subjectUserId.toString()),
   );

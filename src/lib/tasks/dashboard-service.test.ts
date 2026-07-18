@@ -1,9 +1,10 @@
 import { Types } from "mongoose";
 import { describe, expect, it } from "vitest";
 
-import type { TaskRecord } from "@/lib/models";
+import type { SubmissionRecordModel, TaskRecord } from "@/lib/models";
 import type { SerializedUser } from "@/lib/domain";
 import {
+  buildDashboardLookup,
   buildDashboardGoalNotice,
   buildDashboardSubmissionDateFilter,
   buildTaskCard,
@@ -79,6 +80,27 @@ function makeTask(
     zoneId: null,
     campaignOnly: false,
     maxPerWeek: input.maxPerWeek ?? null,
+  };
+}
+
+function makeSubmission(input: {
+  actorUserId: Types.ObjectId;
+  completionCount: number;
+  date: string;
+  subjectUserId: Types.ObjectId;
+  taskId: Types.ObjectId;
+}): SubmissionRecordModel {
+  const now = new Date("2026-04-20T12:00:00.000Z");
+  return {
+    _id: new Types.ObjectId(),
+    actorUserId: input.actorUserId,
+    completionCount: input.completionCount,
+    createdAt: now,
+    date: input.date,
+    subjectUserId: input.subjectUserId,
+    submittedAt: now,
+    taskId: input.taskId,
+    updatedAt: now,
   };
 }
 
@@ -214,6 +236,7 @@ describe("dashboard task progress", () => {
         applicableUsersByTaskId: new Map([[taskId, []]]),
         completedSubmissionCount: 0,
         submissionByTaskUser: new Map(),
+        submissionByTaskUserDate: new Map(),
         submissionsByTaskId: new Map(),
       },
       monthlyByTaskUser: new Map([[`${taskId}:${actorId}`, 6]]),
@@ -257,6 +280,7 @@ describe("dashboard task progress", () => {
         applicableUsersByTaskId: new Map([[taskId, []]]),
         completedSubmissionCount: 0,
         submissionByTaskUser: new Map(),
+        submissionByTaskUserDate: new Map(),
         submissionsByTaskId: new Map(),
       },
       monthlyByTaskUser: new Map(),
@@ -271,6 +295,114 @@ describe("dashboard task progress", () => {
       isGoalMissing: false,
       isGoalComplete: false,
     });
+  });
+
+  it("does not show a weekly dashboard tick for submissions from another day in the same week", () => {
+    const actorObjectId = new Types.ObjectId();
+    const actorId = actorObjectId.toString();
+    const task = makeTask({
+      _id: new Types.ObjectId(),
+      deadlineTime: "21:00",
+      maxPerWeek: 3,
+      taskType: "WEEKLY_PER_MEMBER",
+      title: "Weekly with prior day tick",
+    });
+    const taskId = task._id.toString();
+    const lookup = buildDashboardLookup(
+      [task],
+      [
+        {
+          id: actorId,
+          regionId: null,
+          role: "MEMBER",
+          teamId: task.teamId.toString(),
+          zoneId: null,
+        },
+      ],
+      [
+        makeSubmission({
+          actorUserId: actorObjectId,
+          completionCount: 1,
+          date: "2026-04-19",
+          subjectUserId: actorObjectId,
+          taskId: task._id,
+        }),
+      ],
+    );
+
+    const card = buildTaskCard(task, {
+      actorId,
+      actorShape: {
+        regionId: null,
+        role: "MEMBER",
+        teamId: task.teamId.toString(),
+        zoneId: null,
+      },
+      dateKey: "2026-04-20",
+      goalByTaskUser: new Map(),
+      lookup,
+      monthlyByTaskUser: new Map(),
+      reminderByTaskId: new Map(),
+      totalByTask: new Map(),
+      weeklyByTaskUser: new Map([[`${taskId}:${actorId}`, 1]]),
+    });
+
+    expect(card.weeklyCompletion).toBe(1);
+    expect(card.myCompletionCount).toBe(0);
+  });
+
+  it("shows a weekly dashboard tick for submissions on the selected dashboard date", () => {
+    const actorObjectId = new Types.ObjectId();
+    const actorId = actorObjectId.toString();
+    const task = makeTask({
+      _id: new Types.ObjectId(),
+      deadlineTime: "21:00",
+      maxPerWeek: 3,
+      taskType: "WEEKLY_PER_MEMBER",
+      title: "Weekly with today tick",
+    });
+    const taskId = task._id.toString();
+    const lookup = buildDashboardLookup(
+      [task],
+      [
+        {
+          id: actorId,
+          regionId: null,
+          role: "MEMBER",
+          teamId: task.teamId.toString(),
+          zoneId: null,
+        },
+      ],
+      [
+        makeSubmission({
+          actorUserId: actorObjectId,
+          completionCount: 1,
+          date: "2026-04-20",
+          subjectUserId: actorObjectId,
+          taskId: task._id,
+        }),
+      ],
+    );
+
+    const card = buildTaskCard(task, {
+      actorId,
+      actorShape: {
+        regionId: null,
+        role: "MEMBER",
+        teamId: task.teamId.toString(),
+        zoneId: null,
+      },
+      dateKey: "2026-04-20",
+      goalByTaskUser: new Map(),
+      lookup,
+      monthlyByTaskUser: new Map(),
+      reminderByTaskId: new Map(),
+      totalByTask: new Map(),
+      weeklyByTaskUser: new Map([[`${taskId}:${actorId}`, 1]]),
+    });
+
+    expect(card.weeklyCompletion).toBe(1);
+    expect(card.myCompletionCount).toBe(1);
   });
 
   it("keeps count-total tasks out of monthly-goal missing notices", () => {
