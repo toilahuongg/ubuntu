@@ -17,6 +17,7 @@ import {
 import { connectToDatabase } from "@/lib/mongoose";
 import {
   AuditLogModel,
+  DttClassTaskModel,
   MonthlyGoalModel,
   type MonthlyGoalRecord,
   SubmissionModel,
@@ -849,6 +850,7 @@ export async function deleteTask(
 
   await Promise.all([
     SubmissionModel.deleteMany({ taskId: taskObjectId }),
+    DttClassTaskModel.deleteMany({ taskId: taskObjectId }),
     MonthlyGoalModel.deleteMany({ taskId: taskObjectId }),
     TaskReminderPreferenceModel.deleteMany({ taskId: taskObjectId }),
   ]);

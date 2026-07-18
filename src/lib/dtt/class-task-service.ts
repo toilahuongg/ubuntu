@@ -26,19 +26,78 @@ import { toObjectId } from "@/lib/utils/ids";
 type PopulatedClassId = { _id: Types.ObjectId; name: string };
 
 type EnrollmentWithClass = {
-  classId: PopulatedClassId;
+  classId: PopulatedClassId | null;
 };
 
 type PopulatedUserId = { _id: Types.ObjectId; fullName: string; role: string };
 
 type EnrollmentWithUser = {
-  userId: PopulatedUserId;
+  userId: PopulatedUserId | null;
 };
 
 type DttClassTaskWithTask = {
-  taskId: TaskRecord;
+  taskId: TaskRecord | null;
   isInherited: boolean;
 };
+
+type ObjectIdLike = { toString(): string };
+
+export type DttClassTaskAssignmentSource = {
+  classId: ObjectIdLike | string | null;
+  taskId:
+    | {
+        _id?: ObjectIdLike | string | null;
+        title?: string | null;
+      }
+    | null;
+  isInherited?: boolean | null;
+};
+
+export type DttClassTaskAssignmentSummary = {
+  taskId: string;
+  taskTitle: string;
+  isInherited: boolean;
+};
+
+function stringifyId(value: unknown): string | null {
+  if (typeof value === "string") return value || null;
+  if (!value || typeof value !== "object") return null;
+
+  const text = value.toString();
+  return text && text !== "[object Object]" ? text : null;
+}
+
+function getPopulatedTaskId(task: { _id?: unknown } | null): string | null {
+  return task ? stringifyId(task._id) : null;
+}
+
+function hasPopulatedTask(
+  assignment: DttClassTaskWithTask,
+): assignment is DttClassTaskWithTask & { taskId: TaskRecord } {
+  return Boolean(getPopulatedTaskId(assignment.taskId));
+}
+
+export function mapDttClassTasksByClass(
+  assignments: readonly DttClassTaskAssignmentSource[],
+): Record<string, DttClassTaskAssignmentSummary[]> {
+  const classTasksByClass: Record<string, DttClassTaskAssignmentSummary[]> = {};
+
+  for (const assignment of assignments) {
+    const classId = stringifyId(assignment.classId);
+    const taskId = getPopulatedTaskId(assignment.taskId);
+
+    if (!classId || !taskId) continue;
+
+    classTasksByClass[classId] ??= [];
+    classTasksByClass[classId].push({
+      taskId,
+      taskTitle: assignment.taskId?.title ?? "Nhiệm vụ",
+      isInherited: assignment.isInherited ?? false,
+    });
+  }
+
+  return classTasksByClass;
+}
 
 /**
  * Check if a taskId is assigned to any DTT class.
@@ -164,10 +223,16 @@ export async function getUserEnrolledClasses(
     .populate("classId", "name")
     .lean()) as unknown as EnrollmentWithClass[];
 
-  return enrollments.map((e) => ({
-    classId: e.classId._id.toString(),
-    className: e.classId.name,
-  }));
+  return enrollments.flatMap((e) =>
+    e.classId
+      ? [
+          {
+            classId: e.classId._id.toString(),
+            className: e.classId.name,
+          },
+        ]
+      : [],
+  );
 }
 
 /**
@@ -194,10 +259,18 @@ export async function buildDttClassTaskView(
 
   if (enrollments.length === 0) return null;
 
-  const userClasses = enrollments.map((e) => ({
-    classId: e.classId._id.toString(),
-    className: e.classId.name,
-  }));
+  const userClasses = enrollments.flatMap((e) =>
+    e.classId
+      ? [
+          {
+            classId: e.classId._id.toString(),
+            className: e.classId.name,
+          },
+        ]
+      : [],
+  );
+  if (userClasses.length === 0) return null;
+
   const classNames = userClasses.map((c) => c.className);
   const classIds = userClasses.map((c) => c.classId);
 
@@ -213,7 +286,10 @@ export async function buildDttClassTaskView(
 
   // Deduplicate tasks (same task may appear in multiple classes)
   const taskMap = new Map<string, boolean>(); // taskId -> isInherited
-  for (const a of assignments) {
+  const validAssignments = assignments.filter(hasPopulatedTask);
+  if (validAssignments.length === 0) return { cards: [], classNames };
+
+  for (const a of validAssignments) {
     const taskId = a.taskId._id.toString();
     if (!taskMap.has(taskId)) {
       taskMap.set(taskId, a.isInherited ?? false);
@@ -296,9 +372,10 @@ export async function buildClassReport(
     .populate("taskId")
     .lean()) as unknown as DttClassTaskWithTask[];
 
-  const taskIds = assignments.map((a) => a.taskId._id);
+  const validAssignments = assignments.filter(hasPopulatedTask);
+  const taskIds = validAssignments.map((a) => a.taskId._id);
   const taskById = new Map(
-    assignments.map((a) => [a.taskId._id.toString(), { title: a.taskId.title, isInherited: a.isInherited ?? false }])
+    validAssignments.map((a) => [a.taskId._id.toString(), { title: a.taskId.title, isInherited: a.isInherited ?? false }])
   );
 
   // 3. Load enrolled students
@@ -309,12 +386,17 @@ export async function buildClassReport(
     .populate("userId", "fullName role")
     .lean()) as unknown as EnrollmentWithUser[];
 
+  const validEnrollments = enrollments.filter(
+    (enrollment): enrollment is EnrollmentWithUser & { userId: PopulatedUserId } =>
+      Boolean(enrollment.userId?._id),
+  );
+
   // 4. Load submissions for today
-  const submissions = taskIds.length > 0 && enrollments.length > 0
+  const submissions = taskIds.length > 0 && validEnrollments.length > 0
     ? (await SubmissionModel.find({
         date: dateKey,
         taskId: { $in: taskIds },
-        subjectUserId: { $in: enrollments.map((e) => e.userId._id) },
+        subjectUserId: { $in: validEnrollments.map((e) => e.userId._id) },
       }).lean()) as unknown as SubmissionRecordModel[]
     : [];
 
@@ -339,7 +421,7 @@ export async function buildClassReport(
   }> = [];
   let completedCount = 0;
 
-  for (const enrollment of enrollments) {
+  for (const enrollment of validEnrollments) {
     const userId = enrollment.userId._id.toString();
     const fullName = enrollment.userId.fullName;
     const role = enrollment.userId.role;
@@ -347,7 +429,7 @@ export async function buildClassReport(
 
     let studentCompleted = 0;
 
-    for (const assignment of assignments) {
+    for (const assignment of validAssignments) {
       const taskId = assignment.taskId._id.toString();
       const taskInfo = taskById.get(taskId)!;
       const count = userSubs.get(taskId) ?? 0;
@@ -366,7 +448,7 @@ export async function buildClassReport(
       });
     }
 
-    if (studentCompleted === assignments.length && assignments.length > 0) {
+    if (studentCompleted === validAssignments.length && validAssignments.length > 0) {
       completedCount++;
     }
   }
@@ -375,7 +457,7 @@ export async function buildClassReport(
     className: dttClass.name,
     date: dateKey,
     entries,
-    totalStudents: enrollments.length,
+    totalStudents: validEnrollments.length,
     completedStudents: completedCount,
   };
 }

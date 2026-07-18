@@ -4,6 +4,7 @@ import {
   isTaskAssignedToAnyDttClass,
   getDttClassTaskIdsForUser,
   buildClassTaskCard,
+  mapDttClassTasksByClass,
 } from "./class-task-service";
 import type { TaskRecord } from "@/lib/models";
 
@@ -85,6 +86,39 @@ describe("getDttClassTaskIdsForUser", () => {
     ];
     const result = getDttClassTaskIdsForUser(userClasses, classTasks);
     expect(result.sort()).toEqual(["taskA", "taskB", "taskC"]);
+  });
+});
+
+describe("mapDttClassTasksByClass", () => {
+  it("skips assignments whose populated task was deleted", () => {
+    const classId = new Types.ObjectId();
+    const taskId = new Types.ObjectId();
+
+    const result = mapDttClassTasksByClass([
+      {
+        classId,
+        taskId: null,
+        isInherited: true,
+      },
+      {
+        classId,
+        taskId: {
+          _id: taskId,
+          title: "Existing task",
+        },
+        isInherited: false,
+      },
+    ]);
+
+    expect(result).toEqual({
+      [classId.toString()]: [
+        {
+          taskId: taskId.toString(),
+          taskTitle: "Existing task",
+          isInherited: false,
+        },
+      ],
+    });
   });
 });
 

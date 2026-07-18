@@ -9,7 +9,11 @@ import { UserModel } from "@/lib/models/user";
 import { RegionModel } from "@/lib/models/region";
 import { toObjectId } from "@/lib/utils/ids";
 import { connectToDatabase } from "@/lib/mongoose";
-import { loadAllDttClassTaskIdsForTeam } from "@/lib/dtt/class-task-service";
+import {
+  type DttClassTaskAssignmentSource,
+  loadAllDttClassTaskIdsForTeam,
+  mapDttClassTasksByClass,
+} from "@/lib/dtt/class-task-service";
 import { AdminSubHeader } from "../sub-header";
 import { DttManager } from "./dtt-manager";
 
@@ -89,18 +93,9 @@ export default async function DttManagementPage() {
   // Fetch class task assignments
   const classAssignments = (await DttClassTaskModel.find({ teamId })
     .populate("taskId", "title")
-    .lean()) as any[];
+    .lean()) as unknown as DttClassTaskAssignmentSource[];
 
-  const classTasksByClass: Record<string, Array<{ taskId: string; taskTitle: string; isInherited: boolean }>> = {};
-  for (const a of classAssignments) {
-    const cid = a.classId.toString();
-    if (!classTasksByClass[cid]) classTasksByClass[cid] = [];
-    classTasksByClass[cid].push({
-      taskId: a.taskId._id.toString(),
-      taskTitle: a.taskId.title,
-      isInherited: a.isInherited ?? false,
-    });
-  }
+  const classTasksByClass = mapDttClassTasksByClass(classAssignments);
 
   return (
     <div className="space-y-6 animate-slide-up pb-8">
