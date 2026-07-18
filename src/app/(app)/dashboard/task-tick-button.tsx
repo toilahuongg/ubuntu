@@ -47,8 +47,9 @@ export function TaskTickButton({
   const isDone = optimisticCount > 0;
   const isWeeklyTask = taskType === "WEEKLY_PER_MEMBER";
   const isCompletedMonthlyTask = taskType === "MONTHLY_PER_MEMBER" && isDone;
+  const isCompletedWeeklyDashboardTask = isWeeklyTask && isDone;
   const shouldRenderChecked =
-    isDone && taskType !== "COUNT_TOTAL" && !isWeeklyTask;
+    isDone && taskType !== "COUNT_TOTAL";
   const isTaskCompleted = status === "COMPLETED";
   const weeklyLimitReached =
     taskType === "WEEKLY_PER_MEMBER" &&
@@ -58,6 +59,7 @@ export function TaskTickButton({
     isPending ||
     isLocked ||
     isCompletedMonthlyTask ||
+    isCompletedWeeklyDashboardTask ||
     isGoalComplete ||
     weeklyLimitReached ||
     (isTaskCompleted && !isDone);
@@ -103,7 +105,7 @@ export function TaskTickButton({
     ? taskType === "COUNT_TOTAL"
       ? "Đánh dấu thêm lượt cầu nguyện"
       : isWeeklyTask
-        ? "Thêm một lượt hoàn thành"
+        ? "Đã hoàn thành tuần này"
       : taskType === "MONTHLY_PER_MEMBER"
         ? "Đã hoàn thành tháng này"
       : "Bỏ hoàn thành"

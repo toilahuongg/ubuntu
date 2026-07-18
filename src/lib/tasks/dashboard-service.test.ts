@@ -333,7 +333,7 @@ describe("dashboard task progress", () => {
     ]);
   });
 
-  it("keeps weekly tasks pending after a quick submit until the target is reached", () => {
+  it("keeps weekly tasks pending after one dashboard tick until the target is reached", () => {
     const card = makeCard(
       "weekly",
       "Nhiệm vụ tuần",
