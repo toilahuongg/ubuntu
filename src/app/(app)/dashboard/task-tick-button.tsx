@@ -9,6 +9,7 @@ import {
   submitTaskViaApi,
   type StreakBonusResult,
 } from "@/lib/tasks/client-submit";
+import { resolveDashboardTickState } from "@/lib/tasks/dashboard-tick-state";
 import type { TaskStatus } from "@/lib/tasks/types";
 import type { TaskType } from "@/lib/tasks/constants";
 
@@ -43,47 +44,30 @@ export function TaskTickButton({
     setOptimisticCount(myCompletionCount);
   }, [myCompletionCount]);
 
-  const isLocked = status === "LOCKED";
-  const isDone = optimisticCount > 0;
-  const isWeeklyTask = taskType === "WEEKLY_PER_MEMBER";
-  const isCompletedMonthlyTask = taskType === "MONTHLY_PER_MEMBER" && isDone;
-  const isCompletedWeeklyDashboardTask = isWeeklyTask && isDone;
-  const shouldRenderChecked =
-    isDone && taskType !== "COUNT_TOTAL";
-  const isTaskCompleted = status === "COMPLETED";
-  const weeklyLimitReached =
-    taskType === "WEEKLY_PER_MEMBER" &&
-    maxPerWeek != null &&
-    (weeklyCompletion ?? 0) >= maxPerWeek;
-  const disabled =
-    isPending ||
-    isLocked ||
-    isCompletedMonthlyTask ||
-    isCompletedWeeklyDashboardTask ||
-    isGoalComplete ||
-    weeklyLimitReached ||
-    (isTaskCompleted && !isDone);
+  const tickState = resolveDashboardTickState({
+    isGoalComplete,
+    isPending,
+    maxPerWeek,
+    optimisticCount,
+    status,
+    taskType,
+    weeklyCompletion,
+  });
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    if (disabled) return;
+    if (tickState.disabled) return;
     setError(null);
     const previousCount = optimisticCount;
-    const isCountTotal = taskType === "COUNT_TOTAL";
-    const nextCount = isCountTotal || isWeeklyTask
-      ? previousCount + 1
-      : isDone ? 0 : Math.max(1, previousCount);
-    setOptimisticCount(nextCount);
+    setOptimisticCount(tickState.nextCount);
     setIsPending(true);
     void (async () => {
       const result = await submitTaskViaApi({
         taskId,
         subjectUserId,
-        count: isCountTotal || isWeeklyTask ? 1 : (isDone ? 0 : undefined),
-        mode: isCountTotal || isWeeklyTask
-          ? "increment"
-          : (isDone ? "set" : undefined),
+        count: tickState.submitCount,
+        mode: tickState.submitMode,
       });
       if (result.status === "error") {
         setOptimisticCount(previousCount);
@@ -101,21 +85,21 @@ export function TaskTickButton({
     })();
   }
 
-  const label = isDone
+  const label = tickState.isDone
     ? taskType === "COUNT_TOTAL"
       ? "Đánh dấu thêm lượt cầu nguyện"
-      : isWeeklyTask
-        ? "Đã hoàn thành tuần này"
+      : tickState.isWeeklyTask
+        ? "Bỏ hoàn thành tuần này"
       : taskType === "MONTHLY_PER_MEMBER"
         ? "Đã hoàn thành tháng này"
       : "Bỏ hoàn thành"
     : isGoalComplete
       ? "Đã đạt mục tiêu"
-      : isLocked || isTaskCompleted
+      : tickState.isLocked || tickState.isTaskCompleted
         ? "Đã khoá"
         : "Đánh dấu hoàn thành";
 
-  if (isGoalComplete) {
+  if (!tickState.shouldRenderButton) {
     return <div className="h-9 w-9 shrink-0" aria-hidden />;
   }
 
@@ -128,20 +112,20 @@ export function TaskTickButton({
       <button
         type="button"
         onClick={handleClick}
-        disabled={disabled}
+        disabled={tickState.disabled}
         aria-label={label}
         title={error ?? label}
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
-          shouldRenderChecked
+          tickState.shouldRenderChecked
             ? "border-primary bg-primary text-background"
-            : isLocked || isTaskCompleted
+            : tickState.isLocked || tickState.isTaskCompleted
               ? "border-border bg-muted text-muted-foreground"
               : "border-border bg-background hover:border-primary hover:bg-primary/10"
         } ${isPending ? "opacity-70" : ""} disabled:cursor-not-allowed`}
       >
         {isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-        ) : shouldRenderChecked ? (
+        ) : tickState.shouldRenderChecked ? (
           <Check className="h-4 w-4" aria-hidden />
         ) : (
           <span className="h-4 w-4 rounded-full" aria-hidden />

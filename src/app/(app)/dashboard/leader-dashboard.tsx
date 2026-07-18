@@ -4,6 +4,7 @@ import { CompletionTrendCard } from "@/components/completion-trend-card";
 import { formatDateLabel } from "@/lib/dates";
 import { SCOPE_LABELS, type SessionUser } from "@/lib/domain";
 import type { ActivityEntry } from "@/lib/tasks/activity-service";
+import { countDashboardDoneCards } from "@/lib/tasks/dashboard-card-state";
 import type { LeaderDashboardView } from "@/lib/tasks/types";
 import { ActivityFeed } from "./activity-feed";
 import { GoalNoticeBanner } from "./goal-notice-banner";
@@ -33,9 +34,7 @@ export function LeaderDashboard({
       card.taskType !== "WEEKLY_PER_MEMBER",
   );
   const personalCards = data.cards.filter((card) => card.isApplicableToActor);
-  const completedCount = personalCards.filter(
-    (card) => card.myCompletionCount > 0,
-  ).length;
+  const completedCount = countDashboardDoneCards(personalCards);
   const pendingCount = Math.max(personalCards.length - completedCount, 0);
 
   return (

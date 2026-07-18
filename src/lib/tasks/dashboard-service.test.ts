@@ -10,9 +10,12 @@ import {
   buildTaskProgress,
   isTaskRelevantForVisibleUsers,
 } from "@/lib/tasks/dashboard-service";
+import {
+  countDashboardDoneCards,
+  isDashboardCardDone,
+} from "@/lib/tasks/dashboard-card-state";
 import { sortTasksForDisplay } from "@/lib/tasks/task-service";
 import type { TaskCard, TaskProgress } from "@/lib/tasks/types";
-import { isCardDone } from "@/app/(app)/dashboard/task-card-sections";
 import { getTaskProgressPeriodLabel } from "@/app/(app)/dashboard/task-progress-badge";
 
 function makeCard(
@@ -345,7 +348,8 @@ describe("dashboard task progress", () => {
     );
     card.myCompletionCount = 1;
 
-    expect(isCardDone(card)).toBe(false);
+    expect(isDashboardCardDone(card)).toBe(false);
+    expect(countDashboardDoneCards([card])).toBe(0);
   });
 
   it("marks weekly tasks done after the weekly target is reached", () => {
@@ -359,7 +363,7 @@ describe("dashboard task progress", () => {
       }),
     );
 
-    expect(isCardDone(card)).toBe(true);
+    expect(isDashboardCardDone(card)).toBe(true);
   });
 });
 

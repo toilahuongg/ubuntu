@@ -3,6 +3,7 @@ import { Calendar, CheckCircle2 } from "lucide-react";
 import { formatDateLabel } from "@/lib/dates";
 import type { SessionUser } from "@/lib/domain";
 import type { ActivityEntry } from "@/lib/tasks/activity-service";
+import { countDashboardDoneCards } from "@/lib/tasks/dashboard-card-state";
 import type { MemberDashboardView } from "@/lib/tasks/types";
 import { ActivityFeed } from "./activity-feed";
 import { GoalNoticeBanner } from "./goal-notice-banner";
@@ -31,7 +32,7 @@ export function MemberDashboard({
       card.taskType !== "MONTHLY_PER_MEMBER" &&
       card.taskType !== "WEEKLY_PER_MEMBER",
   );
-  const completedCount = data.cards.filter((card) => card.myCompletionCount > 0).length;
+  const completedCount = countDashboardDoneCards(data.cards);
   const pendingCount = Math.max(data.cards.length - completedCount, 0);
 
   return (

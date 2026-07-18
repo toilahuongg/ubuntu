@@ -5,6 +5,7 @@ import { useState } from "react";
 import { CheckCircle2, ChevronRight, Clock } from "lucide-react";
 
 import { TASK_TYPE_LABELS } from "@/lib/tasks/constants";
+import { isDashboardCardDone } from "@/lib/tasks/dashboard-card-state";
 import type { TaskCard } from "@/lib/tasks/types";
 import { TaskProgressBadge } from "./task-progress-badge";
 import { TaskTickButton } from "./task-tick-button";
@@ -216,16 +217,5 @@ function TabButton({
 }
 
 export function isCardDone(card: TaskCard) {
-  if (card.taskType === "MONTHLY_PER_MEMBER") {
-    return card.progress.isGoalComplete || card.myCompletionCount > 0;
-  }
-  if (card.taskType === "WEEKLY_PER_MEMBER") {
-    return card.progress.isGoalComplete;
-  }
-  if (card.taskType === "COUNT_TOTAL") {
-    return card.progress.target !== null
-      ? card.progress.isGoalComplete
-      : card.myCompletionCount > 0;
-  }
-  return card.myCompletionCount > 0;
+  return isDashboardCardDone(card);
 }
