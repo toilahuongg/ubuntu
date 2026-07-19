@@ -40,7 +40,7 @@ vi.mock("@/lib/models", () => ({
   UserTaskVisibilityModel: {},
 }));
 
-const { deleteTask } = await import("./task-service");
+const { deleteCampaignOnlyTask, deleteTask } = await import("./task-service");
 
 describe("deleteTask", () => {
   beforeEach(() => {
@@ -85,5 +85,80 @@ describe("deleteTask", () => {
 
     expect(mocks.dttClassTaskDeleteMany).toHaveBeenCalledWith({ taskId });
     expect(mocks.taskDeleteOne).toHaveBeenCalledWith({ _id: taskId });
+  });
+
+  it("rejects campaign-only deletion when the task is not a campaign custom task", async () => {
+    const teamId = new Types.ObjectId();
+    const taskId = new Types.ObjectId();
+    const actorId = new Types.ObjectId();
+
+    mocks.taskFindById.mockReturnValue({
+      lean: vi.fn().mockResolvedValue({
+        _id: taskId,
+        campaignOnly: false,
+        teamId,
+        zoneId: null,
+        regionId: null,
+        scope: "TEAM",
+        targetRoles: ["MEMBER"],
+        title: "Nhiệm vụ chung",
+        taskType: "DAILY_PER_MEMBER",
+      }),
+    });
+
+    await expect(
+      deleteCampaignOnlyTask(
+        {
+          id: actorId.toString(),
+          fullName: "Team Lead",
+          role: "TEAM_LEAD",
+          status: "ACTIVE",
+          teamId: teamId.toString(),
+        },
+        taskId.toString(),
+      ),
+    ).rejects.toThrow("Chỉ được xoá nhiệm vụ custom của chiến dịch.");
+
+    expect(mocks.taskDeleteOne).not.toHaveBeenCalled();
+    expect(mocks.submissionDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it("deletes campaign custom tasks through the campaign-only delete path", async () => {
+    const teamId = new Types.ObjectId();
+    const taskId = new Types.ObjectId();
+    const actorId = new Types.ObjectId();
+
+    mocks.taskFindById.mockReturnValue({
+      lean: vi.fn().mockResolvedValue({
+        _id: taskId,
+        campaignOnly: true,
+        teamId,
+        zoneId: null,
+        regionId: null,
+        scope: "TEAM",
+        targetRoles: ["MEMBER"],
+        title: "Nhiệm vụ custom chiến dịch",
+        taskType: "DAILY_PER_MEMBER",
+      }),
+    });
+
+    await deleteCampaignOnlyTask(
+      {
+        id: actorId.toString(),
+        fullName: "Team Lead",
+        role: "TEAM_LEAD",
+        status: "ACTIVE",
+        teamId: teamId.toString(),
+      },
+      taskId.toString(),
+    );
+
+    expect(mocks.taskDeleteOne).toHaveBeenCalledWith({ _id: taskId });
+    expect(mocks.auditCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "task.deleted",
+        entityId: taskId.toString(),
+      }),
+    );
   });
 });

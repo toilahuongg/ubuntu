@@ -9,16 +9,20 @@ import {
   assertCampaignOnlyTaskCanSubmit,
   assertCanManageDailyCampaign,
   buildCampaignReportRows,
+  isTaskEligibleForCampaign,
   resolveCampaignReportDate,
   normalizeCampaignTaskIds,
 } from "@/lib/campaigns/campaign-service";
 import type { SessionUser } from "@/lib/domain";
+import type { TaskRecord } from "@/lib/models";
 import { createCampaignOnlyTaskInput } from "@/lib/tasks/task-service";
 
 describe("campaign constants", () => {
   it("uses the approved campaign roles", () => {
     expect(CAMPAIGN_TARGET_ROLES).toEqual([
       "NGV",
+      "MEMBER",
+      "TDM",
       "REGIONAL_LEAD",
       "ZONE_LEAD",
       "TEAM_LEAD",
@@ -30,7 +34,8 @@ describe("campaign constants", () => {
     expect(isCampaignRole("REGIONAL_LEAD")).toBe(true);
     expect(isCampaignRole("ZONE_LEAD")).toBe(true);
     expect(isCampaignRole("TEAM_LEAD")).toBe(true);
-    expect(isCampaignRole("MEMBER")).toBe(false);
+    expect(isCampaignRole("MEMBER")).toBe(true);
+    expect(isCampaignRole("TDM")).toBe(true);
     expect(isCampaignRole("ADMIN")).toBe(false);
   });
 });
@@ -85,6 +90,61 @@ describe("campaign-only task input", () => {
       scheduledMonthDays: [],
       targetCount: null,
     });
+  });
+});
+
+describe("campaign task eligibility", () => {
+  const teamId = new Types.ObjectId();
+
+  function dailyTeamTask(targetRoles: TaskRecord["targetRoles"]): TaskRecord {
+    return {
+      _id: new Types.ObjectId(),
+      campaignOnly: false,
+      createdAt: new Date("2026-07-19T00:00:00Z"),
+      createdBy: new Types.ObjectId(),
+      deadlineTime: "20:00",
+      description: "",
+      expReward: 10,
+      externalLabel: "",
+      externalUrl: "",
+      completedAt: null,
+      isActive: true,
+      lateWindowDays: 1,
+      maxPerWeek: null,
+      pointReward: 10,
+      regionId: null,
+      scope: "TEAM",
+      scheduleType: "EVERY_DAY",
+      scheduledMonthDays: [],
+      scheduledWeekdays: [],
+      sortOrder: 100,
+      submissionMessage: "",
+      completionMessage: "",
+      taskType: "DAILY_PER_MEMBER",
+      teamId,
+      title: "Campaign member task",
+      targetCount: null,
+      targetRoles,
+      updatedAt: new Date("2026-07-19T00:00:00Z"),
+      zoneId: null,
+    } as TaskRecord;
+  }
+
+  it("allows team daily tasks targeting TĐ and TĐM into campaigns", () => {
+    expect(
+      isTaskEligibleForCampaign(
+        dailyTeamTask(["MEMBER"]),
+        teamId.toString(),
+        "2026-07-19",
+      ),
+    ).toBe(true);
+    expect(
+      isTaskEligibleForCampaign(
+        dailyTeamTask(["TDM"]),
+        teamId.toString(),
+        "2026-07-19",
+      ),
+    ).toBe(true);
   });
 });
 

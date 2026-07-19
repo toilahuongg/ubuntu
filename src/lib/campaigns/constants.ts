@@ -2,6 +2,8 @@ import type { Role, TaskTargetRole } from "@/lib/domain";
 
 export const CAMPAIGN_TARGET_ROLES = [
   "NGV",
+  "MEMBER",
+  "TDM",
   "REGIONAL_LEAD",
   "ZONE_LEAD",
   "TEAM_LEAD",

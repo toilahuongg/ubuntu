@@ -810,6 +810,14 @@ export async function updateTask(
   });
 }
 
+export async function updateCampaignOnlyTask(
+  actor: SessionUser,
+  taskId: string,
+  input: UpdateTaskInput,
+): Promise<void> {
+  await updateTask(actor, taskId, { ...input, campaignOnly: true });
+}
+
 export function normalizeTaskExternalLink(input: {
   externalLabel?: string | null;
   externalUrl?: string | null;
@@ -844,6 +852,46 @@ export async function deleteTask(
 
   if (!record || !canManageTask(actor, taskToScope(record))) {
     throw new Error("Không tìm thấy nhiệm vụ phù hợp.");
+  }
+
+  const taskObjectId = toObjectId(taskId);
+
+  await Promise.all([
+    SubmissionModel.deleteMany({ taskId: taskObjectId }),
+    DttClassTaskModel.deleteMany({ taskId: taskObjectId }),
+    MonthlyGoalModel.deleteMany({ taskId: taskObjectId }),
+    TaskReminderPreferenceModel.deleteMany({ taskId: taskObjectId }),
+  ]);
+
+  await TaskModel.deleteOne({ _id: record._id });
+
+  await AuditLogModel.create({
+    action: "task.deleted",
+    actorUserId: toObjectId(actor.id),
+    entityId: taskId,
+    entityType: "Task",
+    metadata: {
+      title: record.title,
+      scope: record.scope,
+      taskType: record.taskType,
+    },
+  });
+}
+
+export async function deleteCampaignOnlyTask(
+  actor: SessionUser,
+  taskId: string,
+): Promise<void> {
+  await connectToDatabase();
+
+  const record = (await TaskModel.findById(taskId).lean()) as TaskRecord | null;
+
+  if (!record || !canManageTask(actor, taskToScope(record))) {
+    throw new Error("Không tìm thấy nhiệm vụ phù hợp.");
+  }
+
+  if (!record.campaignOnly) {
+    throw new Error("Chỉ được xoá nhiệm vụ custom của chiến dịch.");
   }
 
   const taskObjectId = toObjectId(taskId);
