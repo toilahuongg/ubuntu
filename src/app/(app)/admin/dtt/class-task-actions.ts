@@ -8,8 +8,7 @@ import { canManageDtt } from "@/lib/permissions";
 import { connectToDatabase } from "@/lib/mongoose";
 import { DttClassTaskModel } from "@/lib/models/dtt-class-task";
 import { DttClassModel } from "@/lib/models/dtt-class";
-import { TaskModel } from "@/lib/models/task";
-import { createTask } from "@/lib/tasks/task-service";
+import { createTask, updateTask } from "@/lib/tasks/task-service";
 import { toObjectId } from "@/lib/utils/ids";
 import type { TaskTargetRole } from "@/lib/domain";
 
@@ -104,5 +103,47 @@ export async function createCustomClassTaskAction(
     revalidatePath("/admin/dtt");
     revalidatePath("/dashboard");
     return { id: taskId };
+  });
+}
+
+export async function updateCustomClassTaskAction(
+  classId: string,
+  taskId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAction(async () => {
+    const { session, teamId } = await requireManagerTeam();
+    await assertClassInTeam(classId, teamId);
+
+    const customAssignment = await DttClassTaskModel.exists({
+      classId: toObjectId(classId),
+      taskId: toObjectId(taskId),
+      teamId,
+      isInherited: false,
+    });
+    if (!customAssignment) {
+      throw new Error("Không tìm thấy nhiệm vụ custom của lớp.");
+    }
+
+    await updateTask(session, taskId, {
+      title: ((formData.get("title") as string) ?? "").trim(),
+      description: (formData.get("description") as string) ?? "",
+      deadlineTime: (formData.get("deadlineTime") as string) ?? "20:00",
+      expReward: Number(formData.get("expReward") ?? 10),
+      pointReward: 0,
+      lateWindowDays: Number(formData.get("lateWindowDays") ?? 7),
+      targetRoles: formData.getAll("targetRoles").map(String) as TaskTargetRole[],
+      taskType: "DAILY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      scheduledWeekdays: [],
+      scheduledMonthDays: [],
+      submissionMessage: (formData.get("submissionMessage") as string) ?? "",
+      completionMessage: "",
+    });
+
+    revalidatePath("/admin/dtt");
+    revalidatePath("/dashboard");
+    revalidatePath(`/tasks/${taskId}`);
+    revalidatePath(`/tasks/${taskId}/proxy`);
   });
 }

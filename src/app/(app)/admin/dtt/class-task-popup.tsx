@@ -2,14 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { X, Plus, Book, BookOpen } from "lucide-react";
+import { X, Plus, Book, BookOpen, Pencil } from "lucide-react";
 import {
   addClassTaskAction,
   removeClassTaskAction,
   createCustomClassTaskAction,
+  updateCustomClassTaskAction,
 } from "./class-task-actions";
 import { FormError, FormSuccess } from "../_shared";
-import { TASK_TARGET_ROLES, ROLE_LABELS } from "@/lib/domain";
+import { TASK_TARGET_ROLES, ROLE_LABELS, type TaskTargetRole } from "@/lib/domain";
 
 type TaskSummary = {
   id: string;
@@ -21,6 +22,12 @@ type TaskSummary = {
 type ClassTaskEntry = {
   taskId: string;
   taskTitle: string;
+  description: string;
+  deadlineTime: string;
+  expReward: number;
+  lateWindowDays: number;
+  targetRoles: TaskTargetRole[];
+  submissionMessage: string;
   isInherited: boolean;
 };
 
@@ -43,6 +50,7 @@ export function ClassTaskPopup({
   const [success, setSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showCustomForm, setShowCustomForm] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const classTaskIds = new Set(classTasks.map((t) => t.taskId));
   const inheritableTasks = availableTasks.filter(
@@ -88,6 +96,21 @@ export function ClassTaskPopup({
     } else {
       setError(result.error);
     }
+  };
+
+  const handleUpdateCustom = (taskId: string, formData: FormData) => {
+    setError(null);
+    setSuccess(null);
+    startTransition(async () => {
+      const result = await updateCustomClassTaskAction(classId, taskId, formData);
+      if (result.ok) {
+        setSuccess("Đã cập nhật nhiệm vụ custom của lớp.");
+        setEditingTaskId(null);
+        router.refresh();
+      } else {
+        setError(result.error);
+      }
+    });
   };
 
   return (
@@ -330,25 +353,52 @@ export function ClassTaskPopup({
                   </h3>
                   <div className="space-y-1.5">
                     {classTasks.filter(t => !t.isInherited).map((task) => (
-                      <div
-                        key={task.taskId}
-                        className="flex items-center justify-between rounded-lg border border-border/40 bg-overlay-subtle/30 px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">{task.taskTitle}</p>
-                            <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                              Chỉ EXP
-                            </span>
+                      <div key={task.taskId} className="space-y-2">
+                        <div className="flex items-center justify-between rounded-lg border border-border/40 bg-overlay-subtle/30 px-3 py-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium truncate">{task.taskTitle}</p>
+                              <span className="shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                                Chỉ EXP
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                              {task.expReward} EXP · Hạn {task.deadlineTime}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditingTaskId((current) =>
+                                  current === task.taskId ? null : task.taskId,
+                                )
+                              }
+                              disabled={isPending}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-overlay-medium hover:text-foreground disabled:opacity-50"
+                              aria-label="Sửa nhiệm vụ custom"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleRemove(task.taskId, task.taskTitle)}
+                              disabled={isPending}
+                              className="h-8 px-2 text-xs text-destructive hover:underline disabled:opacity-50"
+                            >
+                              Xóa
+                            </button>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleRemove(task.taskId, task.taskTitle)}
-                          disabled={isPending}
-                          className="text-xs text-destructive hover:underline disabled:opacity-50"
-                        >
-                          Xóa
-                        </button>
+                        {editingTaskId === task.taskId && (
+                          <CustomClassTaskEditForm
+                            isPending={isPending}
+                            task={task}
+                            onCancel={() => setEditingTaskId(null)}
+                            onSubmit={(formData) =>
+                              handleUpdateCustom(task.taskId, formData)
+                            }
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
@@ -359,5 +409,156 @@ export function ClassTaskPopup({
         </div>
       </div>
     </div>
+  );
+}
+
+function CustomClassTaskEditForm({
+  isPending,
+  task,
+  onCancel,
+  onSubmit,
+}: {
+  isPending: boolean;
+  task: ClassTaskEntry;
+  onCancel: () => void;
+  onSubmit: (formData: FormData) => void;
+}) {
+  return (
+    <form
+      action={onSubmit}
+      className="space-y-3 rounded-lg border border-border bg-card p-4"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-primary" />
+          Sửa nhiệm vụ custom
+        </h3>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-md p-1 text-muted-foreground hover:text-foreground"
+          aria-label="Đóng form sửa"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Nhiệm vụ custom chỉ thưởng EXP, không thưởng point.
+      </p>
+
+      <label className="block space-y-1.5">
+        <span className="text-xs font-medium text-muted-foreground">
+          Tên nhiệm vụ
+        </span>
+        <input
+          name="title"
+          required
+          minLength={3}
+          maxLength={80}
+          defaultValue={task.taskTitle}
+          className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+        />
+      </label>
+
+      <label className="block space-y-1.5">
+        <span className="text-xs font-medium text-muted-foreground">Mô tả</span>
+        <textarea
+          name="description"
+          maxLength={280}
+          defaultValue={task.description}
+          className="min-h-20 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+        />
+      </label>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            Hạn hoàn thành
+          </span>
+          <input
+            name="deadlineTime"
+            type="time"
+            defaultValue={task.deadlineTime}
+            required
+            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            EXP thưởng
+          </span>
+          <input
+            name="expReward"
+            type="number"
+            min={0}
+            defaultValue={task.expReward}
+            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">
+            Nhập bù
+          </span>
+          <input
+            name="lateWindowDays"
+            type="number"
+            min={1}
+            defaultValue={task.lateWindowDays}
+            className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm"
+          />
+        </label>
+      </div>
+
+      <div className="space-y-1.5">
+        <p className="text-xs font-medium text-muted-foreground">
+          Vai trò áp dụng
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {TASK_TARGET_ROLES.map((role) => (
+            <label
+              key={role}
+              className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs"
+            >
+              <input
+                type="checkbox"
+                name="targetRoles"
+                value={role}
+                defaultChecked={task.targetRoles.includes(role)}
+              />
+              {ROLE_LABELS[role]}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <label className="block space-y-1.5">
+        <span className="text-xs font-medium text-muted-foreground">
+          Tin nhắn sau khi nộp
+        </span>
+        <textarea
+          name="submissionMessage"
+          maxLength={280}
+          defaultValue={task.submissionMessage}
+          className="min-h-16 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+        />
+      </label>
+
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="btn-primary-gradient flex h-10 flex-1 items-center justify-center text-sm disabled:opacity-50"
+        >
+          Lưu
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="btn-secondary-gradient flex h-10 items-center px-4 text-sm"
+        >
+          Hủy
+        </button>
+      </div>
+    </form>
   );
 }

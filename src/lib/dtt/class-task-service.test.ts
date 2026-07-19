@@ -115,10 +115,52 @@ describe("mapDttClassTasksByClass", () => {
         {
           taskId: taskId.toString(),
           taskTitle: "Existing task",
+          description: "",
+          deadlineTime: "20:00",
+          expReward: 10,
+          lateWindowDays: 7,
+          targetRoles: [],
+          submissionMessage: "",
           isInherited: false,
         },
       ],
     });
+  });
+
+  it("maps custom class task edit fields from the populated task", () => {
+    const classId = new Types.ObjectId();
+    const taskId = new Types.ObjectId();
+
+    const result = mapDttClassTasksByClass([
+      {
+        classId,
+        taskId: {
+          _id: taskId,
+          title: "Đọc kinh Sáng",
+          description: "Đọc theo tài liệu lớp",
+          deadlineTime: "06:30",
+          expReward: 15,
+          lateWindowDays: 3,
+          targetRoles: ["MEMBER", "TDM"],
+          submissionMessage: "Đã đọc xong",
+        },
+        isInherited: false,
+      },
+    ]);
+
+    expect(result[classId.toString()]).toEqual([
+      {
+        taskId: taskId.toString(),
+        taskTitle: "Đọc kinh Sáng",
+        description: "Đọc theo tài liệu lớp",
+        deadlineTime: "06:30",
+        expReward: 15,
+        lateWindowDays: 3,
+        targetRoles: ["MEMBER", "TDM"],
+        submissionMessage: "Đã đọc xong",
+        isInherited: false,
+      },
+    ]);
   });
 });
 

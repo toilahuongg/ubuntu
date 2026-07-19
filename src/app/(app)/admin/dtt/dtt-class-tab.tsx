@@ -14,7 +14,7 @@ import {
 import { ConfirmDeleteButton, FormError, FormSuccess } from "../_shared";
 import { BulkEnrollPopup, type BulkEnrollMember } from "./bulk-enroll-popup";
 import { ClassTaskPopup } from "./class-task-popup";
-import { ROLE_LABELS } from "@/lib/domain";
+import { ROLE_LABELS, type TaskTargetRole } from "@/lib/domain";
 
 type ClassItem = {
   id: string;
@@ -68,6 +68,12 @@ export function DttClassTab({
   classTasksByClass?: Record<string, Array<{
     taskId: string;
     taskTitle: string;
+    description: string;
+    deadlineTime: string;
+    expReward: number;
+    lateWindowDays: number;
+    targetRoles: TaskTargetRole[];
+    submissionMessage: string;
     isInherited: boolean;
   }>>;
 }) {
@@ -369,11 +375,6 @@ export function DttClassTab({
       {bulkEnrollClassId && (() => {
         const targetClass = classes.find((c) => c.id === bulkEnrollClassId);
         if (!targetClass) return null;
-
-        // Get users already enrolled in this specific class
-        const classEnrolledIds = new Set(
-          enrollments.filter((e) => e.classId === bulkEnrollClassId).map((e) => e.userId)
-        );
 
         // Filter to members not in ANY DTT class (same as nonDttMembers)
         const popupMembers: BulkEnrollMember[] = nonDttMembers.map((m) => ({

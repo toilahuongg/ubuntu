@@ -1,6 +1,7 @@
 "use client";
 
 import { DttClassTab } from "./dtt-class-tab";
+import type { TaskTargetRole } from "@/lib/domain";
 
 type ClassItem = {
   id: string;
@@ -44,6 +45,12 @@ export function DttManager({
   classTasksByClass?: Record<string, Array<{
     taskId: string;
     taskTitle: string;
+    description: string;
+    deadlineTime: string;
+    expReward: number;
+    lateWindowDays: number;
+    targetRoles: TaskTargetRole[];
+    submissionMessage: string;
     isInherited: boolean;
   }>>;
 }) {

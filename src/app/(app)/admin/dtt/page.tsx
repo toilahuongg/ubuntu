@@ -92,7 +92,10 @@ export default async function DttManagementPage() {
 
   // Fetch class task assignments
   const classAssignments = (await DttClassTaskModel.find({ teamId })
-    .populate("taskId", "title")
+    .populate(
+      "taskId",
+      "title description deadlineTime expReward lateWindowDays targetRoles submissionMessage",
+    )
     .lean()) as unknown as DttClassTaskAssignmentSource[];
 
   const classTasksByClass = mapDttClassTasksByClass(classAssignments);

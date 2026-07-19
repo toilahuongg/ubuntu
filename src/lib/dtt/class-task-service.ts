@@ -14,12 +14,14 @@ import {
 } from "@/lib/models";
 import {
   DEFAULT_EXP_REWARD,
+  DEFAULT_LATE_WINDOW_DAYS,
   DEFAULT_POINT_REWARD,
 } from "@/lib/tasks/constants";
 import { computeTaskStatus } from "@/lib/tasks/task-service";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
 import type { TaskCard } from "@/lib/tasks/types";
 import { toObjectId } from "@/lib/utils/ids";
+import type { TaskTargetRole } from "@/lib/domain";
 
 // Types for populated query results
 
@@ -46,9 +48,15 @@ export type DttClassTaskAssignmentSource = {
   classId: ObjectIdLike | string | null;
   taskId:
     | {
-        _id?: ObjectIdLike | string | null;
-        title?: string | null;
-      }
+      _id?: ObjectIdLike | string | null;
+      title?: string | null;
+      description?: string | null;
+      deadlineTime?: string | null;
+      expReward?: number | null;
+      lateWindowDays?: number | null;
+      targetRoles?: TaskTargetRole[] | null;
+      submissionMessage?: string | null;
+    }
     | null;
   isInherited?: boolean | null;
 };
@@ -56,6 +64,12 @@ export type DttClassTaskAssignmentSource = {
 export type DttClassTaskAssignmentSummary = {
   taskId: string;
   taskTitle: string;
+  description: string;
+  deadlineTime: string;
+  expReward: number;
+  lateWindowDays: number;
+  targetRoles: TaskTargetRole[];
+  submissionMessage: string;
   isInherited: boolean;
 };
 
@@ -92,6 +106,13 @@ export function mapDttClassTasksByClass(
     classTasksByClass[classId].push({
       taskId,
       taskTitle: assignment.taskId?.title ?? "Nhiệm vụ",
+      description: assignment.taskId?.description ?? "",
+      deadlineTime: assignment.taskId?.deadlineTime ?? "20:00",
+      expReward: assignment.taskId?.expReward ?? DEFAULT_EXP_REWARD,
+      lateWindowDays:
+        assignment.taskId?.lateWindowDays ?? DEFAULT_LATE_WINDOW_DAYS,
+      targetRoles: assignment.taskId?.targetRoles ?? [],
+      submissionMessage: assignment.taskId?.submissionMessage ?? "",
       isInherited: assignment.isInherited ?? false,
     });
   }
