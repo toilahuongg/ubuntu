@@ -33,6 +33,7 @@ import {
   getUserById,
   getRegionById,
   getZoneById,
+  resetManagedUserPassword,
   saveUser,
   updateRegion,
   updateTeam,
@@ -420,5 +421,16 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
     }
     await deleteUser(userId);
     revalidatePath("/admin");
+  });
+}
+
+export async function resetManagedUserPasswordAction(
+  userId: string,
+): Promise<ActionResult<{ temporaryPassword: string }>> {
+  return runAction(async () => {
+    const session = await requireUserManagementUser();
+    const result = await resetManagedUserPassword(session, userId);
+    revalidatePath("/admin/users");
+    return result;
   });
 }

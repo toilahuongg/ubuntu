@@ -2,9 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { AlertTriangle, ClipboardList, Filter, Pencil, Search, X } from "lucide-react";
+import { AlertTriangle, Check, Clipboard, ClipboardList, Filter, KeyRound, Pencil, Search, X } from "lucide-react";
 
-import { deleteUserAction, saveUserAction } from "@/app/(app)/actions";
+import {
+  deleteUserAction,
+  resetManagedUserPasswordAction,
+  saveUserAction,
+} from "@/app/(app)/actions";
 import { ROLE_LABELS, ROLES, USER_STATUSES } from "@/lib/domain";
 import type { Role, SerializedUser, SessionUser, UserStatus } from "@/lib/domain";
 import { canManageUser, canPersonalizeTasks } from "@/lib/permissions";
@@ -27,6 +31,10 @@ const STATUS_LABELS: Record<UserStatus, string> = {
   INACTIVE: "Khóa",
   PENDING: "Chờ duyệt",
 };
+
+function isResettableTdRole(role: Role) {
+  return role === "MEMBER" || role === "TDM" || role === "NGV";
+}
 
 export function UserSection({
   currentUser,
@@ -188,6 +196,12 @@ export function UserSection({
                 canDelete={
                   user.id !== currentUser.id && canManageUser(currentUser, user)
                 }
+                canResetPassword={
+                  currentUser.role === "TEAM_LEAD" &&
+                  user.id !== currentUser.id &&
+                  isResettableTdRole(user.role) &&
+                  canManageUser(currentUser, user)
+                }
                 isSelf={user.id === currentUser.id}
                 onEdit={() => setEditingId(user.id)}
                 canPersonalize={canPersonalizeTasks(currentUser, user)}
@@ -204,6 +218,7 @@ function UserRow({
   user,
   canEdit,
   canDelete,
+  canResetPassword,
   isSelf,
   onEdit,
   canPersonalize,
@@ -211,6 +226,7 @@ function UserRow({
   user: SerializedUser;
   canEdit: boolean;
   canDelete: boolean;
+  canResetPassword: boolean;
   isSelf: boolean;
   onEdit: () => void;
   canPersonalize: boolean;
@@ -252,6 +268,9 @@ function UserRow({
             <ClipboardList className="h-4 w-4" aria-hidden />
           </Link>
         )}
+        {canResetPassword && (
+          <ResetPasswordButton userId={user.id} userName={user.fullName} />
+        )}
         {canDelete && (
           <ConfirmDeleteButton
             ariaLabel={`Xóa ${user.fullName}`}
@@ -259,6 +278,102 @@ function UserRow({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+function ResetPasswordButton({
+  userId,
+  userName,
+}: {
+  userId: string;
+  userName: string;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [armed, setArmed] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function handleReset() {
+    if (!armed) {
+      setArmed(true);
+      setError(null);
+      setTemporaryPassword(null);
+      window.setTimeout(() => setArmed(false), 4000);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await resetManagedUserPasswordAction(userId);
+      if (!result.ok) {
+        setError(result.error);
+        setTemporaryPassword(null);
+        setArmed(false);
+        return;
+      }
+
+      setTemporaryPassword(result.data?.temporaryPassword ?? null);
+      setCopied(false);
+      setArmed(false);
+    });
+  }
+
+  async function handleCopy() {
+    if (!temporaryPassword) return;
+    await navigator.clipboard.writeText(temporaryPassword);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        onClick={handleReset}
+        disabled={isPending}
+        aria-label={
+          armed
+            ? `Xác nhận reset mật khẩu cho ${userName}`
+            : `Reset mật khẩu cho ${userName}`
+        }
+        className={`inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg transition-colors disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+          armed
+            ? "bg-yellow-500/15 text-yellow-700 hover:bg-yellow-500/25"
+            : "text-muted-foreground hover:bg-overlay-medium hover:text-foreground"
+        }`}
+      >
+        {isPending ? (
+          <span
+            aria-hidden
+            className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+          />
+        ) : armed ? (
+          <Check className="h-4 w-4" aria-hidden />
+        ) : (
+          <KeyRound className="h-4 w-4" aria-hidden />
+        )}
+      </button>
+      {temporaryPassword && (
+        <div className="flex max-w-[180px] items-center gap-1 rounded-lg border border-border bg-overlay-subtle px-2 py-1 text-[11px]">
+          <code className="min-w-0 flex-1 truncate font-mono text-foreground">
+            {temporaryPassword}
+          </code>
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-label="Sao chép mật khẩu tạm"
+            className="inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-overlay-medium hover:text-foreground"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5" aria-hidden />
+            ) : (
+              <Clipboard className="h-3.5 w-3.5" aria-hidden />
+            )}
+          </button>
+        </div>
+      )}
+      {error && <FormError message={error} onDismiss={() => setError(null)} />}
     </div>
   );
 }

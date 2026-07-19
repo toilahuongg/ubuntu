@@ -1,11 +1,13 @@
 import "server-only";
 
+import { randomBytes } from "node:crypto";
 import type { Role, SerializedUser, SessionUser, UserStatus } from "@/lib/domain";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import {
   canAccessManagement,
   canAccessRegionStructure,
   canAccessUserManagement,
+  canManageUser,
   canReviewPendingUser,
 } from "@/lib/permissions";
 import { connectToDatabase } from "@/lib/mongoose";
@@ -1084,4 +1086,45 @@ export async function changeUserPassword(
 
   const newHash = await hashPassword(newPassword);
   await UserModel.findByIdAndUpdate(userId, { passwordHash: newHash });
+}
+
+function createTemporaryPassword() {
+  return randomBytes(9).toString("base64url");
+}
+
+function isMemberLikeRole(role: Role) {
+  return role === "MEMBER" || role === "TDM" || role === "NGV";
+}
+
+export async function resetManagedUserPassword(
+  actor: SessionUser,
+  targetUserId: string,
+) {
+  await connectToDatabase();
+
+  if (actor.role !== "TEAM_LEAD") {
+    throw new Error("Chỉ CS - ĐL mới được reset mật khẩu TĐ.");
+  }
+
+  const target = (await UserModel.findById(targetUserId).lean()) as
+    | UserRecord
+    | null;
+  if (!target) {
+    throw new Error("Không tìm thấy người dùng.");
+  }
+
+  const serializedTarget = serializeUser(target);
+  if (!canManageUser(actor, serializedTarget)) {
+    throw new Error("Bạn không có quyền reset mật khẩu người dùng này.");
+  }
+
+  if (!isMemberLikeRole(serializedTarget.role)) {
+    throw new Error("Chỉ có thể reset mật khẩu cho TĐ/TĐM/NTĐ.");
+  }
+
+  const temporaryPassword = createTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
+  await UserModel.findByIdAndUpdate(targetUserId, { passwordHash });
+
+  return { temporaryPassword };
 }
