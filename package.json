@@ -11,6 +11,7 @@
     "convert:levels": "tsx src/scripts/convert-levels-from-xp.ts",
     "repair:weekly-limits:ledger": "tsx src/scripts/repair-weekly-limit-ledger.ts",
     "repair:weekly-limits": "tsx src/scripts/repair-weekly-limit-overflows.ts",
+    "repair:streak-bonuses": "tsx src/scripts/repair-missing-streak-bonuses.ts",
     "lint": "eslint",
     "seed": "tsx src/scripts/seed.ts",
     "seed:cosmetics": "tsx src/scripts/seed-cosmetics.ts",

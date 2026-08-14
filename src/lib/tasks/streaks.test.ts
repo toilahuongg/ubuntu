@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateTaskStreakBonus } from "@/lib/tasks/streaks";
+import {
+  buildTaskStreakBonusDescription,
+  buildTaskStreakBonusLegacyDescription,
+  calculateTaskStreakBonus,
+  getTaskStreakBonusPeriodRange,
+} from "@/lib/tasks/streaks";
 
 describe("calculateTaskStreakBonus", () => {
   it("awards a 7-day milestone for everyday scheduled tasks", () => {
@@ -150,6 +155,36 @@ describe("calculateTaskStreakBonus", () => {
       awarded: false,
       milestone: null,
       streakLength: 5,
+    });
+  });
+
+  it("identifies streak bonus transactions by reward month", () => {
+    expect(
+      buildTaskStreakBonusDescription({
+        milestone: 7,
+        periodKey: "2026-07",
+        taskTitle: "Daily Task",
+      }),
+    ).toBe("Thưởng chuỗi 7 ngày (2026-07): Daily Task");
+
+    expect(
+      buildTaskStreakBonusDescription({
+        milestone: 7,
+        periodKey: "2026-08",
+        taskTitle: "Daily Task",
+      }),
+    ).toBe("Thưởng chuỗi 7 ngày (2026-08): Daily Task");
+
+    expect(
+      buildTaskStreakBonusLegacyDescription({
+        milestone: 7,
+        taskTitle: "Daily Task",
+      }),
+    ).toBe("Thưởng chuỗi 7 ngày: Daily Task");
+
+    expect(getTaskStreakBonusPeriodRange("2026-12")).toEqual({
+      end: new Date("2027-01-01T00:00:00.000Z"),
+      start: new Date("2026-12-01T00:00:00.000Z"),
     });
   });
 });

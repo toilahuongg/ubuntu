@@ -37,8 +37,11 @@ import {
 import { appliesToUser, isWithinLateWindow } from "@/lib/tasks/policy";
 import { isTaskScheduledForDate } from "@/lib/tasks/schedule";
 import {
+  buildTaskStreakBonusDescription,
+  buildTaskStreakBonusLegacyDescription,
   calculateTaskStreakBonus,
   EMPTY_TASK_STREAK_BONUS,
+  getTaskStreakBonusPeriodRange,
   type TaskStreakBonusResult,
 } from "@/lib/tasks/streaks";
 import { sumTaskCompletions, taskToScope } from "@/lib/tasks/task-service";
@@ -522,10 +525,32 @@ export async function saveSubmission(
         });
 
         if (nextStreakBonus.awarded && nextStreakBonus.milestone) {
-          const description = `Thưởng chuỗi ${nextStreakBonus.milestone} ngày: ${taskRaw.title}`;
+          const periodKey = dateKey.slice(0, 7);
+          const description = buildTaskStreakBonusDescription({
+            milestone: nextStreakBonus.milestone,
+            periodKey,
+            taskTitle: taskRaw.title,
+          });
+          const legacyDescription = buildTaskStreakBonusLegacyDescription({
+            milestone: nextStreakBonus.milestone,
+            taskTitle: taskRaw.title,
+          });
+          const periodRange = getTaskStreakBonusPeriodRange(periodKey);
+          const duplicateDescriptionFilter = {
+            $or: [
+              { description },
+              {
+                createdAt: {
+                  $gte: periodRange.start,
+                  $lt: periodRange.end,
+                },
+                description: legacyDescription,
+              },
+            ],
+          };
           const [existingXpBonus, existingPointBonus] = await Promise.all([
             XpTransactionModel.findOne({
-              description,
+              ...duplicateDescriptionFilter,
               source: "task_streak_bonus",
               sourceId: taskRaw._id,
               userId: subjectRaw._id,
@@ -533,7 +558,7 @@ export async function saveSubmission(
               .session(session ?? null)
               .lean(),
             PointTransactionModel.findOne({
-              description,
+              ...duplicateDescriptionFilter,
               source: "task_streak_bonus_reward",
               sourceId: taskRaw._id,
               userId: subjectRaw._id,
@@ -557,33 +582,41 @@ export async function saveSubmission(
         }
       }
 
-      if (streakBonus.awarded && streakBonus.bonusExp > 0) {
-        await XpTransactionModel.create(
-          [
-            {
-              amount: streakBonus.bonusExp,
-              description: `Thưởng chuỗi ${streakBonus.milestone} ngày: ${taskRaw.title}`,
-              source: "task_streak_bonus",
-              sourceId: taskRaw._id,
-              userId: subjectRaw._id,
-            },
-          ],
-          session ? { session } : undefined,
-        );
-      }
-      if (streakBonus.awarded && streakBonus.bonusPoints > 0) {
-        await PointTransactionModel.create(
-          [
-            {
-              amount: streakBonus.bonusPoints,
-              description: `Thưởng chuỗi ${streakBonus.milestone} ngày: ${taskRaw.title}`,
-              source: "task_streak_bonus_reward",
-              sourceId: taskRaw._id,
-              userId: subjectRaw._id,
-            },
-          ],
-          session ? { session } : undefined,
-        );
+      if (streakBonus.awarded && streakBonus.milestone) {
+        const description = buildTaskStreakBonusDescription({
+          milestone: streakBonus.milestone,
+          periodKey: dateKey.slice(0, 7),
+          taskTitle: taskRaw.title,
+        });
+
+        if (streakBonus.bonusExp > 0) {
+          await XpTransactionModel.create(
+            [
+              {
+                amount: streakBonus.bonusExp,
+                description,
+                source: "task_streak_bonus",
+                sourceId: taskRaw._id,
+                userId: subjectRaw._id,
+              },
+            ],
+            session ? { session } : undefined,
+          );
+        }
+        if (streakBonus.bonusPoints > 0) {
+          await PointTransactionModel.create(
+            [
+              {
+                amount: streakBonus.bonusPoints,
+                description,
+                source: "task_streak_bonus_reward",
+                sourceId: taskRaw._id,
+                userId: subjectRaw._id,
+              },
+            ],
+            session ? { session } : undefined,
+          );
+        }
       }
 
       xpAwarded += streakBonus.bonusExp;
