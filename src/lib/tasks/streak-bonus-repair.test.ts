@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildMissingTaskStreakBonusRepairs } from "@/lib/tasks/streak-bonus-repair";
+import {
+  buildMissingTaskStreakBonusRepairs,
+  buildTaskStreakBonusRepairCreateOptions,
+} from "@/lib/tasks/streak-bonus-repair";
 
 const task = {
   expReward: 10,
@@ -91,5 +94,18 @@ describe("buildMissingTaskStreakBonusRepairs", () => {
     });
 
     expect(rows).toEqual([]);
+  });
+
+  it("sets ordered create options when a mongoose session is present", () => {
+    const session = { id: "session" };
+
+    expect(
+      buildTaskStreakBonusRepairCreateOptions(
+        session as unknown as Parameters<
+          typeof buildTaskStreakBonusRepairCreateOptions
+        >[0],
+      ),
+    ).toEqual({ ordered: true, session });
+    expect(buildTaskStreakBonusRepairCreateOptions(null)).toBeUndefined();
   });
 });

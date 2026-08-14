@@ -212,6 +212,12 @@ export function buildTaskStreakBonusRepairReport(input: {
   };
 }
 
+export function buildTaskStreakBonusRepairCreateOptions(
+  session: mongoose.ClientSession | null,
+) {
+  return session ? { ordered: true, session } : undefined;
+}
+
 export async function repairMissingTaskStreakBonuses({
   apply = false,
   fromDate,
@@ -328,7 +334,7 @@ async function applyTaskStreakBonusRepairRows(
           sourceId: new Types.ObjectId(row.taskId),
           userId: new Types.ObjectId(row.userId),
         })),
-        session ? { session } : undefined,
+        buildTaskStreakBonusRepairCreateOptions(session),
       );
     }
 
@@ -341,7 +347,7 @@ async function applyTaskStreakBonusRepairRows(
           sourceId: new Types.ObjectId(row.taskId),
           userId: new Types.ObjectId(row.userId),
         })),
-        session ? { session } : undefined,
+        buildTaskStreakBonusRepairCreateOptions(session),
       );
     }
 
