@@ -5,7 +5,8 @@ import { Crown, GraduationCap, Layers, MapPin, Sparkles, Trophy, Users } from "l
 import { LevelAvatar } from "@/components/level-avatar";
 import { getSessionUser } from "@/lib/auth/session";
 import {
-  getLeaderboardMonthLabel,
+  getCurrentPeriodKey,
+  getLeaderboardPeriodLabel,
   getTopMembers,
   getTopNgv,
   getTopRegionalLeads,
@@ -14,6 +15,9 @@ import {
   getTopZoneLeads,
   getTopZones,
   getUserLeaderboardResult,
+  listSelectablePeriods,
+  normalizeLeaderboardPeriod,
+  type LeaderboardPeriod,
   type RegionLeaderboardEntry,
   type ZoneLeaderboardEntry,
 } from "@/lib/services/leaderboard-service";
@@ -21,6 +25,7 @@ import type { LeaderboardEntry } from "@/lib/services/gamification-service";
 import { CosmeticName } from "@/components/cosmetic-name";
 import { ResponsiveNameTicker } from "./responsive-name-ticker";
 import { LeaderboardBoardSelect } from "./leaderboard-board-select";
+import { LeaderboardPeriodSelect } from "./leaderboard-period-select";
 import { canManageDtt } from "@/lib/permissions";
 import { DttEnrollmentModel } from "@/lib/models/dtt-enrollment";
 import { connectToDatabase } from "@/lib/mongoose";
@@ -31,6 +36,12 @@ const LEADERBOARD_BOARDS = [
     label: "Top Khu vực",
     description: "Tổng điểm theo khu vực",
     icon: <MapPin className="h-4 w-4" />,
+  },
+  {
+    value: "leads",
+    label: "Top KVT",
+    description: "Khu vực trưởng nổi bật",
+    icon: <Crown className="h-4 w-4" />,
   },
   {
     value: "zones",
@@ -62,17 +73,18 @@ const LEADERBOARD_BOARDS = [
     description: "Địa vực trưởng nổi bật",
     icon: <Crown className="h-4 w-4" />,
   },
-  {
-    value: "leads",
-    label: "Top KVT",
-    description: "Khu vực trưởng nổi bật",
-    icon: <Crown className="h-4 w-4" />,
-  },
 ] as const;
 
 const LEADERBOARD_LIMIT = 10;
 
 type LeaderboardBoard = (typeof LEADERBOARD_BOARDS)[number]["value"];
+
+// Bảng tổ chức ít phần tử: ẩn luôn khi kỳ chỉ có 0-1 phần tử (quyết định spec #7).
+const HIDE_IF_SINGLE_BOARDS: LeaderboardBoard[] = [
+  "regions",
+  "zones",
+  "zone-leads",
+];
 
 function normalizeBoard(value?: string | string[]): LeaderboardBoard {
   const candidate = Array.isArray(value) ? value[0] : value;
@@ -84,7 +96,11 @@ function normalizeBoard(value?: string | string[]): LeaderboardBoard {
 export default async function LeaderboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ board?: string | string[] | undefined }>;
+  searchParams: Promise<{
+    board?: string | string[] | undefined;
+    period?: string | string[] | undefined;
+    key?: string | string[] | undefined;
+  }>;
 }) {
   const session = await getSessionUser();
   if (!session) {
@@ -97,28 +113,67 @@ export default async function LeaderboardPage({
   const enrollment = await DttEnrollmentModel.findOne({ userId: session.id }).lean();
   const isEnrolled = !!enrollment;
 
-  const boardParam = await searchParams;
-  const activeBoard = normalizeBoard(boardParam.board);
-  const activeBoardMeta =
-    LEADERBOARD_BOARDS.find((board) => board.value === activeBoard) ??
-    LEADERBOARD_BOARDS[0];
-  const monthLabel = getLeaderboardMonthLabel();
-  const entries =
-    activeBoard === "regions"
-      ? await getTopRegions(LEADERBOARD_LIMIT)
-      : activeBoard === "zones"
-        ? await getTopZones(LEADERBOARD_LIMIT)
-        : activeBoard === "tdm"
-          ? await getTopTdm(LEADERBOARD_LIMIT)
-          : activeBoard === "members"
-            ? await getTopMembers(LEADERBOARD_LIMIT)
-            : activeBoard === "ngv"
-              ? await getTopNgv(LEADERBOARD_LIMIT)
-              : activeBoard === "zone-leads"
-                ? await getTopZoneLeads(LEADERBOARD_LIMIT)
-                : await getTopRegionalLeads(LEADERBOARD_LIMIT);
+  const params = await searchParams;
+  const period: LeaderboardPeriod = normalizeLeaderboardPeriod(params.period);
+  const selectableKeys = listSelectablePeriods(period);
+  const currentKey = getCurrentPeriodKey(period);
+  const rawKey = Array.isArray(params.key) ? params.key[0] : params.key;
+  // Key sai định dạng hoặc ngoài phạm vi lịch sử → clamp về kỳ hiện tại (spec #5).
+  const periodKey = rawKey && selectableKeys.includes(rawKey) ? rawKey : currentKey;
 
-  const personalResult = await getUserLeaderboardResult(session.id, activeBoard);
+  const activeBoard = normalizeBoard(params.board);
+
+  type BoardEntries = LeaderboardEntry[] | RegionLeaderboardEntry[] | ZoneLeaderboardEntry[];
+  const fetchBoard = (board: LeaderboardBoard, limit: number): Promise<BoardEntries> => {
+    switch (board) {
+      case "regions":
+        return getTopRegions(limit, period, periodKey);
+      case "zones":
+        return getTopZones(limit, period, periodKey);
+      case "tdm":
+        return getTopTdm(limit, period, periodKey);
+      case "members":
+        return getTopMembers(limit, period, periodKey);
+      case "ngv":
+        return getTopNgv(limit, period, periodKey);
+      case "zone-leads":
+        return getTopZoneLeads(limit, period, periodKey);
+      default:
+        return getTopRegionalLeads(limit, period, periodKey);
+    }
+  };
+
+  const activeEntries = await fetchBoard(activeBoard, LEADERBOARD_LIMIT);
+
+  const singleBoardCounts: Partial<Record<LeaderboardBoard, number>> = {};
+  for (const board of HIDE_IF_SINGLE_BOARDS) {
+    if (board === activeBoard) {
+      singleBoardCounts[board] = activeEntries.length;
+    } else {
+      const boardEntries = await fetchBoard(board, LEADERBOARD_LIMIT);
+      singleBoardCounts[board] = boardEntries.length;
+    }
+  }
+
+  const hiddenBoards = HIDE_IF_SINGLE_BOARDS.filter(
+    (board) => (singleBoardCounts[board] ?? 0) <= 1,
+  );
+  const visibleBoards = LEADERBOARD_BOARDS.filter(
+    (board) => !hiddenBoards.includes(board.value),
+  );
+  const effectiveBoard = hiddenBoards.includes(activeBoard)
+    ? visibleBoards[0]?.value ?? activeBoard
+    : activeBoard;
+  const activeBoardMeta =
+    LEADERBOARD_BOARDS.find((board) => board.value === effectiveBoard) ??
+    LEADERBOARD_BOARDS[0];
+  const entries =
+    effectiveBoard === activeBoard
+      ? activeEntries
+      : await fetchBoard(effectiveBoard, LEADERBOARD_LIMIT);
+
+  const periodLabel = getLeaderboardPeriodLabel(period, periodKey);
+  const personalResult = await getUserLeaderboardResult(session.id, effectiveBoard, period, periodKey);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 animate-slide-up">
@@ -126,13 +181,18 @@ export default async function LeaderboardPage({
         <div>
           <h1 className="font-display text-xl font-bold">Bảng Xếp Hạng</h1>
           <p className="mt-1 text-xs text-muted-foreground">
-            Tháng {monthLabel} — tính từ ngày 1 hàng tháng
+            {periodLabel} — điểm tích lũy trong kỳ
           </p>
         </div>
 
         <LeaderboardBoardSelect
-          activeBoard={activeBoard}
-          boards={LEADERBOARD_BOARDS.map(({ label, value }) => ({ label, value }))}
+          activeBoard={effectiveBoard}
+          boards={visibleBoards.map(({ label, value }) => ({ label, value }))}
+        />
+        <LeaderboardPeriodSelect
+          period={period}
+          periodKey={periodKey}
+          selectableKeys={selectableKeys}
         />
       </div>
 
@@ -155,15 +215,15 @@ export default async function LeaderboardPage({
 
       <Section title={activeBoardMeta.label} icon={activeBoardMeta.icon}>
         {entries.length === 0 ? <EmptyRow /> : null}
-        {entries.length > 0 && activeBoard === "regions" ? (
+        {entries.length > 0 && effectiveBoard === "regions" ? (
           <RegionPodium regions={entries as RegionLeaderboardEntry[]} />
         ) : null}
-        {entries.length > 0 && activeBoard === "zones" ? (
+        {entries.length > 0 && effectiveBoard === "zones" ? (
           <ZonePodium zones={entries as ZoneLeaderboardEntry[]} />
         ) : null}
         {entries.length > 0 &&
-        activeBoard !== "regions" &&
-        activeBoard !== "zones" ? (
+        effectiveBoard !== "regions" &&
+        effectiveBoard !== "zones" ? (
           <UserPodium entries={entries as LeaderboardEntry[]} selfId={session.id} />
         ) : null}
       </Section>
