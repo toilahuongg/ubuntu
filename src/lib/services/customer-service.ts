@@ -30,6 +30,7 @@ import type {
   Personality,
 } from "@/lib/customer/constants";
 import { getLevelFromXp } from "@/lib/xp";
+import { normalizePhone } from "@/lib/validation";
 
 export type CustomerListFilters = {
   ageBracket?: AgeBracket;
@@ -59,6 +60,7 @@ export type CustomerInput = {
   notes?: string;
   occupation: Occupation;
   personality: Personality;
+  phone?: string | null;
   teamId?: string | null;
   zoneId?: string | null;
   regionId?: string | null;
@@ -79,6 +81,7 @@ export type CustomerListItem = {
   notes: string;
   occupation: Occupation;
   personality: Personality;
+  phone: string | null;
   teamId: string | null;
   zoneId: string | null;
   regionId: string | null;
@@ -130,6 +133,7 @@ function serializeCustomer(
     notes: record.notes ?? "",
     occupation: record.occupation,
     personality: record.personality,
+    phone: record.phone ?? null,
     teamId: record.teamId ? record.teamId.toString() : null,
     zoneId: record.zoneId ? record.zoneId.toString() : null,
     regionId: record.regionId ? record.regionId.toString() : null,
@@ -517,6 +521,30 @@ async function reverseCustomerInteractionRewards(customerId: string) {
   ]);
 }
 
+const NEW_CUSTOMER_PHONE_POINTS = 5;
+
+async function awardNewCustomerPhonePoints(input: {
+  customerId: CustomerRecord["_id"];
+  customerName: string;
+  recipientIds: string[];
+}) {
+  for (const userId of input.recipientIds) {
+    await PointTransactionModel.create([
+      {
+        amount: NEW_CUSTOMER_PHONE_POINTS,
+        description: `SĐT mới: ${input.customerName}`,
+        source: "new_customer_reward",
+        sourceId: input.customerId,
+        userId: toObjectId(userId),
+      },
+    ]);
+    await UserModel.updateOne(
+      { _id: toObjectId(userId) },
+      { $inc: { pointBalance: NEW_CUSTOMER_PHONE_POINTS } },
+    );
+  }
+}
+
 export async function createCustomer(
   input: CustomerInput,
   createdBy: SessionUser,
@@ -525,6 +553,16 @@ export async function createCustomer(
 
   if (!canManageCustomer(createdBy)) {
     throw new Error("Bạn không có quyền tạo học viên.");
+  }
+
+  const phone = normalizePhone(input.phone);
+  if (phone) {
+    const existing = (await CustomerModel.findOne({ phone })
+      .select({ _id: 1 })
+      .lean()) as CustomerRecord | null;
+    if (existing) {
+      throw new Error("SĐT đã tồn tại.");
+    }
   }
 
   const assignment = await resolveCustomerAssignment(
@@ -543,12 +581,26 @@ export async function createCustomer(
     notes: input.notes?.trim() ?? "",
     occupation: input.occupation,
     personality: input.personality,
+    phone,
     teamId: assignment.teamId ? toObjectId(assignment.teamId) : null,
     zoneId: assignment.zoneId ? toObjectId(assignment.zoneId) : null,
     regionId: assignment.regionId ? toObjectId(assignment.regionId) : null,
   });
+  const record = customer.toObject() as CustomerRecord;
 
-  return serializeCustomer(customer.toObject() as CustomerRecord);
+  if (phone) {
+    const recipientIds =
+      assignment.caregiverIds.length > 0
+        ? assignment.caregiverIds
+        : [createdBy.id];
+    await awardNewCustomerPhonePoints({
+      customerId: record._id,
+      customerName: record.name,
+      recipientIds,
+    });
+  }
+
+  return serializeCustomer(record);
 }
 
 export async function listAssignableCustomerCaregivers(
@@ -612,6 +664,24 @@ export async function updateCustomer(
   if (input.occupation !== undefined) update.occupation = input.occupation;
   if (input.personality !== undefined) update.personality = input.personality;
   if (input.notes !== undefined) update.notes = input.notes.trim();
+
+  if (input.phone !== undefined) {
+    const phone = normalizePhone(input.phone);
+    if (phone) {
+      const existing = (await CustomerModel.findOne({
+        phone,
+        _id: { $ne: customer._id },
+      })
+        .select({ _id: 1 })
+        .lean()) as CustomerRecord | null;
+      if (existing) {
+        throw new Error("SĐT đã tồn tại.");
+      }
+      update.phone = phone;
+    } else {
+      update.phone = null;
+    }
+  }
 
   const assignmentTouched =
     input.caregiverIds !== undefined ||

@@ -48,6 +48,7 @@ export function CustomerForm({
   const [personality, setPersonality] = useState(initialData?.personality ?? "");
   const [heartStatus, setHeartStatus] = useState(initialData?.heartStatus ?? "LEARN_MORE");
   const [notes, setNotes] = useState(initialData?.notes ?? "");
+  const [phone, setPhone] = useState(initialData?.phone ?? "");
   const [caregiverIds, setCaregiverIds] = useState<string[]>(
     initialData?.caregiverIds ??
       (currentUserId && caregiverOptions.some((user) => user.id === currentUserId)
@@ -73,6 +74,7 @@ export function CustomerForm({
     formData.append("personality", personality);
     formData.append("heartStatus", heartStatus);
     formData.append("notes", notes);
+    formData.append("phone", phone);
     for (const caregiverId of caregiverIds) {
       formData.append("caregiverIds", caregiverId);
     }
@@ -113,6 +115,20 @@ export function CustomerForm({
           required
           className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
           placeholder="Tên học viên"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">
+          SĐT (không bắt buộc)
+        </label>
+        <input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          inputMode="tel"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/40"
+          placeholder="Nhập SĐT để nhận 5 điểm/SDT mới"
         />
       </div>
 
