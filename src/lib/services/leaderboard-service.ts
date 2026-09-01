@@ -1,10 +1,10 @@
 import "server-only";
 
+import { addDays } from "date-fns";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 import {
   getAppTimezone,
-  getCurrentYearMonth,
   getTodayDateKey,
   getWeekRangeFromDateKey,
 } from "@/lib/dates";
@@ -40,6 +40,86 @@ export type ZoneLeaderboardEntry = RegionLeaderboardEntry;
 
 type MonthlyXpRow = { _id: unknown; monthlyXp: number };
 
+export type LeaderboardPeriod = "week" | "month" | "year";
+export type PeriodRange = { start: Date; end: Date }; // [start, end)
+
+export function normalizeLeaderboardPeriod(
+  value?: string | string[] | null,
+): LeaderboardPeriod {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return candidate === "week" || candidate === "year" ? candidate : "month";
+}
+
+export function getCurrentPeriodKey(
+  period: LeaderboardPeriod,
+  now = new Date(),
+): string {
+  const tz = getAppTimezone();
+  if (period === "week") {
+    return getWeekRangeFromDateKey(getTodayDateKey(now), 6).startStr;
+  }
+  if (period === "year") return formatInTimeZone(now, tz, "yyyy");
+  return formatInTimeZone(now, tz, "yyyy-MM");
+}
+
+export function resolvePeriodRange(
+  period: LeaderboardPeriod,
+  periodKey: string,
+): PeriodRange {
+  const tz = getAppTimezone();
+  if (period === "week") {
+    const { startStr } = getWeekRangeFromDateKey(periodKey, 6);
+    const start = fromZonedTime(`${startStr}T00:00:00`, tz);
+    return { start, end: addDays(start, 7) };
+  }
+  if (period === "year") {
+    return {
+      start: fromZonedTime(`${periodKey}-01-01T00:00:00`, tz),
+      end: fromZonedTime(`${Number(periodKey) + 1}-01-01T00:00:00`, tz),
+    };
+  }
+  const year = Number(periodKey.slice(0, 4));
+  const month = Number(periodKey.slice(5, 7));
+  const nextYearMonth = month === 12
+    ? `${year + 1}-01`
+    : `${year}-${String(month + 1).padStart(2, "0")}`;
+  return {
+    start: fromZonedTime(`${periodKey}-01T00:00:00`, tz),
+    end: fromZonedTime(`${nextYearMonth}-01T00:00:00`, tz),
+  };
+}
+
+export function listSelectablePeriods(
+  period: LeaderboardPeriod,
+  now = new Date(),
+): string[] {
+  const tz = getAppTimezone();
+  const year = Number(formatInTimeZone(now, tz, "yyyy"));
+  if (period === "year") return [String(year)];
+  if (period === "month") {
+    const currentMonth = Number(formatInTimeZone(now, tz, "MM"));
+    return Array.from(
+      { length: currentMonth },
+      (_, i) => `${year}-${String(i + 1).padStart(2, "0")}`,
+    );
+  }
+  const keys: string[] = [];
+  const previousWeekStartKey = (weekStartKey: string): string => {
+    const prevDay = formatInTimeZone(
+      addDays(fromZonedTime(`${weekStartKey}T12:00:00`, tz), -1),
+      tz,
+      "yyyy-MM-dd",
+    );
+    return getWeekRangeFromDateKey(prevDay, 6).startStr;
+  };
+  let cursor = getWeekRangeFromDateKey(getTodayDateKey(now), 6).startStr;
+  while (cursor.startsWith(String(year))) {
+    keys.push(cursor);
+    cursor = previousWeekStartKey(cursor);
+  }
+  return keys;
+}
+
 function toLeaderboardEntry(
   user: UserRecord,
   monthlyXp: number,
@@ -56,16 +136,7 @@ function toLeaderboardEntry(
   };
 }
 
-function buildMonthlyPointsPipeline(yearMonth: string) {
-  const timezone = getAppTimezone();
-  const startOfMonth = fromZonedTime(`${yearMonth}-01T00:00:00`, timezone);
-  const year = Number(yearMonth.slice(0, 4));
-  const month = Number(yearMonth.slice(5, 7));
-  const nextYearMonth = month === 12
-    ? `${year + 1}-01`
-    : `${year}-${String(month + 1).padStart(2, "0")}`;
-  const endOfMonth = fromZonedTime(`${nextYearMonth}-01T00:00:00`, timezone);
-
+function buildPeriodPointsPipeline(range: PeriodRange) {
   return [
     {
       $match: {
@@ -74,9 +145,10 @@ function buildMonthlyPointsPipeline(yearMonth: string) {
             "task_reward",
             "task_streak_bonus_reward",
             "customer_interaction_reward",
+            "new_customer_reward",
           ],
         },
-        createdAt: { $gte: startOfMonth, $lt: endOfMonth },
+        createdAt: { $gte: range.start, $lt: range.end },
       },
     },
     {
@@ -91,15 +163,17 @@ function buildMonthlyPointsPipeline(yearMonth: string) {
   ];
 }
 
-async function getTopUsersByMonthlyXp(
+async function getTopUsersByPeriodPoints(
   filter: Record<string, unknown>,
   limit: number,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
 ): Promise<LeaderboardEntry[]> {
   await connectToDatabase();
-  const yearMonth = getCurrentYearMonth();
+  const range = resolvePeriodRange(period, periodKey);
 
   const topIds = (await PointTransactionModel.aggregate([
-    ...buildMonthlyPointsPipeline(yearMonth),
+    ...buildPeriodPointsPipeline(range),
     {
       $lookup: {
         as: "user",
@@ -131,42 +205,81 @@ async function getTopUsersByMonthlyXp(
   });
 }
 
-export async function getTopMembers(limit = 5): Promise<LeaderboardEntry[]> {
-  return getTopUsersByMonthlyXp({ role: "MEMBER", status: "ACTIVE" }, limit);
+export async function getTopMembers(
+  limit = 5,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
+): Promise<LeaderboardEntry[]> {
+  return getTopUsersByPeriodPoints(
+    { role: "MEMBER", status: "ACTIVE" },
+    limit,
+    period,
+    periodKey,
+  );
 }
 
-export async function getTopNgv(limit = 5): Promise<LeaderboardEntry[]> {
-  return getTopUsersByMonthlyXp({ role: "NGV", status: "ACTIVE" }, limit);
+export async function getTopNgv(
+  limit = 5,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
+): Promise<LeaderboardEntry[]> {
+  return getTopUsersByPeriodPoints(
+    { role: "NGV", status: "ACTIVE" },
+    limit,
+    period,
+    periodKey,
+  );
 }
 
-export async function getTopTdm(limit = 5): Promise<LeaderboardEntry[]> {
-  return getTopUsersByMonthlyXp({ role: "TDM", status: "ACTIVE" }, limit);
+export async function getTopTdm(
+  limit = 5,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
+): Promise<LeaderboardEntry[]> {
+  return getTopUsersByPeriodPoints(
+    { role: "TDM", status: "ACTIVE" },
+    limit,
+    period,
+    periodKey,
+  );
 }
 
 export async function getTopRegionalLeads(
   limit = 3,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
 ): Promise<LeaderboardEntry[]> {
-  return getTopUsersByMonthlyXp(
+  return getTopUsersByPeriodPoints(
     { role: "REGIONAL_LEAD", status: "ACTIVE" },
     limit,
+    period,
+    periodKey,
   );
 }
 
-export async function getTopZoneLeads(limit = 3): Promise<LeaderboardEntry[]> {
-  return getTopUsersByMonthlyXp(
+export async function getTopZoneLeads(
+  limit = 3,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
+): Promise<LeaderboardEntry[]> {
+  return getTopUsersByPeriodPoints(
     { role: "ZONE_LEAD", status: "ACTIVE" },
     limit,
+    period,
+    periodKey,
   );
 }
 
 export async function getTopRegions(
   limit = 3,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
 ): Promise<RegionLeaderboardEntry[]> {
   await connectToDatabase();
-  const yearMonth = getCurrentYearMonth();
+  const range = resolvePeriodRange(period, periodKey);
 
   const aggregated = (await PointTransactionModel.aggregate([
-    ...buildMonthlyPointsPipeline(yearMonth),
+    ...buildPeriodPointsPipeline(range),
     {
       $lookup: {
         as: "user",
@@ -219,12 +332,14 @@ export async function getTopRegions(
 
 export async function getTopZones(
   limit = 3,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
 ): Promise<ZoneLeaderboardEntry[]> {
   await connectToDatabase();
-  const yearMonth = getCurrentYearMonth();
+  const range = resolvePeriodRange(period, periodKey);
 
   const aggregated = (await PointTransactionModel.aggregate([
-    ...buildMonthlyPointsPipeline(yearMonth),
+    ...buildPeriodPointsPipeline(range),
     {
       $lookup: {
         as: "user",
@@ -278,8 +393,18 @@ export async function getTopZones(
     .filter((zone): zone is ZoneLeaderboardEntry => zone !== null);
 }
 
-export function getLeaderboardMonthLabel(now = new Date()): string {
-  return formatInTimeZone(now, getAppTimezone(), "MM/yyyy");
+export function getLeaderboardPeriodLabel(
+  period: LeaderboardPeriod,
+  periodKey: string,
+): string {
+  const tz = getAppTimezone();
+  if (period === "year") return `Năm ${periodKey}`;
+  if (period === "month") {
+    const [year, month] = periodKey.split("-");
+    return `Tháng ${month}/${year}`;
+  }
+  const { startStr, endStr } = getWeekRangeFromDateKey(periodKey, 6);
+  return `Tuần ${startStr.slice(8, 10)}/${startStr.slice(5, 7)} – ${endStr.slice(8, 10)}/${endStr.slice(5, 7)}`;
 }
 
 export async function getDttClassLeaderboard(
@@ -424,13 +549,15 @@ export type PersonalLeaderboardResult = {
 async function getRoleLeaderboardRankAndScore(
   user: UserRecord,
   role: string,
+  period: LeaderboardPeriod,
+  periodKey: string,
 ): Promise<{ rank: number; totalXp: number; entry: LeaderboardEntry } | null> {
   const userId = user._id.toString();
   await connectToDatabase();
-  const yearMonth = getCurrentYearMonth();
+  const range = resolvePeriodRange(period, periodKey);
 
   const aggregated = (await PointTransactionModel.aggregate([
-    ...buildMonthlyPointsPipeline(yearMonth),
+    ...buildPeriodPointsPipeline(range),
     {
       $lookup: {
         as: "user",
@@ -477,6 +604,8 @@ async function getRoleLeaderboardRankAndScore(
 export async function getUserLeaderboardResult(
   userId: string,
   activeBoard: string,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
 ): Promise<PersonalLeaderboardResult | null> {
   await connectToDatabase();
   const user = (await UserModel.findById(userId).lean()) as UserRecord | null;
@@ -484,7 +613,7 @@ export async function getUserLeaderboardResult(
 
   if (activeBoard === "regions") {
     if (!user.regionId) return null;
-    const allRegions = await getTopRegions(999);
+    const allRegions = await getTopRegions(999, period, periodKey);
     const userRegion = allRegions.find((r) => r.id === user.regionId?.toString());
     if (!userRegion) {
       const region = await RegionModel.findById(user.regionId)
@@ -515,7 +644,7 @@ export async function getUserLeaderboardResult(
 
   if (activeBoard === "zones") {
     if (!user.zoneId) return null;
-    const allZones = await getTopZones(999);
+    const allZones = await getTopZones(999, period, periodKey);
     const userZone = allZones.find((z) => z.id === user.zoneId?.toString());
     if (!userZone) {
       const zone = await ZoneModel.findById(user.zoneId)
@@ -551,7 +680,7 @@ export async function getUserLeaderboardResult(
     return null;
   }
 
-  const res = await getRoleLeaderboardRankAndScore(user, userRole);
+  const res = await getRoleLeaderboardRankAndScore(user, userRole, period, periodKey);
   if (!res) return null;
 
   return {

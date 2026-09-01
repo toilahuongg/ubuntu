@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getWeekRangeFromDateKey } from "@/lib/dates";
+import type * as DatesModule from "@/lib/dates";
+
 const mocks = vi.hoisted(() => ({
   aggregate: vi.fn(),
   regionFind: vi.fn(),
@@ -12,15 +15,22 @@ const mocks = vi.hoisted(() => ({
   userFindById: vi.fn(),
 }));
 
-vi.mock("@/lib/dates", () => ({
-  getAppTimezone: () => "Asia/Ho_Chi_Minh",
-  getCurrentYearMonth: () => "2026-06",
-  getWeekRangeFromDateKey: () => ({
-    startStr: "2026-06-01",
-    endStr: "2026-06-07",
-  }),
-  getTodayDateKey: () => "2026-06-03",
-}));
+vi.mock("@/lib/dates", async (importOriginal) => {
+  const actual = await importOriginal<typeof DatesModule>();
+  return {
+    ...actual,
+    getAppTimezone: () => "Asia/Ho_Chi_Minh",
+    // Ghim tuần hiện tại để các test BXH tháng/tuần deterministic.
+    // Với dateKey khác, fallback sang helper thật (cần cho listSelectablePeriods).
+    getWeekRangeFromDateKey: vi.fn(
+      (dateKey: string, startDayOfWeek: number) =>
+        dateKey === "2026-06-03"
+          ? { startStr: "2026-06-01", endStr: "2026-06-07" }
+          : actual.getWeekRangeFromDateKey(dateKey, startDayOfWeek),
+    ),
+    getTodayDateKey: () => "2026-06-03",
+  };
+});
 
 vi.mock("@/lib/mongoose", () => ({
   connectToDatabase: vi.fn().mockResolvedValue(undefined),
@@ -73,12 +83,16 @@ vi.mock("@/lib/models", () => ({
 }));
 
 import {
+  getLeaderboardPeriodLabel,
   getTopZoneLeads,
   getTopZones,
   getDttClassLeaderboard,
   getUserLeaderboardResult,
+  getCurrentPeriodKey,
+  listSelectablePeriods,
+  normalizeLeaderboardPeriod,
+  resolvePeriodRange,
 } from "@/lib/services/leaderboard-service";
-
 function objectId(value: string) {
   return {
     toString: () => value,
@@ -186,7 +200,7 @@ describe("leaderboard service", () => {
     expect(pipeline).toContainEqual({ $limit: 5 });
   });
 
-  it("sums transaction amounts in monthly points pipeline", async () => {
+  it("sums transaction amounts in period points pipeline", async () => {
     mocks.aggregate.mockResolvedValue([]);
     mocks.zoneFind.mockReturnValue({
       select: () => ({
@@ -205,6 +219,7 @@ describe("leaderboard service", () => {
                 "task_reward",
                 "task_streak_bonus_reward",
                 "customer_interaction_reward",
+                "new_customer_reward",
               ],
             },
           }),
@@ -577,3 +592,62 @@ describe("leaderboard service", () => {
   });
 });
 
+
+describe("leaderboard period helpers", () => {
+  it("defaults unknown period values to month", () => {
+    expect(normalizeLeaderboardPeriod(undefined)).toBe("month");
+    expect(normalizeLeaderboardPeriod(["bogus"])).toBe("month");
+    expect(normalizeLeaderboardPeriod("week")).toBe("week");
+    expect(normalizeLeaderboardPeriod("year")).toBe("year");
+  });
+
+  it("resolves month ranges on calendar boundaries in app timezone", () => {
+    const range = resolvePeriodRange("month", "2026-12");
+    expect(range.start.toISOString()).toBe("2026-11-30T17:00:00.000Z");
+    expect(range.end.toISOString()).toBe("2026-12-31T17:00:00.000Z");
+  });
+
+  it("resolves year ranges on calendar boundaries", () => {
+    const range = resolvePeriodRange("year", "2026");
+    expect(range.start.toISOString()).toBe("2025-12-31T17:00:00.000Z");
+    expect(range.end.toISOString()).toBe("2026-12-31T17:00:00.000Z");
+  });
+
+  it("resolves week ranges Saturday to Friday", () => {
+    vi.mocked(getWeekRangeFromDateKey).mockImplementationOnce(() => ({
+      startStr: "2026-05-30",
+      endStr: "2026-06-05",
+    }));
+    const range = resolvePeriodRange("week", "2026-06-03");
+    expect(range.start.toISOString()).toBe("2026-05-29T17:00:00.000Z");
+    expect(range.end.toISOString()).toBe("2026-06-05T17:00:00.000Z");
+  });
+
+  it("lists selectable months up to the current month", () => {
+    const keys = listSelectablePeriods("month", new Date("2026-04-15T10:00:00Z"));
+    expect(keys).toEqual(["2026-01", "2026-02", "2026-03", "2026-04"]);
+  });
+
+  it("lists only the current year for yearly boards", () => {
+    expect(listSelectablePeriods("year", new Date("2026-04-15T10:00:00Z"))).toEqual(["2026"]);
+  });
+
+  it("lists weeks starting within the current year only", () => {
+    const keys = listSelectablePeriods("week", new Date("2026-06-03T10:00:00Z"));
+    expect(keys[0]).toBe("2026-06-01");
+    expect(keys.at(-1)).toBe("2026-01-03");
+    expect(keys.every((key) => key.startsWith("2026"))).toBe(true);
+  });
+
+  it("formats period labels for month, year and week", () => {
+    expect(getLeaderboardPeriodLabel("month", "2026-06")).toBe("Tháng 06/2026");
+    expect(getLeaderboardPeriodLabel("year", "2026")).toBe("Năm 2026");
+    expect(getLeaderboardPeriodLabel("week", "2026-06-03")).toBe("Tuần 01/06 – 07/06");
+  });
+
+  it("derives current period key from pinned today", () => {
+    expect(getCurrentPeriodKey("month", new Date("2026-06-03T10:00:00Z"))).toBe("2026-06");
+    expect(getCurrentPeriodKey("year", new Date("2026-06-03T10:00:00Z"))).toBe("2026");
+    expect(getCurrentPeriodKey("week", new Date("2026-06-03T10:00:00Z"))).toBe("2026-06-01");
+  });
+});
