@@ -7,8 +7,19 @@ vi.mock("@/lib/notifications/submission-notifier", () => ({
   notifyTaskCompletionToGroups: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Ghim "hôm nay" về 2026-07-07 để bộ dates hardcode trong test nằm trong cửa sổ
+// nhập bù và trong cùng tháng (chuỗi streak reset theo tháng).
+vi.mock("@/lib/dates", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/dates")>();
+  return {
+    ...actual,
+    getTodayDateKey: () => "2026-07-07",
+  };
+});
+
 import { saveSubmission } from "./submission-service";
 import { UserModel, TaskModel, TeamModel, PointTransactionModel, XpTransactionModel } from "../models";
+import { connectToDatabase } from "../mongoose";
 import type { SessionUser } from "../domain";
 
 let mongoServer: MongoMemoryServer;
@@ -22,7 +33,7 @@ beforeAll(async () => {
   process.env.TELEGRAM_WEBHOOK_SECRET = "webhook-secret";
   process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 
-  await mongoose.connect(uri, { dbName: "daily-task-app-test" });
+  await connectToDatabase();
 }, 60000);
 
 afterAll(async () => {
@@ -107,14 +118,14 @@ describe("streak points verification", () => {
     // Verify streak bonus response
     expect(result7.streakBonus.awarded).toBe(true);
     expect(result7.streakBonus.milestone).toBe(7);
-    expect(result7.streakBonus.bonusPoints).toBe(10); // 5 points * 2 (multiplier for 7 days) = 10
-    expect(result7.streakBonus.bonusExp).toBe(20); // 10 exp * 2 = 20
+    expect(result7.streakBonus.bonusPoints).toBe(2); // floor(5 * 0.5) for 7-day milestone
+    expect(result7.streakBonus.bonusExp).toBe(5); // floor(10 * 0.5) = 5
 
     // Verify user pointBalance after 7th day:
-    // Should be 30 + 5 (base reward) + 10 (streak bonus reward) = 45 points
+    // Should be 30 + 5 (base reward) + 2 (streak bonus reward) = 37 points
     const userAfter7 = await UserModel.findById(user._id).lean();
-    expect(userAfter7?.pointBalance).toBe(45);
-    expect(userAfter7?.totalXp).toBe(90); // 6 * 10 (base exp) + 10 (7th base) + 20 (7th bonus) = 90
+    expect(userAfter7?.pointBalance).toBe(37);
+    expect(userAfter7?.totalXp).toBe(75); // 6 * 10 (base exp) + 10 (7th base) + 5 (7th bonus) = 75
 
     // Verify PointTransactionModel for streak bonus
     const bonusTransaction = await PointTransactionModel.findOne({
@@ -122,7 +133,7 @@ describe("streak points verification", () => {
       source: "task_streak_bonus_reward",
     }).lean();
     expect(bonusTransaction).not.toBeNull();
-    expect(bonusTransaction?.amount).toBe(10);
+    expect(bonusTransaction?.amount).toBe(2);
     expect(bonusTransaction?.description).toContain("Thưởng chuỗi 7 ngày");
 
     // Verify XpTransactionModel for streak bonus
@@ -131,6 +142,6 @@ describe("streak points verification", () => {
       source: "task_streak_bonus",
     }).lean();
     expect(xpBonusTransaction).not.toBeNull();
-    expect(xpBonusTransaction?.amount).toBe(20);
+    expect(xpBonusTransaction?.amount).toBe(5);
   });
 });

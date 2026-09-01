@@ -7,6 +7,16 @@ vi.mock("@/lib/notifications/submission-notifier", () => ({
   notifyTaskCompletionToGroups: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Ghim "hôm nay" về 2026-07-14 để bộ dates hardcode (2026-07-07..2026-07-14)
+// nằm trong cửa sổ nhập bù (7 ngày).
+vi.mock("@/lib/dates", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/dates")>();
+  return {
+    ...actual,
+    getTodayDateKey: () => "2026-07-14",
+  };
+});
+
 import {
   saveSubmission,
   clampSubmissionCountForTaskType,
@@ -21,6 +31,7 @@ import {
   SubmissionModel,
 } from "../models";
 import type { SessionUser } from "../domain";
+import { connectToDatabase } from "../mongoose";
 
 let mongoServer: MongoMemoryServer;
 
@@ -32,8 +43,7 @@ beforeAll(async () => {
   process.env.TELEGRAM_BOT_TOKEN = "123:abc";
   process.env.TELEGRAM_WEBHOOK_SECRET = "webhook-secret";
   process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
-
-  await mongoose.connect(uri, { dbName: "submission-service-test" });
+  await connectToDatabase();
 }, 60000);
 
 afterAll(async () => {

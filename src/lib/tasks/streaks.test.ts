@@ -27,8 +27,8 @@ describe("calculateTaskStreakBonus", () => {
 
     expect(result).toEqual({
       awarded: true,
-      bonusExp: 20,
-      bonusPoints: 20,
+      bonusExp: 5,
+      bonusPoints: 5,
       milestone: 7,
       streakLength: 7,
     });
@@ -103,9 +103,9 @@ describe("calculateTaskStreakBonus", () => {
   });
 
   it.each([
-    { bonus: 30, milestone: 14 },
-    { bonus: 40, milestone: 21 },
-    { bonus: 50, milestone: 28 },
+    { bonus: 10, milestone: 14 },
+    { bonus: 15, milestone: 21 },
+    { bonus: 20, milestone: 28 },
   ])(
     "awards a different multiplier for the $milestone-day milestone",
     ({ bonus, milestone }) => {

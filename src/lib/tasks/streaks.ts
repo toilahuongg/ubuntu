@@ -4,10 +4,10 @@ import type { TaskType } from "@/lib/tasks/constants";
 
 export const TASK_STREAK_MILESTONES = [7, 14, 21, 28] as const;
 export const TASK_STREAK_BONUS_MULTIPLIERS = {
-  7: 2,
-  14: 3,
-  21: 4,
-  28: 5,
+  7: 0.5,
+  14: 1,
+  21: 1.5,
+  28: 2,
 } as const satisfies Record<TaskStreakMilestone, number>;
 
 export type TaskStreakMilestone = (typeof TASK_STREAK_MILESTONES)[number];
@@ -130,10 +130,10 @@ export function calculateTaskStreakBonus(
     ? TASK_STREAK_BONUS_MULTIPLIERS[milestone]
     : 0;
   const bonusExp = milestone
-    ? Math.max(0, Math.floor(input.expReward)) * multiplier
+    ? Math.floor(Math.max(0, input.expReward) * multiplier)
     : 0;
   const bonusPoints = milestone
-    ? Math.max(0, Math.floor(input.pointReward)) * multiplier
+    ? Math.floor(Math.max(0, input.pointReward) * multiplier)
     : 0;
 
   return {
