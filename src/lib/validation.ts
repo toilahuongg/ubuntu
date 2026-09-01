@@ -272,7 +272,7 @@ export const customerInputSchema = z.object({
   caregiverIds: z.array(z.string()).max(3, "Tối đa 3 ngườii chăm sóc.").optional().default([]),
   teamId: z.string().optional().nullable(),
   zoneId: z.string().optional().nullable(),
-  regionId: z.string().optional().nullable(),
+  phone: z.string().max(20).optional().nullable(),
 });
 
 export const updateCustomerInputSchema = customerInputSchema.extend({
@@ -293,3 +293,8 @@ export const updateCustomerInteractionInputSchema =
   customerInteractionInputSchema.extend({
     interactionId: z.string().min(1, "Thiếu mã tương tác."),
   });
+
+export function normalizePhone(value?: string | null): string | null {
+  const digits = (value ?? "").replace(/\D/g, "");
+  return digits.length > 0 ? digits : null;
+}

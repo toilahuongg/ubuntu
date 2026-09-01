@@ -29,6 +29,7 @@ const customerSchema = new Schema(
     notes: { default: "", trim: true, type: String },
     occupation: { enum: OCCUPATIONS, required: true, type: String },
     personality: { enum: PERSONALITIES, required: true, type: String },
+    phone: { default: null, trim: true, type: String },
     regionId: { default: null, ref: "Region", type: Schema.Types.ObjectId },
     teamId: { default: null, ref: "Team", type: Schema.Types.ObjectId },
     zoneId: { default: null, ref: "Zone", type: Schema.Types.ObjectId },
@@ -42,10 +43,20 @@ customerSchema.index({ regionId: 1, createdAt: -1 });
 customerSchema.index({ caregiverIds: 1, createdAt: -1 });
 customerSchema.index({ heartStatus: 1 });
 customerSchema.index({ lastInteractionAt: 1 });
+
+customerSchema.index(
+  { phone: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { phone: { $type: "string" } },
+    name: "customer_phone_unique",
+  },
+);
 customerSchema.index({ isBaptized: 1 });
 
 export type CustomerRecord = InferSchemaType<typeof customerSchema> & {
   _id: Types.ObjectId;
+  phone: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
