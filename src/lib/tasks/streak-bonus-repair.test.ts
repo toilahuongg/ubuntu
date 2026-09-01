@@ -52,8 +52,8 @@ describe("buildMissingTaskStreakBonusRepairs", () => {
 
     expect(rows).toEqual([
       {
-        bonusExp: 20,
-        bonusPoints: 10,
+        bonusExp: 5,
+        bonusPoints: 2,
         date: "2026-08-07",
         description: "Thưởng chuỗi 7 ngày (2026-08): Daily Task",
         milestone: 7,

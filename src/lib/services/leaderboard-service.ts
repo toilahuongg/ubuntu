@@ -397,7 +397,6 @@ export function getLeaderboardPeriodLabel(
   period: LeaderboardPeriod,
   periodKey: string,
 ): string {
-  const tz = getAppTimezone();
   if (period === "year") return `Năm ${periodKey}`;
   if (period === "month") {
     const [year, month] = periodKey.split("-");
@@ -528,14 +527,6 @@ export async function getDttClassLeaderboard(
     tasks: dttTasks.map((t) => ({ id: t._id.toString(), title: t.title })),
   };
 }
-
-const BOARD_TO_ROLE: Record<string, string> = {
-  tdm: "TDM",
-  members: "MEMBER",
-  ngv: "NGV",
-  "zone-leads": "ZONE_LEAD",
-  leads: "REGIONAL_LEAD",
-};
 
 export type PersonalLeaderboardResult = {
   type: "user" | "region" | "zone";
