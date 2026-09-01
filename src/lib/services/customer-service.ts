@@ -30,6 +30,7 @@ import type {
   Personality,
 } from "@/lib/customer/constants";
 import { getLevelFromXp } from "@/lib/xp";
+import { grantLevelUnlocks } from "@/lib/services/cosmetics-service";
 import { normalizePhone } from "@/lib/validation";
 
 export type CustomerListFilters = {
@@ -545,6 +546,162 @@ async function awardNewCustomerPhonePoints(input: {
   }
 }
 
+// Bất biến khi đổi caregiver: điểm đi theo caregiver hiện tại.
+// Ghi dạng delta (giao dịch điều chỉnh ±, giữ nguyên source/sourceId) để
+// BXH các kỳ cũ không bị đổi ngược — chỉ kỳ hiện tại phản ánh sự dịch chuyển.
+async function resyncCustomerRewardsOnCaregiverChange(input: {
+  customerId: string;
+  customerName: string;
+  oldCaregiverIds: string[];
+  newCaregiverIds: string[];
+}) {
+  const removed = input.oldCaregiverIds.filter(
+    (id) => !input.newCaregiverIds.includes(id),
+  );
+  const added = input.newCaregiverIds.filter(
+    (id) => !input.oldCaregiverIds.includes(id),
+  );
+  if (removed.length === 0 && added.length === 0) return;
+
+  const customerObjectId = toObjectId(input.customerId);
+  const affectedUserIds = [...new Set([...removed, ...added])];
+
+  // SĐT mới: mỗi caregiver hiện tại giữ net +5 nếu học viên đã được thưởng SĐT.
+  const phoneTxs = (await PointTransactionModel.find({
+    source: "new_customer_reward",
+    sourceId: customerObjectId,
+  }).lean()) as { userId: CustomerRecord["_id"]; amount: number }[];
+  if (phoneTxs.length > 0) {
+    const netByUser = new Map<string, number>();
+    for (const tx of phoneTxs) {
+      const key = tx.userId.toString();
+      netByUser.set(key, (netByUser.get(key) ?? 0) + tx.amount);
+    }
+    for (const userId of affectedUserIds) {
+      const net = netByUser.get(userId) ?? 0;
+      const target = input.newCaregiverIds.includes(userId)
+        ? NEW_CUSTOMER_PHONE_POINTS
+        : 0;
+      const delta = target - net;
+      if (delta === 0) continue;
+      await PointTransactionModel.create([
+        {
+          amount: delta,
+          description: delta > 0
+            ? `SĐT mới: ${input.customerName}`
+            : `Thu hồi SĐT mới: ${input.customerName}`,
+          source: "new_customer_reward",
+          sourceId: customerObjectId,
+          userId: toObjectId(userId),
+        },
+      ]);
+      await UserModel.updateOne(
+        { _id: toObjectId(userId) },
+        { $inc: { pointBalance: delta } },
+      );
+    }
+  }
+
+  // Điểm chăm sóc: mỗi interaction đi theo caregivers hiện tại
+  // (fallback: người tạo tương tác khi học viên không còn caregiver).
+  const interactions = (await CustomerInteractionModel.find({
+    customerId: customerObjectId,
+  }).lean()) as {
+    _id: CustomerRecord["_id"];
+    caregiverId: CustomerRecord["_id"];
+    expAwarded: number;
+    pointsAwarded: number;
+  }[];
+
+  for (const interaction of interactions) {
+    if (interaction.expAwarded === 0 && interaction.pointsAwarded === 0) {
+      continue;
+    }
+
+    const targetIds = input.newCaregiverIds.length > 0
+      ? input.newCaregiverIds
+      : [interaction.caregiverId.toString()];
+
+    const [pointTxs, xpTxs] = await Promise.all([
+      PointTransactionModel.find({
+        source: "customer_interaction_reward",
+        sourceId: interaction._id,
+      }).lean() as Promise<{ userId: CustomerRecord["_id"]; amount: number }[]>,
+      XpTransactionModel.find({
+        source: "customer_interaction",
+        sourceId: interaction._id,
+      }).lean() as Promise<{ userId: CustomerRecord["_id"]; amount: number }[]>,
+    ]);
+
+    const pointNet = new Map<string, number>();
+    for (const tx of pointTxs) {
+      const key = tx.userId.toString();
+      pointNet.set(key, (pointNet.get(key) ?? 0) + tx.amount);
+    }
+    const xpNet = new Map<string, number>();
+    for (const tx of xpTxs) {
+      const key = tx.userId.toString();
+      xpNet.set(key, (xpNet.get(key) ?? 0) + tx.amount);
+    }
+
+    for (const userId of affectedUserIds) {
+      const pointTarget = targetIds.includes(userId)
+        ? interaction.pointsAwarded
+        : 0;
+      const xpTarget = targetIds.includes(userId) ? interaction.expAwarded : 0;
+      const pointDelta = pointTarget - (pointNet.get(userId) ?? 0);
+      const xpDelta = xpTarget - (xpNet.get(userId) ?? 0);
+      if (pointDelta === 0 && xpDelta === 0) continue;
+
+      if (pointDelta !== 0) {
+        await PointTransactionModel.create([
+          {
+            amount: pointDelta,
+            description: `Điều chỉnh chăm sóc: ${input.customerName}`,
+            source: "customer_interaction_reward",
+            sourceId: interaction._id,
+            userId: toObjectId(userId),
+          },
+        ]);
+      }
+      if (xpDelta !== 0) {
+        await XpTransactionModel.create([
+          {
+            amount: xpDelta,
+            description: `Điều chỉnh chăm sóc: ${input.customerName}`,
+            source: "customer_interaction",
+            sourceId: interaction._id,
+            userId: toObjectId(userId),
+          },
+        ]);
+      }
+
+      const updatedUser = (await UserModel.findByIdAndUpdate(
+        userId,
+        { $inc: { totalXp: xpDelta, pointBalance: pointDelta } },
+        { new: true },
+      ).lean()) as UserRecord | null;
+
+      if (updatedUser) {
+        const newLevel = getLevelFromXp(updatedUser.totalXp);
+        if (newLevel !== updatedUser.level) {
+          await UserModel.updateOne(
+            { _id: toObjectId(userId) },
+            { $set: { level: newLevel } },
+          );
+          if (newLevel > (updatedUser.level ?? 1)) {
+            try {
+              await grantLevelUnlocks(userId, newLevel);
+            } catch (error) {
+              console.error("[cosmetics] grantLevelUnlocks failed", error);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 export async function createCustomer(
   input: CustomerInput,
   createdBy: SessionUser,
@@ -723,6 +880,27 @@ export async function updateCustomer(
 
   if (!updated) {
     throw new Error("Cập nhật học viên thất bại.");
+  }
+
+  if (assignmentTouched) {
+    const newCaregiverIds = (updated.caregiverIds ?? []).map((caregiverId) =>
+      caregiverId.toString(),
+    );
+    const oldCaregiverIds = (customer.caregiverIds ?? []).map((caregiverId) =>
+      caregiverId.toString(),
+    );
+    const caregiverSetChanged =
+      newCaregiverIds.length !== oldCaregiverIds.length ||
+      [...newCaregiverIds].sort().join() !==
+        [...oldCaregiverIds].sort().join();
+    if (caregiverSetChanged) {
+      await resyncCustomerRewardsOnCaregiverChange({
+        customerId: updated._id.toString(),
+        customerName: updated.name,
+        oldCaregiverIds,
+        newCaregiverIds,
+      });
+    }
   }
 
   return serializeCustomer(updated);

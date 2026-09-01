@@ -8,9 +8,11 @@ import {
   PointTransactionModel,
   TeamModel,
   UserModel,
+  XpTransactionModel,
 } from "../models";
-import type { SessionUser } from "../domain";
 import { connectToDatabase } from "../mongoose";
+import { createInteraction } from "./customer-interaction-service";
+import type { SessionUser } from "../domain";
 
 let mongoServer: MongoMemoryServer;
 
@@ -212,7 +214,7 @@ describe("updateCustomer phone rules", () => {
     expect(firstTxs).toHaveLength(1);
   });
 
-  it("does not award retroactive points when adding caregivers later", async () => {
+  it("moves the phone reward to the new caregiver set on change", async () => {
     const { lead, caregiver1 } = await seedLeadAndCaregivers();
 
     const customer = await createCustomer(
@@ -221,7 +223,7 @@ describe("updateCustomer phone rules", () => {
     );
 
     const before = await phoneTransactionsFor(customer.id);
-    expect(before).toHaveLength(1);
+    expect(before).toHaveLength(1); // lead +5 lúc tạo
 
     await updateCustomer(
       customer.id,
@@ -230,10 +232,14 @@ describe("updateCustomer phone rules", () => {
     );
 
     const after = await phoneTransactionsFor(customer.id);
-    expect(after).toHaveLength(1);
+    expect(after).toHaveLength(3); // +5 lead (lúc tạo), -5 lead (thu hồi), +5 caregiver1
+    const reversal = after.find((tx) => tx.amount < 0);
+    expect(reversal?.description).toBe("Thu hồi SĐT mới: Học viên I");
 
+    const leadAfter = await UserModel.findById(lead._id).lean();
+    expect(leadAfter?.pointBalance).toBe(0);
     const cg1 = await UserModel.findById(caregiver1._id).lean();
-    expect(cg1?.pointBalance).toBe(0);
+    expect(cg1?.pointBalance).toBe(5);
   });
 
   it("clears the phone when updated to an empty value", async () => {
@@ -251,5 +257,124 @@ describe("updateCustomer phone rules", () => {
     );
 
     expect(updated.phone).toBeNull();
+  });
+});
+
+describe("resync rewards on caregiver change", () => {
+  it("moves interaction points and XP to the new caregiver set", async () => {
+    const { lead, caregiver1, caregiver2 } = await seedLeadAndCaregivers();
+
+    const customer = await createCustomer(
+      {
+        ...baseInput,
+        name: "Học viên L",
+        caregiverIds: [caregiver1._id.toString()],
+      },
+      toSession(lead),
+    );
+
+    await createInteraction(
+      {
+        customerId: customer.id,
+        type: "MESSAGE",
+        outcome: "SIMPLE",
+        notes: "",
+      },
+      toSession(caregiver1),
+    );
+
+    const cg1Before = await UserModel.findById(caregiver1._id).lean();
+    expect(cg1Before?.pointBalance).toBe(50);
+    expect(cg1Before?.totalXp).toBe(50);
+
+    await updateCustomer(
+      customer.id,
+      { caregiverIds: [caregiver2._id.toString()] },
+      toSession(lead),
+    );
+
+    const cg1After = await UserModel.findById(caregiver1._id).lean();
+    expect(cg1After?.pointBalance).toBe(0);
+    expect(cg1After?.totalXp).toBe(0);
+
+    const cg2After = await UserModel.findById(caregiver2._id).lean();
+    expect(cg2After?.pointBalance).toBe(50);
+    expect(cg2After?.totalXp).toBe(50);
+
+    const adjustmentTxs = await PointTransactionModel.find({
+      source: "customer_interaction_reward",
+      description: "Điều chỉnh chăm sóc: Học viên L",
+    }).lean();
+    expect(adjustmentTxs).toHaveLength(2);
+    expect(adjustmentTxs.map((tx) => tx.amount).sort()).toEqual([-50, 50]);
+
+    const xpAdjustments = await XpTransactionModel.find({
+      source: "customer_interaction",
+      description: "Điều chỉnh chăm sóc: Học viên L",
+    }).lean();
+    expect(xpAdjustments.map((tx) => tx.amount).sort()).toEqual([-50, 50]);
+  });
+
+  it("keeps interaction rewards with the author when the customer has no caregivers", async () => {
+    const { lead, caregiver1 } = await seedLeadAndCaregivers();
+
+    const customer = await createCustomer(
+      { ...baseInput, name: "Học viên M" },
+      toSession(lead),
+    );
+
+    await createInteraction(
+      {
+        customerId: customer.id,
+        type: "CALL",
+        outcome: "SIMPLE",
+        notes: "",
+      },
+      toSession(lead),
+    );
+
+    const leadBefore = await UserModel.findById(lead._id).lean();
+    expect(leadBefore?.pointBalance).toBe(50);
+
+    await updateCustomer(
+      customer.id,
+      { caregiverIds: [caregiver1._id.toString()] },
+      toSession(lead),
+    );
+
+    const leadAfter = await UserModel.findById(lead._id).lean();
+    expect(leadAfter?.pointBalance).toBe(0);
+    const cg1 = await UserModel.findById(caregiver1._id).lean();
+    expect(cg1?.pointBalance).toBe(50);
+
+    // Không có SĐT → không phát sinh điều chỉnh SĐT
+    const phoneTxs = await phoneTransactionsFor(customer.id);
+    expect(phoneTxs).toHaveLength(0);
+  });
+
+  it("does not create adjustments when the caregiver set is unchanged", async () => {
+    const { lead, caregiver1 } = await seedLeadAndCaregivers();
+
+    const customer = await createCustomer(
+      {
+        ...baseInput,
+        name: "Học viên N",
+        phone: "0944444444",
+        caregiverIds: [caregiver1._id.toString()],
+      },
+      toSession(lead),
+    );
+
+    const before = await phoneTransactionsFor(customer.id);
+    expect(before).toHaveLength(1);
+
+    await updateCustomer(
+      customer.id,
+      { caregiverIds: [caregiver1._id.toString()] },
+      toSession(lead),
+    );
+
+    const after = await phoneTransactionsFor(customer.id);
+    expect(after).toHaveLength(1);
   });
 });
