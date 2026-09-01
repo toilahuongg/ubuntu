@@ -189,6 +189,73 @@ describe("LeaderboardPage", () => {
     expect(levelAvatarNode).toBeDefined();
     expect(levelAvatarNode.props.src).toBe("/levels/5.png");
   });
+  it("scopes member boards to the viewer's team", async () => {
+    mockGetSessionUser.mockResolvedValue({
+      id: "user_1",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: "team-1",
+    });
+    mockCanManageDtt.mockReturnValue(false);
+    mockEnrollmentFindOne.mockResolvedValue(null);
+
+    await LeaderboardPage({
+      searchParams: Promise.resolve({ board: "members" }),
+    });
+
+    expect(mockGetTopMembers).toHaveBeenCalledWith(
+      10,
+      "month",
+      getCurrentPeriodKey("month"),
+      "team-1",
+    );
+  });
+
+  it("falls back to system-wide member boards for viewers without a team", async () => {
+    mockGetSessionUser.mockResolvedValue({
+      id: "user_1",
+      role: "MEMBER",
+      status: "ACTIVE",
+    });
+    mockCanManageDtt.mockReturnValue(false);
+    mockEnrollmentFindOne.mockResolvedValue(null);
+
+    await LeaderboardPage({ searchParams: Promise.resolve({ board: "tdm" }) });
+
+    expect(mockGetTopTdm).toHaveBeenCalledWith(
+      10,
+      "month",
+      getCurrentPeriodKey("month"),
+      null,
+    );
+  });
+
+  it("labels the personal result as team-scoped for viewers with a team", async () => {
+    mockGetSessionUser.mockResolvedValue({
+      id: "user_1",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: "team-1",
+    });
+    mockCanManageDtt.mockReturnValue(false);
+    mockEnrollmentFindOne.mockResolvedValue(null);
+    mockGetUserLeaderboardResult.mockResolvedValue({
+      type: "user",
+      rank: 4,
+      totalXp: 120,
+      userEntry: {
+        id: "user_1",
+        fullName: "User One",
+        level: 5,
+        levelInfo: { icon: "/levels/5.png", nameVi: "Cấp 5" },
+        rank: 4,
+        totalXp: 120,
+      },
+    });
+
+    const result = await LeaderboardPage({ searchParams: Promise.resolve({}) });
+    expect(hasText(result, "Vị trí của bạn trong nhóm")).toBe(true);
+  });
   function orgEntry(id: string) {
     return {
       id,

@@ -199,6 +199,30 @@ describe("leaderboard service", () => {
     });
     expect(pipeline).toContainEqual({ $limit: 5 });
   });
+  it("scopes role boards to the given team when teamId is provided", async () => {
+    mocks.aggregate.mockResolvedValue([]);
+
+    await getTopZoneLeads(
+      5,
+      "month",
+      getCurrentPeriodKey("month"),
+      "6650f3f2c9e77a0012345678",
+    );
+
+    const pipeline = (mocks.aggregate.mock.calls[0]?.[0] ??
+      []) as Array<Record<string, unknown>>;
+    const matchStage = pipeline.find(
+      (stage: { $match?: Record<string, unknown> }) =>
+        stage.$match?.["user.role"] !== undefined,
+    ) as { $match: Record<string, unknown> } | undefined;
+    expect(matchStage?.$match).toMatchObject({
+      "user.role": "ZONE_LEAD",
+      "user.status": "ACTIVE",
+    });
+    expect(String(matchStage?.$match["user.teamId"])).toBe(
+      "6650f3f2c9e77a0012345678",
+    );
+  });
 
   it("sums transaction amounts in period points pipeline", async () => {
     mocks.aggregate.mockResolvedValue([]);
@@ -549,6 +573,63 @@ describe("leaderboard service", () => {
           rank: 2,
           totalXp: 150,
         },
+      });
+    });
+    it("ranks the user within their team when they belong to one", async () => {
+      mocks.userFindById.mockReturnValue({
+        lean: () =>
+          Promise.resolve({
+            _id: objectId("user-id"),
+            fullName: "User A",
+            role: "MEMBER",
+            teamId: objectId("6650f3f2c9e77a0012345678"),
+            gender: "male",
+            level: 3,
+          }),
+      });
+      mocks.aggregate.mockResolvedValue([
+        { _id: objectId("other-id"), monthlyXp: 200 },
+        { _id: objectId("user-id"), monthlyXp: 150 },
+      ]);
+
+      const res = await getUserLeaderboardResult("user-id", "members");
+      expect(res).toMatchObject({ type: "user", rank: 2, totalXp: 150 });
+
+      const pipeline = (mocks.aggregate.mock.calls[0]?.[0] ??
+        []) as Array<Record<string, unknown>>;
+      const matchStage = pipeline.find(
+        (stage: { $match?: Record<string, unknown> }) =>
+          stage.$match?.["user.role"] !== undefined,
+      ) as { $match: Record<string, unknown> } | undefined;
+      expect(String(matchStage?.$match["user.teamId"])).toBe(
+        "6650f3f2c9e77a0012345678",
+      );
+    });
+
+    it("ranks system-wide when the user has no team", async () => {
+      mocks.userFindById.mockReturnValue({
+        lean: () =>
+          Promise.resolve({
+            _id: objectId("user-id"),
+            fullName: "User A",
+            role: "MEMBER",
+            gender: "male",
+            level: 3,
+          }),
+      });
+      mocks.aggregate.mockResolvedValue([]);
+
+      await getUserLeaderboardResult("user-id", "members");
+
+      const pipeline = (mocks.aggregate.mock.calls[0]?.[0] ??
+        []) as Array<Record<string, unknown>>;
+      const matchStage = pipeline.find(
+        (stage: { $match?: Record<string, unknown> }) =>
+          stage.$match?.["user.role"] !== undefined,
+      ) as { $match: Record<string, unknown> } | undefined;
+      expect(matchStage?.$match).toEqual({
+        "user.role": "MEMBER",
+        "user.status": "ACTIVE",
       });
     });
 

@@ -123,6 +123,8 @@ export default async function LeaderboardPage({
 
   const activeBoard = normalizeBoard(params.board);
 
+  const viewerTeamId = session.teamId ?? null;
+
   type BoardEntries = LeaderboardEntry[] | RegionLeaderboardEntry[] | ZoneLeaderboardEntry[];
   const fetchBoard = (board: LeaderboardBoard, limit: number): Promise<BoardEntries> => {
     switch (board) {
@@ -131,15 +133,15 @@ export default async function LeaderboardPage({
       case "zones":
         return getTopZones(limit, period, periodKey);
       case "tdm":
-        return getTopTdm(limit, period, periodKey);
+        return getTopTdm(limit, period, periodKey, viewerTeamId);
       case "members":
-        return getTopMembers(limit, period, periodKey);
+        return getTopMembers(limit, period, periodKey, viewerTeamId);
       case "ngv":
-        return getTopNgv(limit, period, periodKey);
+        return getTopNgv(limit, period, periodKey, viewerTeamId);
       case "zone-leads":
-        return getTopZoneLeads(limit, period, periodKey);
+        return getTopZoneLeads(limit, period, periodKey, viewerTeamId);
       default:
-        return getTopRegionalLeads(limit, period, periodKey);
+        return getTopRegionalLeads(limit, period, periodKey, viewerTeamId);
     }
   };
 
@@ -239,6 +241,8 @@ export default async function LeaderboardPage({
                 ? "Khu vực của bạn"
                 : personalResult.type === "zone"
                 ? "Địa vực của bạn"
+                : session.teamId
+                ? "Vị trí của bạn trong nhóm"
                 : "Vị trí của bạn"}
             </span>
 

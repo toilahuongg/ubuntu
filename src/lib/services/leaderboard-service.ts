@@ -168,6 +168,7 @@ async function getTopUsersByPeriodPoints(
   limit: number,
   period: LeaderboardPeriod = "month",
   periodKey: string = getCurrentPeriodKey(period),
+  teamId: string | null = null,
 ): Promise<LeaderboardEntry[]> {
   await connectToDatabase();
   const range = resolvePeriodRange(period, periodKey);
@@ -184,9 +185,12 @@ async function getTopUsersByPeriodPoints(
     },
     { $unwind: "$user" },
     {
-      $match: Object.fromEntries(
-        Object.entries(filter).map(([k, v]) => [`user.${k}`, v]),
-      ),
+      $match: {
+        ...Object.fromEntries(
+          Object.entries(filter).map(([k, v]) => [`user.${k}`, v]),
+        ),
+        ...(teamId ? { "user.teamId": toObjectId(teamId) } : {}),
+      },
     },
     { $sort: { monthlyXp: -1 } },
     { $limit: limit },
@@ -209,12 +213,14 @@ export async function getTopMembers(
   limit = 5,
   period: LeaderboardPeriod = "month",
   periodKey: string = getCurrentPeriodKey(period),
+  teamId: string | null = null,
 ): Promise<LeaderboardEntry[]> {
   return getTopUsersByPeriodPoints(
     { role: "MEMBER", status: "ACTIVE" },
     limit,
     period,
     periodKey,
+    teamId,
   );
 }
 
@@ -222,12 +228,14 @@ export async function getTopNgv(
   limit = 5,
   period: LeaderboardPeriod = "month",
   periodKey: string = getCurrentPeriodKey(period),
+  teamId: string | null = null,
 ): Promise<LeaderboardEntry[]> {
   return getTopUsersByPeriodPoints(
     { role: "NGV", status: "ACTIVE" },
     limit,
     period,
     periodKey,
+    teamId,
   );
 }
 
@@ -235,12 +243,14 @@ export async function getTopTdm(
   limit = 5,
   period: LeaderboardPeriod = "month",
   periodKey: string = getCurrentPeriodKey(period),
+  teamId: string | null = null,
 ): Promise<LeaderboardEntry[]> {
   return getTopUsersByPeriodPoints(
     { role: "TDM", status: "ACTIVE" },
     limit,
     period,
     periodKey,
+    teamId,
   );
 }
 
@@ -248,12 +258,14 @@ export async function getTopRegionalLeads(
   limit = 3,
   period: LeaderboardPeriod = "month",
   periodKey: string = getCurrentPeriodKey(period),
+  teamId: string | null = null,
 ): Promise<LeaderboardEntry[]> {
   return getTopUsersByPeriodPoints(
     { role: "REGIONAL_LEAD", status: "ACTIVE" },
     limit,
     period,
     periodKey,
+    teamId,
   );
 }
 
@@ -261,12 +273,14 @@ export async function getTopZoneLeads(
   limit = 3,
   period: LeaderboardPeriod = "month",
   periodKey: string = getCurrentPeriodKey(period),
+  teamId: string | null = null,
 ): Promise<LeaderboardEntry[]> {
   return getTopUsersByPeriodPoints(
     { role: "ZONE_LEAD", status: "ACTIVE" },
     limit,
     period,
     periodKey,
+    teamId,
   );
 }
 
@@ -562,6 +576,9 @@ async function getRoleLeaderboardRankAndScore(
       $match: {
         "user.role": role,
         "user.status": "ACTIVE",
+        ...(user.teamId
+          ? { "user.teamId": toObjectId(user.teamId.toString()) }
+          : {}),
       },
     },
     { $sort: { monthlyXp: -1 } },
