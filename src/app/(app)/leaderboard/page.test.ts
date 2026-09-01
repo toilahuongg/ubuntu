@@ -19,6 +19,7 @@ const mockGetTopMembers = vi.fn();
 const mockGetTopNgv = vi.fn();
 const mockGetTopZoneLeads = vi.fn();
 const mockGetTopRegionalLeads = vi.fn();
+const mockGetTopTeamLeads = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   getSessionUser: () => mockGetSessionUser(),
@@ -56,6 +57,7 @@ vi.mock("@/lib/services/leaderboard-service", async (importOriginal) => {
     getTopNgv: (...args: unknown[]) => mockGetTopNgv(...args),
     getTopZoneLeads: (...args: unknown[]) => mockGetTopZoneLeads(...args),
     getTopRegionalLeads: (...args: unknown[]) => mockGetTopRegionalLeads(...args),
+    getTopTeamLeads: (...args: unknown[]) => mockGetTopTeamLeads(...args),
     getUserLeaderboardResult: () => mockGetUserLeaderboardResult(),
   };
 });
@@ -112,6 +114,7 @@ describe("LeaderboardPage", () => {
     mockGetTopNgv.mockResolvedValue([]);
     mockGetTopZoneLeads.mockResolvedValue([]);
     mockGetTopRegionalLeads.mockResolvedValue([]);
+    mockGetTopTeamLeads.mockResolvedValue([]);
   });
 
   it("redirects to /login if user is not authenticated", async () => {
@@ -267,42 +270,96 @@ describe("LeaderboardPage", () => {
     };
   }
 
-  it("orders boards with Top KVT before Top Địa vực", async () => {
+  it("orders boards TĐM, TĐ, NTĐ, KVT, KV, ĐVT, ĐV, CS-NQL", async () => {
     mockGetSessionUser.mockResolvedValue({ id: "user_1", role: "MEMBER", status: "ACTIVE" });
     mockCanManageDtt.mockReturnValue(false);
     mockEnrollmentFindOne.mockResolvedValue(null);
-    mockGetTopRegions.mockResolvedValueOnce([orgEntry("region-1"), orgEntry("region-2")]);
     mockGetTopZones.mockResolvedValueOnce([orgEntry("zone-1"), orgEntry("zone-2")]);
     mockGetTopZoneLeads.mockResolvedValueOnce([orgEntry("zl-1"), orgEntry("zl-2")]);
+    mockGetTopTeamLeads.mockResolvedValueOnce([orgEntry("tl-1"), orgEntry("tl-2")]);
 
     const result = await LeaderboardPage({ searchParams: Promise.resolve({}) });
     const boardSelect = findComponent(result, "LeaderboardBoardSelect");
     expect(boardSelect).toBeDefined();
     expect(boardSelect.props.boards.map((b: { label: string }) => b.label)).toEqual([
-      "Top Khu vực",
-      "Top KVT",
-      "Top Địa vực",
       "Top TĐM",
       "Top TĐ",
       "Top NTĐ",
+      "Top KVT",
+      "Top Khu vực",
       "Top ĐVT - NQL",
+      "Top Địa vực",
+      "Top CS - NQL",
     ]);
   });
 
-  it("hides org boards with at most one entry and falls back to the first visible board", async () => {
+  it("hides sparse org boards and falls back to the first visible board", async () => {
     mockGetSessionUser.mockResolvedValue({ id: "user_1", role: "MEMBER", status: "ACTIVE" });
     mockCanManageDtt.mockReturnValue(false);
     mockEnrollmentFindOne.mockResolvedValue(null);
-    mockGetTopRegions.mockResolvedValueOnce([orgEntry("region-1")]);
+    mockGetTopZones.mockResolvedValueOnce([orgEntry("zone-1")]);
 
     const result = await LeaderboardPage({ searchParams: Promise.resolve({}) });
     const boardSelect = findComponent(result, "LeaderboardBoardSelect");
     const values = boardSelect.props.boards.map((b: { value: string }) => b.value);
-    expect(values).not.toContain("regions");
     expect(values).not.toContain("zones");
     expect(values).not.toContain("zone-leads");
-    expect(boardSelect.props.activeBoard).toBe("leads");
-    expect(hasText(result, "Top Khu vực")).toBe(false);
+    expect(values).not.toContain("team-leads");
+    expect(values).toContain("regions");
+    expect(boardSelect.props.activeBoard).toBe("tdm");
+    expect(hasText(result, "Top Địa vực")).toBe(false);
+  });
+
+  it("passes the viewer's teamId to the team leads board", async () => {
+    mockGetSessionUser.mockResolvedValue({
+      id: "user_1",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: "team-1",
+    });
+    mockCanManageDtt.mockReturnValue(false);
+    mockEnrollmentFindOne.mockResolvedValue(null);
+    mockGetTopTeamLeads.mockResolvedValue([
+      orgEntry("tl-1"),
+      orgEntry("tl-2"),
+    ]);
+
+    await LeaderboardPage({
+      searchParams: Promise.resolve({ board: "team-leads" }),
+    });
+
+    expect(mockGetTopTeamLeads).toHaveBeenCalledWith(
+      10,
+      "month",
+      getCurrentPeriodKey("month"),
+      "team-1",
+    );
+  });
+
+  it("scopes org aggregate boards to the viewer's team", async () => {
+    mockGetSessionUser.mockResolvedValue({
+      id: "user_1",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: "team-1",
+    });
+    mockCanManageDtt.mockReturnValue(false);
+    mockEnrollmentFindOne.mockResolvedValue(null);
+    mockGetTopRegions.mockResolvedValue([
+      orgEntry("region-1"),
+      orgEntry("region-2"),
+    ]);
+
+    await LeaderboardPage({
+      searchParams: Promise.resolve({ board: "regions" }),
+    });
+
+    expect(mockGetTopRegions).toHaveBeenCalledWith(
+      10,
+      "month",
+      getCurrentPeriodKey("month"),
+      "team-1",
+    );
   });
 
   it("keeps member boards visible even when empty", async () => {

@@ -12,6 +12,7 @@ import {
   getTopRegionalLeads,
   getTopRegions,
   getTopTdm,
+  getTopTeamLeads,
   getTopZoneLeads,
   getTopZones,
   getUserLeaderboardResult,
@@ -32,45 +33,51 @@ import { connectToDatabase } from "@/lib/mongoose";
 
 const LEADERBOARD_BOARDS = [
   {
-    value: "regions",
-    label: "Top Khu vực",
-    description: "Tổng điểm theo khu vực",
-    icon: <MapPin className="h-4 w-4" />,
-  },
-  {
-    value: "leads",
-    label: "Top KVT",
-    description: "Khu vực trưởng nổi bật",
-    icon: <Crown className="h-4 w-4" />,
-  },
-  {
-    value: "zones",
-    label: "Top Địa vực",
-    description: "Tổng điểm theo địa vực",
-    icon: <Layers className="h-4 w-4" />,
-  },
-  {
     value: "tdm",
     label: "Top TĐM",
-    description: "Thành viên TĐM nổi bật",
+    description: "Thành viên TĐM nổi bật trong nhóm",
     icon: <Users className="h-4 w-4" />,
   },
   {
     value: "members",
     label: "Top TĐ",
-    description: "Thành viên TĐ nổi bật",
+    description: "Thành viên TĐ nổi bật trong nhóm",
     icon: <Users className="h-4 w-4" />,
   },
   {
     value: "ngv",
     label: "Top NTĐ",
-    description: "Thành viên NTĐ nổi bật",
+    description: "Thành viên NTĐ nổi bật trong nhóm",
     icon: <Users className="h-4 w-4" />,
+  },
+  {
+    value: "leads",
+    label: "Top KVT",
+    description: "Khu vực trưởng nổi bật trong nhóm",
+    icon: <Crown className="h-4 w-4" />,
+  },
+  {
+    value: "regions",
+    label: "Top Khu vực",
+    description: "Tổng điểm theo khu vực trong nhóm",
+    icon: <MapPin className="h-4 w-4" />,
   },
   {
     value: "zone-leads",
     label: "Top ĐVT - NQL",
-    description: "Địa vực trưởng nổi bật",
+    description: "Địa vực trưởng nổi bật trong nhóm",
+    icon: <Crown className="h-4 w-4" />,
+  },
+  {
+    value: "zones",
+    label: "Top Địa vực",
+    description: "Tổng điểm theo địa vực trong nhóm",
+    icon: <Layers className="h-4 w-4" />,
+  },
+  {
+    value: "team-leads",
+    label: "Top CS - NQL",
+    description: "Trưởng nhóm CS nổi bật trong nhóm",
     icon: <Crown className="h-4 w-4" />,
   },
 ] as const;
@@ -79,18 +86,18 @@ const LEADERBOARD_LIMIT = 10;
 
 type LeaderboardBoard = (typeof LEADERBOARD_BOARDS)[number]["value"];
 
-// Bảng tổ chức ít phần tử: ẩn luôn khi kỳ chỉ có 0-1 phần tử (quyết định spec #7).
+// Bảng ít phần tử: ẩn khi kỳ chỉ có 0-1 phần tử (Top ĐV, Top ĐVT, CS-NQL).
 const HIDE_IF_SINGLE_BOARDS: LeaderboardBoard[] = [
-  "regions",
   "zones",
   "zone-leads",
+  "team-leads",
 ];
 
 function normalizeBoard(value?: string | string[]): LeaderboardBoard {
   const candidate = Array.isArray(value) ? value[0] : value;
   return LEADERBOARD_BOARDS.some((board) => board.value === candidate)
     ? (candidate as LeaderboardBoard)
-    : "regions";
+    : "tdm";
 }
 
 export default async function LeaderboardPage({
@@ -129,9 +136,9 @@ export default async function LeaderboardPage({
   const fetchBoard = (board: LeaderboardBoard, limit: number): Promise<BoardEntries> => {
     switch (board) {
       case "regions":
-        return getTopRegions(limit, period, periodKey);
+        return getTopRegions(limit, period, periodKey, viewerTeamId);
       case "zones":
-        return getTopZones(limit, period, periodKey);
+        return getTopZones(limit, period, periodKey, viewerTeamId);
       case "tdm":
         return getTopTdm(limit, period, periodKey, viewerTeamId);
       case "members":
@@ -140,6 +147,8 @@ export default async function LeaderboardPage({
         return getTopNgv(limit, period, periodKey, viewerTeamId);
       case "zone-leads":
         return getTopZoneLeads(limit, period, periodKey, viewerTeamId);
+      case "team-leads":
+        return getTopTeamLeads(limit, period, periodKey, viewerTeamId);
       default:
         return getTopRegionalLeads(limit, period, periodKey, viewerTeamId);
     }

@@ -284,10 +284,26 @@ export async function getTopZoneLeads(
   );
 }
 
+export async function getTopTeamLeads(
+  limit = 5,
+  period: LeaderboardPeriod = "month",
+  periodKey: string = getCurrentPeriodKey(period),
+  teamId: string | null = null,
+): Promise<LeaderboardEntry[]> {
+  return getTopUsersByPeriodPoints(
+    { role: "TEAM_LEAD", status: "ACTIVE" },
+    limit,
+    period,
+    periodKey,
+    teamId,
+  );
+}
+
 export async function getTopRegions(
   limit = 3,
   period: LeaderboardPeriod = "month",
   periodKey: string = getCurrentPeriodKey(period),
+  teamId: string | null = null,
 ): Promise<RegionLeaderboardEntry[]> {
   await connectToDatabase();
   const range = resolvePeriodRange(period, periodKey);
@@ -303,7 +319,13 @@ export async function getTopRegions(
       },
     },
     { $unwind: "$user" },
-    { $match: { "user.regionId": { $ne: null }, "user.status": "ACTIVE" } },
+    {
+      $match: {
+        "user.regionId": { $ne: null },
+        "user.status": "ACTIVE",
+        ...(teamId ? { "user.teamId": toObjectId(teamId) } : {}),
+      },
+    },
     {
       $group: {
         _id: "$user.regionId",
@@ -348,6 +370,7 @@ export async function getTopZones(
   limit = 3,
   period: LeaderboardPeriod = "month",
   periodKey: string = getCurrentPeriodKey(period),
+  teamId: string | null = null,
 ): Promise<ZoneLeaderboardEntry[]> {
   await connectToDatabase();
   const range = resolvePeriodRange(period, periodKey);
@@ -363,7 +386,13 @@ export async function getTopZones(
       },
     },
     { $unwind: "$user" },
-    { $match: { "user.zoneId": { $ne: null }, "user.status": "ACTIVE" } },
+    {
+      $match: {
+        "user.zoneId": { $ne: null },
+        "user.status": "ACTIVE",
+        ...(teamId ? { "user.teamId": toObjectId(teamId) } : {}),
+      },
+    },
     {
       $group: {
         _id: "$user.zoneId",
@@ -621,7 +650,12 @@ export async function getUserLeaderboardResult(
 
   if (activeBoard === "regions") {
     if (!user.regionId) return null;
-    const allRegions = await getTopRegions(999, period, periodKey);
+    const allRegions = await getTopRegions(
+      999,
+      period,
+      periodKey,
+      user.teamId?.toString() ?? null,
+    );
     const userRegion = allRegions.find((r) => r.id === user.regionId?.toString());
     if (!userRegion) {
       const region = await RegionModel.findById(user.regionId)
@@ -652,7 +686,12 @@ export async function getUserLeaderboardResult(
 
   if (activeBoard === "zones") {
     if (!user.zoneId) return null;
-    const allZones = await getTopZones(999, period, periodKey);
+    const allZones = await getTopZones(
+      999,
+      period,
+      periodKey,
+      user.teamId?.toString() ?? null,
+    );
     const userZone = allZones.find((z) => z.id === user.zoneId?.toString());
     if (!userZone) {
       const zone = await ZoneModel.findById(user.zoneId)
@@ -681,10 +720,14 @@ export async function getUserLeaderboardResult(
     };
   }
 
-  // Individual boards (tdm, members, ngv, zone-leads, leads)
+  // Individual boards (tdm, members, ngv, zone-leads, leads, team-leads)
   const userRole = user.role;
   // Supported roles for leaderboard
-  if (!["TDM", "MEMBER", "NGV", "ZONE_LEAD", "REGIONAL_LEAD"].includes(userRole)) {
+  if (
+    !["TDM", "MEMBER", "NGV", "ZONE_LEAD", "REGIONAL_LEAD", "TEAM_LEAD"].includes(
+      userRole,
+    )
+  ) {
     return null;
   }
 

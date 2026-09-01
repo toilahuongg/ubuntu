@@ -84,6 +84,8 @@ vi.mock("@/lib/models", () => ({
 
 import {
   getLeaderboardPeriodLabel,
+  getTopRegions,
+  getTopTeamLeads,
   getTopZoneLeads,
   getTopZones,
   getDttClassLeaderboard,
@@ -219,6 +221,73 @@ describe("leaderboard service", () => {
       "user.role": "ZONE_LEAD",
       "user.status": "ACTIVE",
     });
+    expect(String(matchStage?.$match["user.teamId"])).toBe(
+      "6650f3f2c9e77a0012345678",
+    );
+  });
+
+  it("scopes the team leads board to the given team", async () => {
+    mocks.aggregate.mockResolvedValue([]);
+
+    await getTopTeamLeads(
+      5,
+      "month",
+      getCurrentPeriodKey("month"),
+      "6650f3f2c9e77a0012345678",
+    );
+
+    const pipeline = (mocks.aggregate.mock.calls[0]?.[0] ??
+      []) as Array<Record<string, unknown>>;
+    const matchStage = pipeline.find(
+      (stage: { $match?: Record<string, unknown> }) =>
+        stage.$match?.["user.role"] !== undefined,
+    ) as { $match: Record<string, unknown> } | undefined;
+    expect(matchStage?.$match).toMatchObject({
+      "user.role": "TEAM_LEAD",
+      "user.status": "ACTIVE",
+    });
+    expect(String(matchStage?.$match["user.teamId"])).toBe(
+      "6650f3f2c9e77a0012345678",
+    );
+  });
+
+  it("scopes zone aggregates to the given team when teamId is provided", async () => {
+    mocks.aggregate.mockResolvedValue([]);
+
+    await getTopZones(
+      10,
+      "month",
+      getCurrentPeriodKey("month"),
+      "6650f3f2c9e77a0012345678",
+    );
+
+    const pipeline = (mocks.aggregate.mock.calls[0]?.[0] ??
+      []) as Array<Record<string, unknown>>;
+    const matchStage = pipeline.find(
+      (stage: { $match?: Record<string, unknown> }) =>
+        stage.$match?.["user.zoneId"] !== undefined,
+    ) as { $match: Record<string, unknown> } | undefined;
+    expect(String(matchStage?.$match["user.teamId"])).toBe(
+      "6650f3f2c9e77a0012345678",
+    );
+  });
+
+  it("scopes region aggregates to the given team when teamId is provided", async () => {
+    mocks.aggregate.mockResolvedValue([]);
+
+    await getTopRegions(
+      10,
+      "month",
+      getCurrentPeriodKey("month"),
+      "6650f3f2c9e77a0012345678",
+    );
+
+    const pipeline = (mocks.aggregate.mock.calls[0]?.[0] ??
+      []) as Array<Record<string, unknown>>;
+    const matchStage = pipeline.find(
+      (stage: { $match?: Record<string, unknown> }) =>
+        stage.$match?.["user.regionId"] !== undefined,
+    ) as { $match: Record<string, unknown> } | undefined;
     expect(String(matchStage?.$match["user.teamId"])).toBe(
       "6650f3f2c9e77a0012345678",
     );
@@ -604,6 +673,27 @@ describe("leaderboard service", () => {
       expect(String(matchStage?.$match["user.teamId"])).toBe(
         "6650f3f2c9e77a0012345678",
       );
+    });
+
+    it("ranks team leads on their own board", async () => {
+      mocks.userFindById.mockReturnValue({
+        lean: () =>
+          Promise.resolve({
+            _id: objectId("user-id"),
+            fullName: "Lead A",
+            role: "TEAM_LEAD",
+            teamId: objectId("6650f3f2c9e77a0012345678"),
+            gender: "male",
+            level: 5,
+          }),
+      });
+      mocks.aggregate.mockResolvedValue([
+        { _id: objectId("other-id"), monthlyXp: 200 },
+        { _id: objectId("user-id"), monthlyXp: 150 },
+      ]);
+
+      const res = await getUserLeaderboardResult("user-id", "team-leads");
+      expect(res).toMatchObject({ type: "user", rank: 2, totalXp: 150 });
     });
 
     it("ranks system-wide when the user has no team", async () => {
