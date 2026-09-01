@@ -467,9 +467,11 @@ export async function saveSubmission(
       ? updated.completionCount - previousCount
       : count;
 
-    if (countAwarded !== 0 && (expReward > 0 || pointReward > 0)) {
+    const isCountTotalTask = taskRaw.taskType === "COUNT_TOTAL";
+    if (countAwarded !== 0 && (expReward > 0 || pointReward > 0 || isCountTotalTask)) {
+      const effectivePointReward = isCountTotalTask ? 1 : pointReward;
       const totalExp = countAwarded * expReward;
-      const totalPoints = countAwarded * pointReward;
+      const totalPoints = countAwarded * effectivePointReward;
       xpAwarded = totalExp;
       if (totalExp !== 0) {
         await XpTransactionModel.create(

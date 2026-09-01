@@ -625,3 +625,258 @@ describe("saveSubmission points/XP subtraction and deletion", () => {
   });
 });
 
+describe("prayer point rule (COUNT_TOTAL)", () => {
+  it("awards exactly 1 point per tick regardless of task pointReward", async () => {
+    const team = await TeamModel.create({ code: "TEST_PRAY_1", name: "Pray Team 1" });
+    const user = await UserModel.create({
+      fullName: "Pray User 1",
+      role: "MEMBER",
+      status: "ACTIVE",
+      totalXp: 0,
+      pointBalance: 0,
+      teamId: team._id,
+    });
+    const task = await TaskModel.create({
+      title: "Cầu nguyện buổi sáng",
+      taskType: "COUNT_TOTAL",
+      expReward: 10,
+      pointReward: 10,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+    });
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-14", {
+      count: 1,
+      mode: "increment",
+    });
+
+    const pointTxs = await PointTransactionModel.find({
+      userId: user._id,
+      source: "task_reward",
+    }).lean();
+    expect(pointTxs).toHaveLength(1);
+    expect(pointTxs[0]?.amount).toBe(1);
+
+    const xpTxs = await XpTransactionModel.find({
+      userId: user._id,
+      source: "task_completion",
+    }).lean();
+    expect(xpTxs[0]?.amount).toBe(10);
+
+    const after = await UserModel.findById(user._id).lean();
+    expect(after?.pointBalance).toBe(1);
+    expect(after?.totalXp).toBe(10);
+  });
+
+  it("awards count-sized points for a multi-tick submission", async () => {
+    const team = await TeamModel.create({ code: "TEST_PRAY_2", name: "Pray Team 2" });
+    const user = await UserModel.create({
+      fullName: "Pray User 2",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: team._id,
+    });
+    const task = await TaskModel.create({
+      title: "Cầu nguyện buổi tối",
+      taskType: "COUNT_TOTAL",
+      expReward: 0,
+      pointReward: 10,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+    });
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-14", {
+      count: 5,
+      mode: "increment",
+    });
+
+    const after = await UserModel.findById(user._id).lean();
+    expect(after?.pointBalance).toBe(5);
+  });
+
+  it("deducts 1 point per removed tick in set mode", async () => {
+    const team = await TeamModel.create({ code: "TEST_PRAY_3", name: "Pray Team 3" });
+    const user = await UserModel.create({
+      fullName: "Pray User 3",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: team._id,
+    });
+    const task = await TaskModel.create({
+      title: "Cầu nguyện xanh",
+      taskType: "COUNT_TOTAL",
+      expReward: 10,
+      pointReward: 10,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+    });
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-14", {
+      count: 8,
+      mode: "set",
+    });
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-14", {
+      count: 3,
+      mode: "set",
+    });
+
+    const after = await UserModel.findById(user._id).lean();
+    expect(after?.pointBalance).toBe(3);
+    expect(after?.totalXp).toBe(30); // net 3 ticks * 10 XP (8 set, then -5)
+  });
+
+  it("awards 1 point even when task pointReward is 0", async () => {
+    const team = await TeamModel.create({ code: "TEST_PRAY_4", name: "Pray Team 4" });
+    const user = await UserModel.create({
+      fullName: "Pray User 4",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: team._id,
+    });
+    const task = await TaskModel.create({
+      title: "Cầu nguyện zero reward",
+      taskType: "COUNT_TOTAL",
+      expReward: 0,
+      pointReward: 0,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+    });
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-14", {
+      count: 1,
+      mode: "increment",
+    });
+
+    const after = await UserModel.findById(user._id).lean();
+    expect(after?.pointBalance).toBe(1);
+  });
+
+  it("keeps legacy point rule for DAILY_PER_MEMBER tasks", async () => {
+    const team = await TeamModel.create({ code: "TEST_PRAY_5", name: "Pray Team 5" });
+    const user = await UserModel.create({
+      fullName: "Pray User 5",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: team._id,
+    });
+    const task = await TaskModel.create({
+      title: "Đọc Kinh Thánh",
+      taskType: "DAILY_PER_MEMBER",
+      scheduleType: "EVERY_DAY",
+      expReward: 10,
+      pointReward: 10,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+    });
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    await saveSubmission(actor, task._id.toString(), user._id.toString(), "2026-07-14", {
+      count: 1,
+      mode: "set",
+    });
+
+    const after = await UserModel.findById(user._id).lean();
+    expect(after?.pointBalance).toBe(10);
+  });
+
+  it("never awards streak bonuses for COUNT_TOTAL tasks", async () => {
+    const team = await TeamModel.create({ code: "TEST_PRAY_6", name: "Pray Team 6" });
+    const user = await UserModel.create({
+      fullName: "Pray User 6",
+      role: "MEMBER",
+      status: "ACTIVE",
+      teamId: team._id,
+    });
+    const task = await TaskModel.create({
+      title: "Cầu nguyện chuỗi",
+      taskType: "COUNT_TOTAL",
+      expReward: 10,
+      pointReward: 10,
+      isActive: true,
+      targetRoles: ["MEMBER"],
+      scope: "TEAM",
+      teamId: team._id,
+      createdBy: user._id,
+      deadlineTime: "23:59",
+    });
+    const actor: SessionUser = {
+      id: user._id.toString(),
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      teamId: team._id.toString(),
+    };
+
+    const dates = ["2026-07-08", "2026-07-09", "2026-07-10", "2026-07-11", "2026-07-12", "2026-07-13", "2026-07-14"];
+    for (const date of dates) {
+      await saveSubmission(actor, task._id.toString(), user._id.toString(), date, {
+        count: 1,
+        mode: "increment",
+      });
+    }
+
+    const bonusTxs = await PointTransactionModel.find({
+      userId: user._id,
+      source: "task_streak_bonus_reward",
+    }).lean();
+    expect(bonusTxs).toHaveLength(0);
+
+    const after = await UserModel.findById(user._id).lean();
+    expect(after?.pointBalance).toBe(7);
+  });
+});
+
