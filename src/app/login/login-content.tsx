@@ -312,7 +312,7 @@ function ManualLoginForm({
         name="username"
         autoComplete="username"
         required
-        placeholder="Username"
+        placeholder="Email hoặc username"
         className="h-11 w-full rounded-lg border border-border bg-overlay-subtle px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
       />
       <input

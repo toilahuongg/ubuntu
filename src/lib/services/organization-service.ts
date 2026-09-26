@@ -390,17 +390,19 @@ export async function authenticateManualUser(input: {
 }) {
   await connectToDatabase();
   const normalized = normalizeUsername(input.username);
-  const user = (await UserModel.findOne({ username: normalized }).lean()) as
+  const user = (await UserModel.findOne({
+    $or: [{ username: normalized }, { email: normalized }],
+  }).lean()) as
     | (UserRecord & { passwordHash?: string | null })
     | null;
 
   if (!user) {
-    throw new Error("Tên đăng nhập hoặc mật khẩu không đúng.");
+    throw new Error("Email, tên đăng nhập hoặc mật khẩu không đúng.");
   }
 
   const passwordOk = await verifyPassword(input.password, user.passwordHash);
   if (!passwordOk) {
-    throw new Error("Tên đăng nhập hoặc mật khẩu không đúng.");
+    throw new Error("Email, tên đăng nhập hoặc mật khẩu không đúng.");
   }
 
   if (user.status === "INACTIVE") {

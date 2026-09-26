@@ -12,6 +12,7 @@ x-app-environment: &app-environment
   WATCHPACK_POLLING: "true"
 
 x-app-service: &app-service
+  image: ubuntu-local-app
   build:
     context: .
     target: development
