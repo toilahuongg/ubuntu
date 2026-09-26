@@ -1,0 +1,80 @@
+name: ubuntu-local
+
+x-app-environment: &app-environment
+  MONGODB_URI: mongodb://mongo:27017/daily-task-app
+  SESSION_SECRET: ${SESSION_SECRET:-local-session-secret-change-before-sharing}
+  AUTH_SECRET: ${AUTH_SECRET:-local-auth-secret-change-before-sharing}
+  AUTH_URL: http://localhost:3000
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+  CRON_SECRET: ${CRON_SECRET:-local-cron-secret}
+  APP_TIMEZONE: Asia/Ho_Chi_Minh
+  ENABLE_DEV_LOGIN: "true"
+  WATCHPACK_POLLING: "true"
+
+x-app-service: &app-service
+  build:
+    context: .
+    target: development
+  env_file:
+    - path: docker.env
+      required: false
+  environment: *app-environment
+  volumes:
+    - .:/app
+    - node_modules:/app/node_modules
+  depends_on:
+    mongo:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  web:
+    <<: *app-service
+    command: npm run dev -- --hostname 0.0.0.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+      - next_cache:/app/.next
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  reminders:
+    <<: *app-service
+    command: npm run cron:reminders
+
+  mongo:
+    image: mongo:8.0
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "db.adminCommand('ping').ok",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  next_cache:
+  node_modules:

@@ -157,7 +157,6 @@ function TaskCard({
                 <Trophy className="h-3 w-3" />
                 {task.pointReward} điểm
               </span>
-              <span>Nhập bù: {task.lateWindowDays} ngày</span>
               <span
                 className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
                   task.isActive

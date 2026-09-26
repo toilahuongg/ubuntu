@@ -46,6 +46,36 @@ npm run seed:cosmetics
 npm run dev
 ```
 
+## Chạy local bằng Docker trên Windows
+
+Yêu cầu: cài Docker Desktop và bật WSL 2 backend. Từ PowerShell tại thư mục dự án, chạy:
+
+```powershell
+docker compose up --build -d
+docker compose exec web npm run seed
+```
+
+Mở `http://localhost:3000`. Stack local gồm Next.js, MongoDB và reminder worker; dữ liệu MongoDB được giữ trong Docker volume khi container khởi động lại. Dev login được bật sẵn để không cần Telegram khi phát triển local.
+
+Xem log hoặc dừng stack:
+
+```powershell
+docker compose logs -f web
+docker compose down
+```
+
+Muốn xóa cả database local và tạo lại từ đầu:
+
+```powershell
+docker compose down -v
+docker compose up --build -d
+docker compose exec web npm run seed
+```
+
+Các tích hợp Telegram, Google OAuth và Web Push là tùy chọn. Khi cần, sao chép `docker.env.example` thành `docker.env`, điền token rồi khởi động lại stack. Không commit `docker.env`.
+
+Nếu port `3000` hoặc `27017` đang được dùng trên Windows, đổi phần port tương ứng ở `compose.yaml`, ví dụ `3001:3000`. Khi đổi port web, cập nhật đồng thời `AUTH_URL` và `NEXT_PUBLIC_APP_URL`.
+
 ## Biến môi trường
 
 | Biến | Mô tả |

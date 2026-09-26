@@ -298,27 +298,15 @@ export function EditTemplateForm({
             className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
           />
         </div>
-        <div>
-          <label
-            htmlFor={`lateWindowDays-${task.id}`}
-            className="mb-1.5 block text-xs font-medium text-muted-foreground"
-          >
-            Nhập bù (ngày)
-          </label>
-          <input
-            id={`lateWindowDays-${task.id}`}
-            name="lateWindowDays"
-            type="number"
-            min={1}
-            max={365}
-            defaultValue={task.lateWindowDays}
-            inputMode="numeric"
-            className="h-10 w-full rounded-xl bg-overlay-subtle border border-border px-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
-          />
-        </div>
       </div>
 
       {/* isDtt checkbox removed — DTT task assignments are now managed per-class */}
+
+      <input
+        type="hidden"
+        name="lateWindowDays"
+        defaultValue={task.lateWindowDays}
+      />
 
       {error && (
         <p role="alert" className="text-xs text-destructive">
