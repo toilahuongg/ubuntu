@@ -36,6 +36,7 @@ export function requireEnv(
     | "TELEGRAM_WEBHOOK_SECRET"
     | "NEXT_PUBLIC_APP_URL"
     | "CRON_SECRET"
+    | "SEED_SECRET"
     | "GOOGLE_CLIENT_ID"
     | "GOOGLE_CLIENT_SECRET"
     | "AUTH_SECRET",

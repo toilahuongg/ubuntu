@@ -7,6 +7,7 @@ x-app-environment: &app-environment
   AUTH_URL: http://localhost:3000
   NEXT_PUBLIC_APP_URL: http://localhost:3000
   CRON_SECRET: ${CRON_SECRET:-local-cron-secret}
+  SEED_SECRET: ${SEED_SECRET:-local-seed-secret}
   APP_TIMEZONE: Asia/Ho_Chi_Minh
   ENABLE_DEV_LOGIN: "true"
   WATCHPACK_POLLING: "true"

@@ -318,6 +318,7 @@ docker compose exec web node -e "console.log({telegram: Boolean(process.env.TELE
 | `NEXT_PUBLIC_APP_URL` | URL app (dùng cho webhook & link) |
 | `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | Username bot để mở WebApp |
 | `CRON_SECRET` | Secret header cho jobs |
+| `SEED_SECRET` | Secret bảo vệ API seed phá huỷ dữ liệu |
 | `APP_TIMEZONE` | Mặc định `Asia/Ho_Chi_Minh` |
 
 ## Vai trò & trạng thái
@@ -337,6 +338,20 @@ Hai route jobs yêu cầu header:
 
 ```txt
 x-cron-secret: <CRON_SECRET>
+```
+
+## API seed
+
+`POST /api/seed` xóa dữ liệu hiện có và tạo lại đúng một tài khoản admin. Route này yêu cầu header:
+
+```txt
+x-seed-secret: <SEED_SECRET>
+```
+
+Ví dụ với Docker local (secret mặc định là `local-seed-secret`):
+
+```powershell
+curl.exe -X POST http://localhost:3000/api/seed -H "x-seed-secret: local-seed-secret"
 ```
 
 ## Scripts
